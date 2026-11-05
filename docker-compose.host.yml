@@ -1,0 +1,18 @@
+# Linux only: host networking is required for mDNS discovery and the RTP/UDP audio path.
+# On Docker Desktop for macOS this only works with the opt-in "Enable host networking"
+# beta, so prefer running the app natively there.
+services:
+  airplay-capture:
+    build: .
+    image: airplay-capture:latest
+    container_name: airplay-capture
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      AIRPLAY_CAPTURE_WEB_PORT: "8080"
+      AIRPLAY_CAPTURE_DATA: /data
+      # Optional: protect the web interface with form login.
+      # AIRPLAY_CAPTURE_WEB_USER: "recorder"
+      # AIRPLAY_CAPTURE_WEB_PASSWORD: "change-me"
+    volumes:
+      - ./data:/data

@@ -1,0 +1,35 @@
+{
+  "$schema": "../../synology-docker-bridge/packaging/app.schema.json",
+  "id": "airplay-capture",
+  "version": "1.6.2",
+  "displayName": "AirPlay Capture",
+  "description": "AirPlay receiver that records every song as its own file with cover and metadata; audiobooks are combined into M4B.",
+  "descriptionGer": "AirPlay-Empfänger, der jeden Titel als eigene Datei mit Cover und Metadaten aufnimmt; Hörbücher werden zu M4B zusammengefasst.",
+  "maintainer": "Moritz",
+  "arch": "x86_64",
+  "appDir": "..",
+  "image": "airplay-capture:spk",
+  "appBuild": "./gradlew bootJar -q && tmp=\"$(mktemp -d)\" && cp build/libs/*.jar \"$tmp/app.jar\" && cp packaging/Dockerfile.runtime \"$tmp/Dockerfile\" && docker buildx build --platform linux/amd64 --provenance=false --sbom=false --load -t airplay-capture:spk \"$tmp\" && rm -rf \"$tmp\"",
+  "service": "airplay-capture",
+  "networkMode": "host",
+  "appPath": "/app/",
+  "appUser": "root",
+  "appEnv": {
+    "SERVER_ADDRESS": "127.0.0.1",
+    "AIRPLAY_CAPTURE_WEB_PORT": "${APP_CONTAINER_PORT}",
+    "AIRPLAY_CAPTURE_DATA": "/data",
+    "AIRPLAY_CAPTURE_LIBRARY_DIR": "${APP_OUTPUT_CONTAINER_DIR:-/output-parent/airplay-capture}"
+  },
+  "defaultOutputDir": "/volume1/music/airplay-capture",
+  "outputLabel": {
+    "enu": "Recordings folder",
+    "ger": "Aufnahmeordner"
+  },
+  "allUsers": false,
+  "authMode": "token",
+  "ui": {
+    "width": 1200,
+    "height": 800
+  },
+  "icons": "packaging/ui/images"
+}

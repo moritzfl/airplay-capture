@@ -1,0 +1,10 @@
+.git
+.gradle
+.idea
+build
+data
+src/main/bundles
+src/main/frontend/generated
+node_modules
+*.log
+.DS_Store

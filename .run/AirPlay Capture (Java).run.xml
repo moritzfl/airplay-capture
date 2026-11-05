@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="AirPlay Capture (Java)" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="de.moritzf.airplaycapture.Main" />
+    <module name="airplay-capture.main" />
+    <option name="PROGRAM_PARAMETERS" value="--data=data --web-port=8080" />
+    <option name="VM_PARAMETERS" value="-Dfile.encoding=UTF-8" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

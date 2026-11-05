@@ -1,0 +1,20 @@
+# Runtime image used by the Synology SPK: the application jar is built on the host,
+# so no architecture-specific build tools are needed inside the image.
+FROM eclipse-temurin:21-jre-alpine
+
+RUN apk add --no-cache ffmpeg tzdata \
+    && addgroup -g 10001 -S recorder \
+    && adduser -S -u 10001 -G recorder -h /app recorder
+
+WORKDIR /app
+COPY app.jar /app/app.jar
+
+ENV AIRPLAY_CAPTURE_DATA=/data \
+    AIRPLAY_CAPTURE_WEB_PORT=8080
+
+RUN mkdir -p /data && chown -R recorder:recorder /data /app
+USER recorder
+VOLUME ["/data"]
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

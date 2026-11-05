@@ -1,0 +1,20 @@
+services:
+  airplay-capture:
+    build: .
+    image: airplay-capture:latest
+    container_name: airplay-capture
+    restart: unless-stopped
+    # Bridge networking with an explicit port mapping: the web UI definitely works on
+    # macOS and Linux. AirPlay discovery needs the container on the LAN interface,
+    # which this mode cannot do - use docker-compose.host.yml on Linux, or run the
+    # app natively on macOS when you want to record.
+    ports:
+      - "8080:8080"
+    environment:
+      AIRPLAY_CAPTURE_WEB_PORT: "8080"
+      AIRPLAY_CAPTURE_DATA: /data
+      # Optional: protect the web interface with form login.
+      # AIRPLAY_CAPTURE_WEB_USER: "recorder"
+      # AIRPLAY_CAPTURE_WEB_PASSWORD: "change-me"
+    volumes:
+      - ./data:/data
