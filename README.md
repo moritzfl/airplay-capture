@@ -82,9 +82,8 @@ docker run -d --name airplay-capture --network host -v "$PWD/data:/data" \
   ghcr.io/moritzfl/airplay-capture:latest
 ```
 
-The same image is also pushed to **Docker Hub** as `<dockerhub-user>/airplay-capture` when the Docker
-Hub secrets are configured (see [Releases](#releases-github-actions)). Use `--network host` on Linux
-to receive AirPlay; use `-p 8080:8080` instead if you only want the web UI.
+Use `--network host` on Linux to receive AirPlay; use `-p 8080:8080` instead if you only want the
+web UI.
 
 ### macOS / Linux
 
@@ -353,15 +352,8 @@ conversion queue by hand.
    SHA-256 checksums.
 
 The version is taken from the tag, so no version bump in the repo is needed. The release and the
-`ghcr.io` package use the workflow's `GITHUB_TOKEN`; **no secret setup is required** for those.
-
-To also publish to **Docker Hub** (`docker.io/<user>/airplay-capture`), add two repository secrets
-under **Settings → Secrets and variables → Actions**:
-
-- `DOCKERHUB_USERNAME` — your Docker Hub username.
-- `DOCKERHUB_TOKEN` — a Docker Hub **access token** with read/write permission.
-
-Without them the Docker Hub step is skipped and the rest of the release still succeeds.
+`ghcr.io` package use the workflow's `GITHUB_TOKEN`, so **no secret setup is required**. Images are
+published to ghcr.io only.
 
 ### Building the Synology SPK
 
