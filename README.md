@@ -411,3 +411,7 @@ cover) with ffprobe.
   disabled for the same-origin UI and the local API; keep the port on a trusted network and do not
   expose it to the internet.
 * Record only content you are allowed to record.
+
+## License
+
+Apache License 2.0, see [LICENSE](LICENSE).
