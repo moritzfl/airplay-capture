@@ -26,7 +26,7 @@ The script builds the jar, builds the app and bridge images for `linux/amd64`, e
 and writes:
 
 ```
-packaging/dist/airplay-capture-1.6.2-x86_64.spk
+packaging/dist/airplay-capture-1.0.0-x86_64.spk
 ```
 
 The images are part of the SPK, so installation needs no registry access.

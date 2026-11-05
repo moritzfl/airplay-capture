@@ -1,7 +1,7 @@
 {
   "$schema": "../../synology-docker-bridge/packaging/app.schema.json",
   "id": "airplay-capture",
-  "version": "1.6.2",
+  "version": "1.0.0",
   "displayName": "AirPlay Capture",
   "description": "AirPlay receiver that records every song as its own file with cover and metadata; audiobooks are combined into M4B.",
   "descriptionGer": "AirPlay-Empfänger, der jeden Titel als eigene Datei mit Cover und Metadaten aufnimmt; Hörbücher werden zu M4B zusammengefasst.",
