@@ -5,9 +5,9 @@
 
   **Record AirPlay audio as individual files with cover art and metadata.**
 
-  Runs on macOS and Linux, in Docker — and as a **Synology package (.spk)** for your NAS.
+  Runs on macOS, Linux and Windows, in Docker — and as a **Synology package (.spk)** for your NAS.
 
-  [Synology SPK](#synology-nas-spk) · [Docker](#docker) · [macOS / Linux](#macos--linux) · [Using it](#using-it) · [License](#license)
+  [Synology SPK](#synology-nas-spk) · [Docker](#docker) · [macOS / Linux](#macos--linux) · [Windows](#windows) · [Using it](#using-it) · [License](#license)
 </div>
 
 ![The library while a track is being recorded](docs/images/library.png)
@@ -91,6 +91,29 @@ java -jar build/libs/airplay-capture-1.0.0.jar --data ~/airplay-data
 On macOS 15+, allow the terminal (or IDE) under **System Settings → Privacy & Security → Local
 Network**, otherwise the receiver never appears in the AirPlay menu.
 
+### Windows
+
+The receiver is pure Java (no native libraries), so it runs on Windows with **JDK 21** and
+**ffmpeg** (`winget install Gyan.FFmpeg`, or a build from gyan.dev — `ffmpeg.exe` must be on `PATH`):
+
+```bat
+gradlew.bat bootRun
+:: open http://localhost:8080/app/
+```
+
+Or the runnable jar:
+
+```bat
+gradlew.bat bootJar
+java -jar build\libs\airplay-capture-1.0.0.jar --data %APPDATA%\AirPlayCapture
+```
+
+Data defaults to **`%APPDATA%\AirPlayCapture`**; recordings land in its `library` subfolder. If
+Windows Firewall asks, allow Java to accept incoming connections on private networks, otherwise the
+receiver cannot be discovered. Docker Desktop has the same mDNS limitation as on macOS, so run
+natively to record. **Windows support is untested on a real Windows machine** — the protocol and file
+handling are platform-independent, but please report anything that misbehaves.
+
 ## Using it
 
 ### Record
@@ -139,7 +162,7 @@ stored in `settings.json` in the data directory. Standalone options:
 
 | Option | Environment | Default |
 | --- | --- | --- |
-| `--data <dir>` | `AIRPLAY_CAPTURE_DATA` | macOS: `~/Library/Application Support/AirPlayCapture`, Linux: `~/.airplay-capture` |
+| `--data <dir>` | `AIRPLAY_CAPTURE_DATA` | macOS: `~/Library/Application Support/AirPlayCapture`, Windows: `%APPDATA%\AirPlayCapture`, Linux: `~/.airplay-capture` |
 | `--web-port <port>` | `AIRPLAY_CAPTURE_WEB_PORT` | `8080` |
 | – | `AIRPLAY_CAPTURE_WEB_USER` | `recorder` (only used with a password) |
 | – | `AIRPLAY_CAPTURE_WEB_PASSWORD` | unset – web UI/API have no authentication |
@@ -155,6 +178,7 @@ Synology, DSM handles sign-in and per-user privileges for you.
 | Synology SPK | `/volume1/music/airplay-capture` (adjustable) | `airplay-capture` shared folder |
 | Docker | `./data/library` | `./data` |
 | macOS / Linux | `<data>/library` | `~/Library/Application Support/AirPlayCapture` or `~/.airplay-capture` |
+| Windows | `%APPDATA%\AirPlayCapture\library` | `%APPDATA%\AirPlayCapture` |
 
 ## Troubleshooting
 

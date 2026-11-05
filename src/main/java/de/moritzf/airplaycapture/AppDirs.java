@@ -19,15 +19,24 @@ public final class AppDirs {
             value = System.getenv("AIRPLAY_CAPTURE_DATA");
         }
         if (value == null || value.isBlank()) {
-            String home = System.getProperty("user.home", ".");
-            boolean mac = System.getProperty("os.name", "").toLowerCase().contains("mac");
-            value = mac
-                    ? home + "/Library/Application Support/AirPlayCapture"
-                    : home + "/.airplay-capture";
+            value = defaultDataDir(System.getProperty("os.name", "").toLowerCase(),
+                    System.getProperty("user.home", "."), System.getenv("APPDATA"));
         }
         AppDirs dirs = new AppDirs(Path.of(value));
         dirs.createDirectories();
         return dirs;
+    }
+
+    /** macOS, Windows (%APPDATA%) and Linux each get their conventional per-user data folder. */
+    static String defaultDataDir(String osName, String home, String appData) {
+        if (osName.contains("mac")) {
+            return home + "/Library/Application Support/AirPlayCapture";
+        }
+        if (osName.startsWith("windows")) {
+            String base = appData == null || appData.isBlank() ? home + "/AppData/Roaming" : appData;
+            return base + "/AirPlayCapture";
+        }
+        return home + "/.airplay-capture";
     }
 
     public void createDirectories() {
