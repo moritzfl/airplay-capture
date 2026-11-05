@@ -343,7 +343,8 @@ conversion queue by hand.
 **CI** runs the full test suite on every push to `main` and on pull requests
 (`.github/workflows/ci.yml`).
 
-**Pushing a tag `vX.Y.Z`** starts the release workflow (`.github/workflows/release.yml`):
+**Pushing a tag `X.Y.Z`** (for example `1.0.0`, without a `v` prefix) starts the release workflow
+(`.github/workflows/release.yml`):
 
 1. Runs the tests again.
 2. Builds and pushes Docker images for **linux/amd64 and linux/arm64** to

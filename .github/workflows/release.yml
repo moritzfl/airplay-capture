@@ -1,10 +1,11 @@
 name: Release
 
-# Pushing a tag vX.Y.Z on GitHub runs the tests, builds the Synology SPK and
-# the runnable jar, publishes Docker images and creates a GitHub Release.
+# Pushing a version tag (e.g. 1.0.0) on GitHub runs the tests, builds the
+# Synology SPK and the runnable jar, publishes Docker images and creates a
+# GitHub Release.
 on:
   push:
-    tags: ['v*']
+    tags: ['*']
 
 permissions:
   contents: write
