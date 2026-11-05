@@ -4,7 +4,7 @@ The SPK is only an installation vehicle: it embeds the platform-independent Dock
 Container Manager to run it as a compose project. The application itself stays a normal OCI image;
 nothing in `src/` knows about Synology. The DSM window, authentication, restart and output-folder
 controls come from the generic
-[`synology-docker-bridge`](../../synology-docker-bridge) framework.
+[`synology-docker-bridge`](https://github.com/moritzfl/synology-docker-bridge) framework.
 
 The web UI is served through DSM's own nginx, under
 `/webman/3rdparty/airplay-capture/proxy/app/`. There is no extra port, no firewall rule and no
@@ -13,10 +13,11 @@ itself stays usable outside Synology with `docker run`.
 
 ## Build
 
-Requirements: JDK 21, Docker with buildx, Node.js 22, and a sibling checkout of
-`synology-docker-bridge`. Run from the repository root:
+Requirements: JDK 21, Docker with buildx, Node.js 22, and a checkout of
+`synology-docker-bridge` next to this repository. Run from the repository root:
 
 ```sh
+git clone https://github.com/moritzfl/synology-docker-bridge.git ../synology-docker-bridge
 ./packaging/pack-framework.sh
 # or: FRAMEWORK_DIR=/path/to/synology-docker-bridge ./packaging/pack-framework.sh
 ```

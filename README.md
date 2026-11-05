@@ -142,10 +142,11 @@ metadata should not leave the machine.
 ## Synology SPK
 
 `packaging/` builds a sideloadable Synology package through the generic
-[synology-docker-bridge](../synology-docker-bridge) framework. The SPK contains the image, so no
-registry is needed:
+[synology-docker-bridge](https://github.com/moritzfl/synology-docker-bridge) framework, checked
+out next to this repository. The SPK contains the image, so no registry is needed:
 
 ```sh
+git clone https://github.com/moritzfl/synology-docker-bridge.git ../synology-docker-bridge
 ./packaging/pack-framework.sh
 # or: FRAMEWORK_DIR=/path/to/synology-docker-bridge ./packaging/pack-framework.sh
 ```
