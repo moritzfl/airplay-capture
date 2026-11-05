@@ -8,6 +8,8 @@
   Runs on macOS, Linux and Windows, in Docker — and as a **Synology package (.spk)** for your NAS.
 
   [Synology SPK](#synology-nas-spk) · [Docker](#docker) · [macOS / Linux](#macos--linux) · [Windows](#windows) · [Using it](#using-it) · [License](#license)
+
+  [![CI](https://github.com/moritzfl/airplay-capture/actions/workflows/ci.yml/badge.svg)](https://github.com/moritzfl/airplay-capture/actions/workflows/ci.yml)
 </div>
 
 ![The library while a track is being recorded](docs/images/library.png)
@@ -71,6 +73,18 @@ docker compose -f docker-compose.host.yml up -d --build
 
 On Docker Desktop for macOS, host networking is an opt-in beta and mDNS is unreliable — run the app
 natively there instead and use Docker for browsing the library. Files are written to `./data`.
+
+**Prebuilt images** (linux/amd64 and linux/arm64) are published to `ghcr.io` on every release, so you
+don't have to build from source:
+
+```bash
+docker run -d --name airplay-capture --network host -v "$PWD/data:/data" \
+  ghcr.io/moritzfl/airplay-capture:latest
+```
+
+The same image is also pushed to **Docker Hub** as `<dockerhub-user>/airplay-capture` when the Docker
+Hub secrets are configured (see [Releases](#releases-github-actions)). Use `--network host` on Linux
+to receive AirPlay; use `-p 8080:8080` instead if you only want the web UI.
 
 ### macOS / Linux
 
@@ -324,6 +338,30 @@ runtime classpath.
 
 `scripts/ux-fixture.mjs <dir>` builds a throwaway library with a long recording for exercising the
 conversion queue by hand.
+
+### Releases (GitHub Actions)
+
+**CI** runs the full test suite on every push to `main` and on pull requests
+(`.github/workflows/ci.yml`).
+
+**Pushing a tag `vX.Y.Z`** starts the release workflow (`.github/workflows/release.yml`):
+
+1. Runs the tests again.
+2. Builds and pushes Docker images for **linux/amd64 and linux/arm64** to
+   `ghcr.io/moritzfl/airplay-capture` with tags `X.Y.Z`, `X.Y` and `latest`.
+3. Builds the Synology SPK and the runnable jar and creates a **GitHub Release** with both plus
+   SHA-256 checksums.
+
+The version is taken from the tag, so no version bump in the repo is needed. The release and the
+`ghcr.io` package use the workflow's `GITHUB_TOKEN`; **no secret setup is required** for those.
+
+To also publish to **Docker Hub** (`docker.io/<user>/airplay-capture`), add two repository secrets
+under **Settings → Secrets and variables → Actions**:
+
+- `DOCKERHUB_USERNAME` — your Docker Hub username.
+- `DOCKERHUB_TOKEN` — a Docker Hub **access token** with read/write permission.
+
+Without them the Docker Hub step is skipped and the rest of the release still succeeds.
 
 ### Building the Synology SPK
 

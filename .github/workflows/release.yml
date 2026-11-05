@@ -1,0 +1,132 @@
+name: Release
+
+# Pushing a tag vX.Y.Z on GitHub runs the tests, builds the Synology SPK and
+# the runnable jar, publishes Docker images and creates a GitHub Release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use the tag as the application version
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          sed -i "s/^version = .*/version = \"${GITHUB_REF_NAME#v}\"/" build.gradle.kts
+
+      - name: Set up QEMU and buildx (multi-arch images)
+        uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub (when the secrets are configured)
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
+
+      - name: Registries to publish to
+        id: registries
+        run: |
+          {
+            echo "images<<EOF"
+            echo "ghcr.io/${{ github.repository }}"
+            if [ -n "$DOCKERHUB_USERNAME" ]; then
+              echo "docker.io/$DOCKERHUB_USERNAME/airplay-capture"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.registries.outputs.images }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push images (amd64 + arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the SPK framework
+        uses: actions/checkout@v4
+        with:
+          repository: moritzfl/synology-docker-bridge
+          path: synology-docker-bridge
+
+      - name: Set up Java 21 and Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Node.js 22 (SPK generator)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Use the tag as the application and package version
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          sed -i "s/^version = .*/version = \"${GITHUB_REF_NAME#v}\"/" build.gradle.kts
+          node -e 'const fs=require("fs");const f="packaging/app.json";const j=JSON.parse(fs.readFileSync(f,"utf8"));j.version=process.env.VERSION;fs.writeFileSync(f,JSON.stringify(j,null,2)+"\n");'
+
+      - name: Build the Synology package
+        env:
+          FRAMEWORK_DIR: ${{ github.workspace }}/synology-docker-bridge
+        run: ./packaging/pack-framework.sh
+
+      - name: Checksums for the release assets
+        run: |
+          jar=$(ls build/libs/airplay-capture-*.jar)
+          spk=$(ls packaging/dist/airplay-capture-*-x86_64.spk)
+          sha256sum "$jar" "$spk" > release-checksums.txt
+
+      - name: Create the GitHub Release with the SPK and the jar
+        uses: softprops/action-gh-release@v2
+        with:
+          name: AirPlay Capture ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            **Synology NAS (DSM 7.2.1+, Container Manager, x86_64):** install the `.spk` in Package Center → Manual Install.
+            **Docker:** `docker run ghcr.io/${{ github.repository }}:${{ github.ref_name }}` (also `:latest`, linux/amd64 and linux/arm64).
+            **Standalone:** the `.jar` needs Java 21 and ffmpeg.
+            SHA-256 checksums: `release-checksums.txt`.
+          files: |
+            packaging/dist/airplay-capture-*-x86_64.spk
+            build/libs/airplay-capture-*.jar
+            release-checksums.txt
