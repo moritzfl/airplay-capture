@@ -87,7 +87,7 @@ The web UI can be reachable while AirPlay discovery still fails. Check in this o
 
 1. **Log** (web UI or `docker logs airplay-capture`): the `net` line lists every interface and the
    `raop`/`mdns` lines name the one in use. It must be the NAS LAN address (for example
-   `192.168.178.136`), not `172.17.x.x` (Docker), `10.0.x.x` on a VPN or `127.0.0.1`.
+   `192.168.1.20`), not `172.17.x.x` (Docker), `10.0.x.x` on a VPN or `127.0.0.1`.
 2. If the wrong interface was picked, set **Settings → Interface address** to the NAS LAN IPv4
    address. Saving restarts the receiver; the log then shows `via eth0`/`via ovs_eth0`.
 3. **DSM firewall**: mDNS discovery needs IGMP and UDP 5353. If the firewall is enabled, add an
