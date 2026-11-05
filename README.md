@@ -348,7 +348,8 @@ conversion queue by hand.
 
 1. Runs the tests again.
 2. Builds and pushes Docker images for **linux/amd64 and linux/arm64** to
-   `ghcr.io/moritzfl/airplay-capture` with tags `X.Y.Z`, `X.Y` and `latest`.
+   `ghcr.io/moritzfl/airplay-capture` with tags `X.Y.Z` and `X.Y`. The `latest` tag only moves when
+   the new tag is the highest version tag, so releasing an older patch does not move it backwards.
 3. Builds the Synology SPK and the runnable jar and creates a **GitHub Release** with both plus
    SHA-256 checksums.
 
