@@ -98,7 +98,7 @@ Or build a runnable jar:
 
 ```bash
 ./gradlew bootJar
-java -jar build/libs/airplay-capture-1.0.0.jar --data ~/airplay-data
+java -jar build/libs/airplay-capture-<version>.jar --data ~/airplay-data
 ```
 
 On macOS 15+, allow the terminal (or IDE) under **System Settings → Privacy & Security → Local
@@ -118,7 +118,7 @@ Or the runnable jar:
 
 ```bat
 gradlew.bat bootJar
-java -jar build\libs\airplay-capture-1.0.0.jar --data %APPDATA%\AirPlayCapture
+java -jar build\libs\airplay-capture-<version>.jar --data %APPDATA%\AirPlayCapture
 ```
 
 Data defaults to **`%APPDATA%\AirPlayCapture`**; recordings land in its `library` subfolder. If
