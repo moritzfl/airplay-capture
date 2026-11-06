@@ -5,7 +5,9 @@ jmdns = "3.6.5"
 junit = "6.0.0"
 archunit = "1.5.1"
 spotless = "8.11.0"
+# renovate: datasource=npm depName=prettier
 prettier-core = "3.9.10"
+# renovate: datasource=npm depName=prettier-plugin-java
 prettier-java = "2.11.0"
 
 [libraries]

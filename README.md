@@ -336,6 +336,11 @@ All endpoints live outside Vaadin's `/app/` mapping and are useful for integrati
 The end-to-end test acts as an AirPlay sender — RTSP handshake, RSA-OAEP key exchange, encrypted RTP
 audio, DMAP metadata and artwork — and verifies the exported file with ffprobe.
 
+`renovate.json` configures dependency update PRs for Gradle, the Gradle wrapper, Docker images,
+GitHub Actions and the Prettier tools. Renovate's GitHub App must be installed for this repository;
+the config alone does not run it. The SPK framework commit pinned in the release workflow is updated
+manually when a new framework version is verified.
+
 Shared IntelliJ run configurations live in `.run/`: **AirPlay Capture (Spring Boot)**, **(Java)** and
 **(bootRun)**. All three need the Gradle build, which copies the Vaadin client bundle into the
 runtime classpath.
