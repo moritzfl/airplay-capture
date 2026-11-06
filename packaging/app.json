@@ -8,7 +8,7 @@
   "arch": "x86_64",
   "appDir": "..",
   "image": "airplay-capture:spk",
-  "appBuild": "rm -f build/libs/*.jar && ./gradlew bootJar -q && tmp=\"$(mktemp -d)\" && cp build/libs/*.jar \"$tmp/app.jar\" && cp packaging/Dockerfile.runtime \"$tmp/Dockerfile\" && docker buildx build --platform linux/amd64 --provenance=false --sbom=false --load -t airplay-capture:spk \"$tmp\" && rm -rf \"$tmp\"",
+  "appBuild": "rm -f build/libs/*.jar && ./gradlew bootJar -q && tmp=\"$(mktemp -d)\" && cp build/libs/*.jar \"$tmp/app.jar\" && cp packaging/Dockerfile.runtime \"$tmp/Dockerfile\" && docker buildx build --platform \"$SPK_PLATFORM\" --provenance=false --sbom=false --load -t airplay-capture:spk \"$tmp\" && rm -rf \"$tmp\"",
   "service": "airplay-capture",
   "networkMode": "host",
   "appPath": "/app/",

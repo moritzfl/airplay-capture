@@ -98,22 +98,27 @@ jobs:
         with:
           node-version: 22
 
+      - name: Set up QEMU and buildx for ARM packages
+        uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
       - name: Use the tag as the version (the SPK build reads it from build.gradle.kts)
         run: |
           export VERSION="${GITHUB_REF_NAME#v}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           sed -i "s/^version = .*/version = \"$VERSION\"/" build.gradle.kts
 
-      - name: Build the Synology package
+      - name: Build the Synology packages
         env:
           FRAMEWORK_DIR: ${{ github.workspace }}/synology-docker-bridge
-        run: ./packaging/pack-framework.sh
+        run: |
+          ARCH=x86_64 ./packaging/pack-framework.sh
+          ARCH=armv8 ./packaging/pack-framework.sh
 
       - name: Checksums for the release assets
         run: |
           jar=$(ls build/libs/airplay-capture-*.jar)
-          spk=$(ls packaging/dist/airplay-capture-*-x86_64.spk)
-          sha256sum "$jar" "$spk" > release-checksums.txt
+          sha256sum "$jar" packaging/dist/airplay-capture-*-x86_64.spk packaging/dist/airplay-capture-*-armv8.spk > release-checksums.txt
 
       - name: Release notes from CHANGELOG.md
         run: |
@@ -122,7 +127,7 @@ jobs:
             echo
             echo "## Install"
             echo
-            echo "- **Synology NAS** (DSM 7.2.1+, Container Manager, x86_64): install the \`.spk\` in Package Center → Manual Install."
+            echo "- **Synology NAS** (DSM 7.2.1+, Container Manager): install the x86_64 or armv8 \`.spk\` in Package Center → Manual Install. The armv8 package has not yet been tested on a real ARM NAS."
             echo "- **Docker** (linux/amd64, linux/arm64): \`docker run ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF_NAME}\`"
             echo "- **Standalone:** the \`.jar\` needs Java 21 and ffmpeg."
             echo
@@ -136,5 +141,6 @@ jobs:
           body_path: release-notes.md
           files: |
             packaging/dist/airplay-capture-*-x86_64.spk
+            packaging/dist/airplay-capture-*-armv8.spk
             build/libs/airplay-capture-*.jar
             release-checksums.txt

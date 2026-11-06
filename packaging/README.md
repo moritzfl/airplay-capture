@@ -1,6 +1,6 @@
 # Synology SPK
 
-The SPK is only an installation vehicle: it embeds the platform-independent Docker image and asks
+The SPK is only an installation vehicle: it embeds Docker images for its target architecture and asks
 Container Manager to run it as a compose project. The application itself stays a normal OCI image;
 nothing in `src/` knows about Synology. The DSM window, authentication, restart and output-folder
 controls come from the generic
@@ -19,14 +19,16 @@ Requirements: JDK 21, Docker with buildx, Node.js 22, and a checkout of
 ```sh
 git clone https://github.com/moritzfl/synology-docker-bridge.git ../synology-docker-bridge
 ./packaging/pack-framework.sh
+ARCH=armv8 ./packaging/pack-framework.sh
 # or: FRAMEWORK_DIR=/path/to/synology-docker-bridge ./packaging/pack-framework.sh
 ```
 
-The script builds the jar, builds the app and bridge images for `linux/amd64`, embeds both images
-and writes:
+The script builds the jar and embeds app and bridge images for `linux/amd64` by default, or
+`linux/arm64` with `ARCH=armv8`:
 
 ```
 packaging/dist/airplay-capture-<version>-x86_64.spk
+packaging/dist/airplay-capture-<version>-armv8.spk
 ```
 
 The images are part of the SPK, so installation needs no registry access.
@@ -39,6 +41,8 @@ framework templates, so do not add copies here - edit `app.json` or the framewor
 ## Install
 
 Requirements: DSM 7.2.1+, **Container Manager** installed and running.
+The ARM package has not yet been tested on a real ARM Synology NAS. Container Manager availability
+depends on the NAS model and DSM version.
 
 1. Package Center → **Manual Install** → choose the SPK.
 2. Start the package and open the **AirPlay Capture** desktop icon.

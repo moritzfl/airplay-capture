@@ -38,11 +38,12 @@ Toniebox, Audiobookshelf and friends.
 
 ### Synology NAS (SPK)
 
-**A ready-to-install Synology package is available** for **DSM 7.2.1+ with Container Manager**
-(**x86_64**). The package contains its Docker images, so the NAS needs no registry access and no
+Synology packages target **DSM 7.2.1+ with Container Manager** on **x86_64** and **armv8**.
+The armv8 package has not yet been tested on a real ARM Synology NAS; Container Manager availability
+depends on the model and DSM version. The package contains its Docker images, so the NAS needs no registry access and no
 extra port or firewall rule — the UI is served through DSM's own HTTPS port.
 
-1. Download `airplay-capture-<version>-x86_64.spk` from the
+1. Download the `x86_64` or `armv8` SPK for your NAS from the
    [Releases page](https://github.com/moritzfl/airplay-capture/releases).
 2. In **Package Center → Manual Install**, choose the SPK and install it.
 3. Open the **AirPlay Capture** desktop icon and sign in with your DSM account.
@@ -382,10 +383,11 @@ next to this repository:
 ```sh
 git clone https://github.com/moritzfl/synology-docker-bridge.git ../synology-docker-bridge
 ./packaging/pack-framework.sh
+ARCH=armv8 ./packaging/pack-framework.sh
 # or: FRAMEWORK_DIR=/path/to/synology-docker-bridge ./packaging/pack-framework.sh
 ```
 
-The result is `packaging/dist/airplay-capture-<version>-x86_64.spk`, including both Docker images.
+The result is `packaging/dist/airplay-capture-<version>-<arch>.spk`, including both Docker images.
 Images, ports, folders, icons and the build command are declared in `packaging/app.json`; the
 version comes from `build.gradle.kts` (a `-SNAPSHOT` suffix is dropped, since DSM accepts numeric
 versions only). DSM scripts and the bridge configuration come from the framework. See

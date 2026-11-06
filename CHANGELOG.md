@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Synology armv8 package for ARM NAS models with Container Manager. Not yet tested on ARM NAS hardware.
+
 ### Fixed
 
 - A finished audiobook conversion could briefly show as ready without its download.
