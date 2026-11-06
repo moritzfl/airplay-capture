@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
-FROM eclipse-temurin:21-jdk AS build
+# The jar is the same for every platform: build it once, natively, instead of again under arm64
+# emulation (which took 16 minutes per release).
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
 WORKDIR /src
 COPY gradle gradle
 COPY gradlew gradlew
