@@ -21,14 +21,14 @@ class FfmpegRunnerTest {
 
     @Test
     void aSlowRunThatKeepsProgressingIsNotStopped() throws Exception {
-        // Runs for ~2 s against a 500 ms stall limit: only missing progress may end a run.
+        // Runs for ~1 s against a 500 ms stall limit: only missing progress may end a run.
         Path ffmpeg = script(
             """
             i=1
             while [ $i -le 10 ]; do
               echo "out_time_us=${i}000000" >&2
               echo "progress=continue" >&2
-              sleep 0.2
+              sleep 0.1
               i=$((i + 1))
             done
             echo "real message" >&2
