@@ -348,16 +348,28 @@ conversion queue by hand.
 **Pushing a tag `X.Y.Z`** (for example `1.0.0`, without a `v` prefix) starts the release workflow
 (`.github/workflows/release.yml`):
 
-1. Runs the tests again.
-2. Builds and pushes Docker images for **linux/amd64 and linux/arm64** to
+1. Checks that `CHANGELOG.md` has a section for the version, and stops otherwise.
+2. Runs the tests again.
+3. Builds and pushes Docker images for **linux/amd64 and linux/arm64** to
    `ghcr.io/moritzfl/airplay-capture` with tags `X.Y.Z` and `X.Y`. The `latest` tag only moves when
    the new tag is the highest version tag, so releasing an older patch does not move it backwards.
-3. Builds the Synology SPK and the runnable jar and creates a **GitHub Release** with both plus
-   SHA-256 checksums.
+4. Builds the Synology SPK and the runnable jar and creates a **GitHub Release** with both plus
+   SHA-256 checksums. The release notes are that version's `CHANGELOG.md` section.
 
-The version is taken from the tag, so no version bump in the repo is needed. The release and the
-`ghcr.io` package use the workflow's `GITHUB_TOKEN`, so **no secret setup is required**. Images are
-published to ghcr.io only.
+The release and the `ghcr.io` package use the workflow's `GITHUB_TOKEN`, so **no secret setup is
+required**. Images are published to ghcr.io only.
+
+**Changelog:** `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/). Add
+user-facing changes under `## [Unreleased]` as they land. `node scripts/changelog-section.mjs
+<version>` prints the notes a release will get.
+
+**Making a release** (between releases `build.gradle.kts` holds the next version with `-SNAPSHOT`):
+
+1. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - <date>`, add a new empty
+   `## [Unreleased]` above it and update the compare links at the bottom.
+2. Set `version = "X.Y.Z"` in `build.gradle.kts` and commit both as `chore(release): X.Y.Z`.
+3. Tag that commit `X.Y.Z` and push `main` and the tag.
+4. Set the next `X.Y.(Z+1)-SNAPSHOT` and commit it as `chore: start X.Y.(Z+1)-SNAPSHOT`.
 
 ### Building the Synology SPK
 

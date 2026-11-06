@@ -12,7 +12,15 @@ permissions:
   packages: write
 
 jobs:
+  # Fails before anything is built or pushed when CHANGELOG.md has no entry for the tag.
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/changelog-section.mjs "${GITHUB_REF_NAME}"
+
   test:
+    needs: changelog
     uses: ./.github/workflows/ci.yml
 
   docker:
@@ -107,16 +115,25 @@ jobs:
           spk=$(ls packaging/dist/airplay-capture-*-x86_64.spk)
           sha256sum "$jar" "$spk" > release-checksums.txt
 
+      - name: Release notes from CHANGELOG.md
+        run: |
+          {
+            node scripts/changelog-section.mjs "${GITHUB_REF_NAME}"
+            echo
+            echo "## Install"
+            echo
+            echo "- **Synology NAS** (DSM 7.2.1+, Container Manager, x86_64): install the \`.spk\` in Package Center → Manual Install."
+            echo "- **Docker** (linux/amd64, linux/arm64): \`docker run ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF_NAME}\`"
+            echo "- **Standalone:** the \`.jar\` needs Java 21 and ffmpeg."
+            echo
+            echo "SHA-256 checksums: \`release-checksums.txt\`."
+          } > release-notes.md
+
       - name: Create the GitHub Release with the SPK and the jar
         uses: softprops/action-gh-release@v2
         with:
           name: AirPlay Capture ${{ github.ref_name }}
-          generate_release_notes: true
-          body: |
-            **Synology NAS (DSM 7.2.1+, Container Manager, x86_64):** install the `.spk` in Package Center → Manual Install.
-            **Docker:** `docker run ghcr.io/${{ github.repository }}:${{ github.ref_name }}` (also `:latest`, linux/amd64 and linux/arm64).
-            **Standalone:** the `.jar` needs Java 21 and ffmpeg.
-            SHA-256 checksums: `release-checksums.txt`.
+          body_path: release-notes.md
           files: |
             packaging/dist/airplay-capture-*-x86_64.spk
             build/libs/airplay-capture-*.jar
