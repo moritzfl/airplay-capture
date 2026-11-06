@@ -9,6 +9,26 @@ if [ ! -f "$FRAMEWORK_DIR/packaging/generate.mjs" ]; then
     exit 1
 fi
 
+# The version lives in build.gradle.kts only. DSM accepts numeric versions only, so a
+# development version such as 1.0.2-SNAPSHOT is packaged as 1.0.2; installing the release
+# 1.0.2 later is then an ordinary update.
+VERSION="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$ROOT/build.gradle.kts")"
+if [ -z "$VERSION" ]; then
+    echo "no version found in build.gradle.kts" >&2
+    exit 1
+fi
+PACKAGE_VERSION="${VERSION%-SNAPSHOT}"
+
+# Next to app.json, so its relative paths keep working.
+CONFIG="$ROOT/packaging/.app.build.json"
+trap 'rm -f "$CONFIG"' EXIT
+PACKAGE_VERSION="$PACKAGE_VERSION" node -e '
+const fs = require("fs");
+const config = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+config.version = process.env.PACKAGE_VERSION;
+fs.writeFileSync(process.argv[2], JSON.stringify(config, null, 2) + "\n");
+' "$ROOT/packaging/app.json" "$CONFIG"
+
 node "$FRAMEWORK_DIR/packaging/generate.mjs" \
-    --config "$ROOT/packaging/app.json" \
+    --config "$CONFIG" \
     --output "$ROOT/packaging/dist"

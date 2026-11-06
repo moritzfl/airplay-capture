@@ -2,3 +2,4 @@ dist/
 e2e/.auth/
 e2e/output/
 e2e/node_modules
+.app.build.json

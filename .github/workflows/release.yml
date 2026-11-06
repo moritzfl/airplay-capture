@@ -90,12 +90,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Use the tag as the application and package version
+      - name: Use the tag as the version (the SPK build reads it from build.gradle.kts)
         run: |
           export VERSION="${GITHUB_REF_NAME#v}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           sed -i "s/^version = .*/version = \"$VERSION\"/" build.gradle.kts
-          node -e 'const fs=require("fs");const f="packaging/app.json";const j=JSON.parse(fs.readFileSync(f,"utf8"));j.version=process.env.VERSION;fs.writeFileSync(f,JSON.stringify(j,null,2)+"\n");'
 
       - name: Build the Synology package
         env:

@@ -1,7 +1,6 @@
 {
   "$schema": "../../synology-docker-bridge/packaging/app.schema.json",
   "id": "airplay-capture",
-  "version": "1.0.0",
   "displayName": "AirPlay Capture",
   "description": "AirPlay receiver that records every song as its own file with cover and metadata; audiobooks are combined into M4B.",
   "descriptionGer": "AirPlay-Empfänger, der jeden Titel als eigene Datei mit Cover und Metadaten aufnimmt; Hörbücher werden zu M4B zusammengefasst.",
@@ -9,7 +8,7 @@
   "arch": "x86_64",
   "appDir": "..",
   "image": "airplay-capture:spk",
-  "appBuild": "./gradlew bootJar -q && tmp=\"$(mktemp -d)\" && cp build/libs/*.jar \"$tmp/app.jar\" && cp packaging/Dockerfile.runtime \"$tmp/Dockerfile\" && docker buildx build --platform linux/amd64 --provenance=false --sbom=false --load -t airplay-capture:spk \"$tmp\" && rm -rf \"$tmp\"",
+  "appBuild": "rm -f build/libs/*.jar && ./gradlew bootJar -q && tmp=\"$(mktemp -d)\" && cp build/libs/*.jar \"$tmp/app.jar\" && cp packaging/Dockerfile.runtime \"$tmp/Dockerfile\" && docker buildx build --platform linux/amd64 --provenance=false --sbom=false --load -t airplay-capture:spk \"$tmp\" && rm -rf \"$tmp\"",
   "service": "airplay-capture",
   "networkMode": "host",
   "appPath": "/app/",

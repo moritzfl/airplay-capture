@@ -31,8 +31,9 @@ packaging/dist/airplay-capture-<version>-x86_64.spk
 
 The images are part of the SPK, so installation needs no registry access.
 
-Everything the package needs is declared in `packaging/app.json`: version, images, ports, folders,
-icons and the app build command. DSM scripts, `INFO` and the bridge configuration come from the
+Everything the package needs is declared in `packaging/app.json`: images, ports, folders,
+icons and the app build command. The version comes from `build.gradle.kts`; a `-SNAPSHOT` suffix is
+dropped because DSM rejects non-numeric versions (`1.0.2-SNAPSHOT` is packaged as `1.0.2`). DSM scripts, `INFO` and the bridge configuration come from the
 framework templates, so do not add copies here - edit `app.json` or the framework instead.
 
 ## Install

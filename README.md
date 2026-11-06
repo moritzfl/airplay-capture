@@ -372,8 +372,9 @@ git clone https://github.com/moritzfl/synology-docker-bridge.git ../synology-doc
 ```
 
 The result is `packaging/dist/airplay-capture-<version>-x86_64.spk`, including both Docker images.
-Version, images, ports, folders, icons and the build command are declared in `packaging/app.json`;
-DSM scripts and the bridge configuration come from the framework. See
+Images, ports, folders, icons and the build command are declared in `packaging/app.json`; the
+version comes from `build.gradle.kts` (a `-SNAPSHOT` suffix is dropped, since DSM accepts numeric
+versions only). DSM scripts and the bridge configuration come from the framework. See
 [packaging/README.md](packaging/README.md) for install, upgrade, troubleshooting and the Virtual DSM
 test round.
 
