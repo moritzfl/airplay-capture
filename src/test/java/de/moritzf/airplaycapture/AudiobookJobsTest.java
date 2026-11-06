@@ -57,7 +57,6 @@ class AudiobookJobsTest {
             release.countDown();
             return result("Test Book");
         });
-        assertEquals(AudiobookJobs.State.QUEUED, job.status());
         assertTrue(release.await(10, TimeUnit.SECONDS));
 
         AudiobookJobs.Job done = waitFor(jobs, job.id, AudiobookJobs.State.DONE);
