@@ -1,16 +1,16 @@
 package de.moritzf.airplaycapture;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.media.Transcoder;
 import de.moritzf.airplaycapture.raop.RaopCrypto;
 import de.moritzf.airplaycapture.raop.RaopServer;
 import de.moritzf.airplaycapture.recording.RecordingManager;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,12 +30,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * End-to-end test: a simulated AirPlay sender drives the real RTSP handshake, AES-encrypted RTP
@@ -82,15 +81,35 @@ class RaopEndToEndTest {
             sender.record();
 
             long rtp = 0;
-            sender.metadata(Map.of("minm", "Test Song One", "asar", "Unit Artist",
-                    "asal", "Test Album", "asgn", "Rock"));
+            sender.metadata(
+                Map.of(
+                    "minm",
+                    "Test Song One",
+                    "asar",
+                    "Unit Artist",
+                    "asal",
+                    "Test Album",
+                    "asgn",
+                    "Rock"
+                )
+            );
             sender.artwork(cover);
             sender.progress(rtp, rtp + 88200);
             rtp = sender.sendAudio(alac.packets(), aesKey, aesIv, rtp);
 
             Thread.sleep(400);
-            sender.metadata(Map.of("minm", "Test Song Two", "asar", "Unit Artist",
-                    "asal", "Test Album", "asgn", "Rock"));
+            sender.metadata(
+                Map.of(
+                    "minm",
+                    "Test Song Two",
+                    "asar",
+                    "Unit Artist",
+                    "asal",
+                    "Test Album",
+                    "asgn",
+                    "Rock"
+                )
+            );
             sender.artwork(cover);
             sender.progress(rtp, rtp + 88200);
             sender.sendAudio(alac.packets(), aesKey, aesIv, rtp);
@@ -107,14 +126,22 @@ class RaopEndToEndTest {
         for (var track : tracks) {
             assertEquals("Unit Artist", track.artist);
             assertEquals("Test Album", track.album);
-            assertEquals("ready", track.status, () -> "status " + track.status + " error " + track.error);
+            assertEquals(
+                "ready",
+                track.status,
+                () -> "status " + track.status + " error " + track.error
+            );
             assertTrue(track.files.containsKey("m4a"), "m4a missing: " + track.files);
             Path file = library.file(track, "m4a");
             assertNotNull(file);
             assertTrue(Files.exists(file), "file missing: " + file);
             assertTrue(track.durationMs > 1000, "duration too short: " + track.durationMs);
 
-            String tags = TestMedia.ffprobe(file, "-show_entries", "format_tags=title,artist,album");
+            String tags = TestMedia.ffprobe(
+                file,
+                "-show_entries",
+                "format_tags=title,artist,album"
+            );
             assertTrue(tags.contains("Test Song"), tags);
             assertTrue(tags.contains("Unit Artist"), tags);
             String streams = TestMedia.ffprobe(file, "-show_entries", "stream=codec_type");
@@ -143,8 +170,13 @@ class RaopEndToEndTest {
         settings.packetRecoveryMs = 500;
 
         Library library = new Library(dirs, settings);
-        RecordingManager recorder = new RecordingManager(dirs, library, new Transcoder(settings),
-                new UiState(), settings);
+        RecordingManager recorder = new RecordingManager(
+            dirs,
+            library,
+            new Transcoder(settings),
+            new UiState(),
+            settings
+        );
         RaopServer server = new RaopServer(settings, recorder, new UiState());
         server.start();
 
@@ -160,10 +192,17 @@ class RaopEndToEndTest {
             sender.announce(TestMedia.fmtp(alac), aesKey, aesIv);
             sender.setup();
             sender.record();
-            sender.metadata(Map.of("minm", "Lossy Song", "asar", "Unit Artist", "asal", "Test Album"));
+            sender.metadata(
+                Map.of("minm", "Lossy Song", "asar", "Unit Artist", "asal", "Test Album")
+            );
             sender.answerResends(index -> !lost.contains(index));
-            sender.sendAudio(packets, aesKey, aesIv, 0,
-                    index -> resendable.contains(index) || lost.contains(index));
+            sender.sendAudio(
+                packets,
+                aesKey,
+                aesIv,
+                0,
+                index -> resendable.contains(index) || lost.contains(index)
+            );
             Thread.sleep(settings.packetRecoveryMs + 1000);
             sender.teardown();
         }
@@ -172,17 +211,28 @@ class RaopEndToEndTest {
         server.stop();
         recorder.shutdown();
 
-        assertEquals("ready", track.status, () -> "status " + track.status + " error " + track.error);
+        assertEquals(
+            "ready",
+            track.status,
+            () -> "status " + track.status + " error " + track.error
+        );
         assertEquals(1, track.gaps, "only the run that was never resent is a gap");
         assertEquals(lost.size(), track.gapPackets);
         assertEquals(lost.size(), track.filledPackets, "the lost run is written as silence");
         assertEquals(2, track.recoveredGaps, "both resent holes are recovered");
         assertTrue(track.maxRecoveryMs < settings.packetRecoveryMs, "recovered within the window");
 
-        long sentMs = Math.round(packets.size() * (double) alac.frameLength() * 1000 / alac.sampleRate());
+        long sentMs = Math.round(
+            (packets.size() * (double) alac.frameLength() * 1000) / alac.sampleRate()
+        );
         assertEquals(sentMs, track.durationMs, 30, "the recording keeps the stream's length");
-        String probed = TestMedia.ffprobe(library.file(track, "m4a"), "-show_entries", "format=duration",
-                "-of", "default=nw=1:nk=1").trim();
+        String probed = TestMedia.ffprobe(
+            library.file(track, "m4a"),
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=nw=1:nk=1"
+        ).trim();
         assertEquals(sentMs / 1000.0, Double.parseDouble(probed), 0.15, "exported file length");
     }
 
@@ -210,7 +260,13 @@ class RaopEndToEndTest {
 
         Library library = new Library(dirs, settings);
         UiState ui = new UiState();
-        RecordingManager recorder = new RecordingManager(dirs, library, new Transcoder(settings), ui, settings);
+        RecordingManager recorder = new RecordingManager(
+            dirs,
+            library,
+            new Transcoder(settings),
+            ui,
+            settings
+        );
         RaopServer server = new RaopServer(settings, recorder, ui);
         server.start();
 
@@ -226,8 +282,20 @@ class RaopEndToEndTest {
 
             long rtp = 0;
             for (int chapter = 1; chapter <= 3; chapter++) {
-                sender.metadata(Map.of("minm", "Chapter " + chapter, "asar", "Narrator " + chapter,
-                        "asal", "Test Book", "asgn", "Audiobook", "astn", String.valueOf(chapter)));
+                sender.metadata(
+                    Map.of(
+                        "minm",
+                        "Chapter " + chapter,
+                        "asar",
+                        "Narrator " + chapter,
+                        "asal",
+                        "Test Book",
+                        "asgn",
+                        "Audiobook",
+                        "astn",
+                        String.valueOf(chapter)
+                    )
+                );
                 sender.artwork(cover);
                 sender.progress(rtp, rtp + 88200);
                 rtp = sender.sendAudio(alac.packets(), aesKey, aesIv, rtp);
@@ -248,21 +316,32 @@ class RaopEndToEndTest {
         Path file = library.file(book, "m4b");
         assertTrue(Files.exists(file));
 
-        String chapters = TestMedia.ffprobe(file, "-show_chapters", "-show_entries",
-                "chapter=start_time:chapter_tags=title", "-of", "json");
+        String chapters = TestMedia.ffprobe(
+            file,
+            "-show_chapters",
+            "-show_entries",
+            "chapter=start_time:chapter_tags=title",
+            "-of",
+            "json"
+        );
         for (int chapter = 1; chapter <= 3; chapter++) {
             assertTrue(chapters.contains("Chapter " + chapter), chapters);
         }
-        String tags = TestMedia.ffprobe(file, "-show_entries",
-                "format=duration:format_tags=title,artist,genre");
+        String tags = TestMedia.ffprobe(
+            file,
+            "-show_entries",
+            "format=duration:format_tags=title,artist,genre"
+        );
         assertTrue(tags.contains("Test Book"), tags);
         assertTrue(tags.contains("Audiobook"), tags);
-        assertTrue(TestMedia.ffprobe(file, "-show_entries", "stream=codec_type").contains("video"),
-                "cover art not embedded");
+        assertTrue(
+            TestMedia.ffprobe(file, "-show_entries", "stream=codec_type").contains("video"),
+            "cover art not embedded"
+        );
     }
 
     private static de.moritzf.airplaycapture.library.LibraryTrack waitForAudiobook(Library library)
-            throws InterruptedException {
+        throws InterruptedException {
         long deadline = System.currentTimeMillis() + 90_000;
         while (System.currentTimeMillis() < deadline) {
             for (var track : library.tracks()) {
@@ -275,12 +354,17 @@ class RaopEndToEndTest {
         throw new AssertionError("audiobook not assembled: " + library.tracks());
     }
 
-    private static List<de.moritzf.airplaycapture.library.LibraryTrack> waitForTracks(Library library, int expected)
-            throws InterruptedException {
+    private static List<de.moritzf.airplaycapture.library.LibraryTrack> waitForTracks(
+        Library library,
+        int expected
+    ) throws InterruptedException {
         long deadline = System.currentTimeMillis() + 90_000;
         while (System.currentTimeMillis() < deadline) {
             List<de.moritzf.airplaycapture.library.LibraryTrack> tracks = library.tracks();
-            if (tracks.size() >= expected && tracks.stream().noneMatch(t -> "processing".equals(t.status))) {
+            if (
+                tracks.size() >= expected &&
+                tracks.stream().noneMatch(t -> "processing".equals(t.status))
+            ) {
                 return tracks;
             }
             Thread.sleep(200);
@@ -303,7 +387,8 @@ class RaopEndToEndTest {
         private int audioPort;
         /** Every audio packet sent, by RTP sequence, as a sender's retransmit history. */
         private final Map<Integer, byte[]> history = new java.util.concurrent.ConcurrentHashMap<>();
-        private final Map<Integer, Integer> indexOf = new java.util.concurrent.ConcurrentHashMap<>();
+        private final Map<Integer, Integer> indexOf =
+            new java.util.concurrent.ConcurrentHashMap<>();
         private Thread resender;
 
         FakeSender(String address, int port) throws IOException {
@@ -317,32 +402,58 @@ class RaopEndToEndTest {
         }
 
         void options() throws IOException {
-            Response response = request("OPTIONS", "*", Map.of(
-                    "Apple-Challenge", Base64.getEncoder().encodeToString("0123456789abcdef".getBytes())), null);
+            Response response = request(
+                "OPTIONS",
+                "*",
+                Map.of(
+                    "Apple-Challenge",
+                    Base64.getEncoder().encodeToString("0123456789abcdef".getBytes())
+                ),
+                null
+            );
             assertEquals(200, response.code);
             assertTrue(response.headers.containsKey("apple-response"), "no Apple-Response");
         }
 
         void announce(String fmtp, byte[] aesKey, byte[] aesIv) throws Exception {
-            String sdp = "v=0\r\n"
-                    + "o=iTunes 1234567890 0 IN IP4 127.0.0.1\r\n"
-                    + "s=iTunes\r\n"
-                    + "c=IN IP4 127.0.0.1\r\n"
-                    + "t=0 0\r\n"
-                    + "m=audio 0 RTP/AVP 96\r\n"
-                    + "a=rtpmap:96 AppleLossless\r\n"
-                    + "a=fmtp:" + fmtp + "\r\n"
-                    + "a=rsaaeskey:" + Base64.getEncoder().encodeToString(RaopCrypto.encryptSessionKey(aesKey)) + "\r\n"
-                    + "a=aesiv:" + Base64.getEncoder().encodeToString(aesIv) + "\r\n";
-            Response response = request("ANNOUNCE", "rtsp://127.0.0.1/1234", Map.of(
-                    "Content-Type", "application/sdp"), sdp.getBytes(StandardCharsets.UTF_8));
+            String sdp =
+                "v=0\r\n" +
+                "o=iTunes 1234567890 0 IN IP4 127.0.0.1\r\n" +
+                "s=iTunes\r\n" +
+                "c=IN IP4 127.0.0.1\r\n" +
+                "t=0 0\r\n" +
+                "m=audio 0 RTP/AVP 96\r\n" +
+                "a=rtpmap:96 AppleLossless\r\n" +
+                "a=fmtp:" +
+                fmtp +
+                "\r\n" +
+                "a=rsaaeskey:" +
+                Base64.getEncoder().encodeToString(RaopCrypto.encryptSessionKey(aesKey)) +
+                "\r\n" +
+                "a=aesiv:" +
+                Base64.getEncoder().encodeToString(aesIv) +
+                "\r\n";
+            Response response = request(
+                "ANNOUNCE",
+                "rtsp://127.0.0.1/1234",
+                Map.of("Content-Type", "application/sdp"),
+                sdp.getBytes(StandardCharsets.UTF_8)
+            );
             assertEquals(200, response.code);
         }
 
         void setup() throws IOException {
-            String transport = "RTP/AVP/UDP;unicast;interleaved=0-1;mode=record;control_port="
-                    + control.getLocalPort() + ";timing_port=" + timing.getLocalPort();
-            Response response = request("SETUP", "rtsp://127.0.0.1/1234", Map.of("Transport", transport), null);
+            String transport =
+                "RTP/AVP/UDP;unicast;interleaved=0-1;mode=record;control_port=" +
+                control.getLocalPort() +
+                ";timing_port=" +
+                timing.getLocalPort();
+            Response response = request(
+                "SETUP",
+                "rtsp://127.0.0.1/1234",
+                Map.of("Transport", transport),
+                null
+            );
             assertEquals(200, response.code, response.headers.toString());
             String reply = response.headers.get("transport");
             assertNotNull(reply);
@@ -356,19 +467,40 @@ class RaopEndToEndTest {
         }
 
         void metadata(Map<String, String> tags) throws IOException {
-            assertEquals(200, request("SET_PARAMETER", "rtsp://127.0.0.1/1234",
-                    Map.of("Content-Type", "application/x-dmap-tagged"), dmap(tags)).code);
+            assertEquals(
+                200,
+                request(
+                    "SET_PARAMETER",
+                    "rtsp://127.0.0.1/1234",
+                    Map.of("Content-Type", "application/x-dmap-tagged"),
+                    dmap(tags)
+                ).code
+            );
         }
 
         void artwork(byte[] image) throws IOException {
-            assertEquals(200, request("SET_PARAMETER", "rtsp://127.0.0.1/1234",
-                    Map.of("Content-Type", "image/jpeg"), image).code);
+            assertEquals(
+                200,
+                request(
+                    "SET_PARAMETER",
+                    "rtsp://127.0.0.1/1234",
+                    Map.of("Content-Type", "image/jpeg"),
+                    image
+                ).code
+            );
         }
 
         void progress(long start, long end) throws IOException {
             String body = "progress: " + start + "/" + start + "/" + end + "\r\n";
-            assertEquals(200, request("SET_PARAMETER", "rtsp://127.0.0.1/1234",
-                    Map.of("Content-Type", "text/parameters"), body.getBytes(StandardCharsets.UTF_8)).code);
+            assertEquals(
+                200,
+                request(
+                    "SET_PARAMETER",
+                    "rtsp://127.0.0.1/1234",
+                    Map.of("Content-Type", "text/parameters"),
+                    body.getBytes(StandardCharsets.UTF_8)
+                ).code
+            );
         }
 
         long sendAudio(List<byte[]> frames, byte[] key, byte[] iv, long rtp) throws Exception {
@@ -376,8 +508,13 @@ class RaopEndToEndTest {
         }
 
         /** Sends audio, dropping the packets {@code drop} selects as a lossy network would. */
-        long sendAudio(List<byte[]> frames, byte[] key, byte[] iv, long rtp,
-                       java.util.function.IntPredicate drop) throws Exception {
+        long sendAudio(
+            List<byte[]> frames,
+            byte[] key,
+            byte[] iv,
+            long rtp,
+            java.util.function.IntPredicate drop
+        ) throws Exception {
             try (DatagramSocket audio = new DatagramSocket(0, host)) {
                 for (int index = 0; index < frames.size(); index++) {
                     byte[] frame = frames.get(index);
@@ -392,7 +529,9 @@ class RaopEndToEndTest {
                     history.put(sequence, packet.array());
                     indexOf.put(sequence, index);
                     if (!drop.test(index)) {
-                        audio.send(new DatagramPacket(packet.array(), packet.capacity(), host, audioPort));
+                        audio.send(
+                            new DatagramPacket(packet.array(), packet.capacity(), host, audioPort)
+                        );
                     }
                     sequence = (sequence + 1) & 0xFFFF;
                     rtp += 4096;
@@ -431,8 +570,14 @@ class RaopEndToEndTest {
                             wrapped[2] = 0;
                             wrapped[3] = 1;
                             System.arraycopy(original, 0, wrapped, 4, original.length);
-                            control.send(new DatagramPacket(wrapped, wrapped.length,
-                                    request.getAddress(), request.getPort()));
+                            control.send(
+                                new DatagramPacket(
+                                    wrapped,
+                                    wrapped.length,
+                                    request.getAddress(),
+                                    request.getPort()
+                                )
+                            );
                         }
                     } catch (IOException e) {
                         return;
@@ -445,13 +590,19 @@ class RaopEndToEndTest {
             assertEquals(200, request("TEARDOWN", "rtsp://127.0.0.1/1234", Map.of(), null).code);
         }
 
-        private Response request(String method, String uri, Map<String, String> headers, byte[] body)
-                throws IOException {
+        private Response request(
+            String method,
+            String uri,
+            Map<String, String> headers,
+            byte[] body
+        ) throws IOException {
             StringBuilder request = new StringBuilder();
             request.append(method).append(' ').append(uri).append(" RTSP/1.0\r\n");
             request.append("CSeq: ").append(cseq++).append("\r\n");
             request.append("User-Agent: iTunes/12.5\r\n");
-            headers.forEach((key, value) -> request.append(key).append(": ").append(value).append("\r\n"));
+            headers.forEach((key, value) ->
+                request.append(key).append(": ").append(value).append("\r\n")
+            );
             if (body != null) {
                 request.append("Content-Length: ").append(body.length).append("\r\n");
             }
@@ -473,8 +624,10 @@ class RaopEndToEndTest {
             while ((line = readLine()) != null && !line.isEmpty()) {
                 int colon = line.indexOf(':');
                 if (colon > 0) {
-                    responseHeaders.put(line.substring(0, colon).trim().toLowerCase(Locale.ROOT),
-                            line.substring(colon + 1).trim());
+                    responseHeaders.put(
+                        line.substring(0, colon).trim().toLowerCase(Locale.ROOT),
+                        line.substring(colon + 1).trim()
+                    );
                 }
             }
             int length = Integer.parseInt(responseHeaders.getOrDefault("content-length", "0"));
@@ -501,7 +654,11 @@ class RaopEndToEndTest {
             byte[] out = plain.clone();
             if (aligned > 0) {
                 Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
-                cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(iv));
+                cipher.init(
+                    Cipher.ENCRYPT_MODE,
+                    new SecretKeySpec(key, "AES"),
+                    new IvParameterSpec(iv)
+                );
                 cipher.doFinal(plain, 0, aligned, out, 0);
             }
             return out;
@@ -548,6 +705,5 @@ class RaopEndToEndTest {
         }
     }
 
-    private record Response(int code, Map<String, String> headers, byte[] body) {
-    }
+    private record Response(int code, Map<String, String> headers, byte[] body) {}
 }

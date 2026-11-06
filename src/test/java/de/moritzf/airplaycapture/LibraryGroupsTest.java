@@ -1,14 +1,13 @@
 package de.moritzf.airplaycapture;
 
-import de.moritzf.airplaycapture.library.LibraryGroups;
-import de.moritzf.airplaycapture.library.LibraryTrack;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import de.moritzf.airplaycapture.library.LibraryGroups;
+import de.moritzf.airplaycapture.library.LibraryTrack;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 class LibraryGroupsTest {
 
@@ -58,7 +57,9 @@ class LibraryGroupsTest {
         longerButGappy.durationMs = 999_000;
         longerButGappy.files.put("m4a", "gappy.m4a");
 
-        LibraryGroups.Group group = LibraryGroups.groups(List.of(longerButGappy, worse, better)).get(0);
+        LibraryGroups.Group group = LibraryGroups.groups(
+            List.of(longerButGappy, worse, better)
+        ).get(0);
 
         assertEquals(3, group.tracks().size(), "all takes stay visible");
         assertEquals(2, group.duplicateCount());
@@ -77,8 +78,7 @@ class LibraryGroupsTest {
         LibraryTrack complete = track("t2", "Song", "Artist", "Album", 2_000);
         complete.durationMs = 300_000;
 
-        assertEquals(List.of(complete),
-                LibraryGroups.bestTakes(List.of(incomplete, complete)));
+        assertEquals(List.of(complete), LibraryGroups.bestTakes(List.of(incomplete, complete)));
     }
 
     @Test
@@ -109,7 +109,9 @@ class LibraryGroupsTest {
         book.chapterCount = 2;
         book.files.put("m4b", "book.m4b");
 
-        List<LibraryGroups.Group> groups = LibraryGroups.groups(List.of(book, chapterOne, chapterTwo));
+        List<LibraryGroups.Group> groups = LibraryGroups.groups(
+            List.of(book, chapterOne, chapterTwo)
+        );
 
         assertEquals(1, groups.size());
         assertEquals(3, groups.get(0).tracks().size());
@@ -230,7 +232,13 @@ class LibraryGroupsTest {
         assertEquals(2, group.bestTakes().size());
     }
 
-    private static LibraryTrack track(String id, String title, String artist, String album, long recordedAt) {
+    private static LibraryTrack track(
+        String id,
+        String title,
+        String artist,
+        String album,
+        long recordedAt
+    ) {
         LibraryTrack track = new LibraryTrack();
         track.id = id;
         track.title = title;

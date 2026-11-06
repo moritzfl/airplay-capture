@@ -1,13 +1,12 @@
 package de.moritzf.airplaycapture.raop;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Base64;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 class RaopCryptoTest {
 
@@ -15,8 +14,8 @@ class RaopCryptoTest {
     void appleResponseIsAValidPkcs1Type1Signature() {
         byte[] challenge = new byte[16];
         Arrays.fill(challenge, (byte) 0x0A);
-        byte[] ip = {(byte) 192, (byte) 168, (byte) 178, (byte) 65};
-        byte[] mac = {0x3E, (byte) 0xEB, 0x26, 0x24, 0x2E, (byte) 0xEC};
+        byte[] ip = { (byte) 192, (byte) 168, (byte) 178, (byte) 65 };
+        byte[] mac = { 0x3E, (byte) 0xEB, 0x26, 0x24, 0x2E, (byte) 0xEC };
 
         byte[] response = Base64.getDecoder().decode(RaopCrypto.appleResponse(challenge, ip, mac));
         assertEquals(256, response.length);
@@ -35,14 +34,20 @@ class RaopCryptoTest {
     }
 
     private static byte[] publicOperation(byte[] input) {
-        byte[] value = new BigInteger(1, input).modPow(RaopCrypto.PUBLIC_EXPONENT, RaopCrypto.MODULUS)
-                .toByteArray();
+        byte[] value = new BigInteger(1, input)
+            .modPow(RaopCrypto.PUBLIC_EXPONENT, RaopCrypto.MODULUS)
+            .toByteArray();
         if (value.length == 256) {
             return value;
         }
         byte[] padded = new byte[256];
-        System.arraycopy(value, Math.max(0, value.length - 256), padded,
-                Math.max(0, 256 - value.length), Math.min(value.length, 256));
+        System.arraycopy(
+            value,
+            Math.max(0, value.length - 256),
+            padded,
+            Math.max(0, 256 - value.length),
+            Math.min(value.length, 256)
+        );
         return padded;
     }
 }

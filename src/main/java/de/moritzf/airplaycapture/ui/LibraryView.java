@@ -39,7 +39,6 @@ import de.moritzf.airplaycapture.library.LibraryGroups;
 import de.moritzf.airplaycapture.library.LibraryTrack;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -53,7 +52,7 @@ import java.util.Set;
 @Route(value = "", layout = MainLayout.class)
 public class LibraryView extends VerticalLayout {
 
-    private static final String[] FORMAT_ORDER = {"m4b", "m4a", "mp3", "alac", "caf"};
+    private static final String[] FORMAT_ORDER = { "m4b", "m4a", "mp3", "alac", "caf" };
 
     /** One grid row: either a group header ({@code track == null}) or a recording. */
     private record Row(String key, LibraryGroups.Group group, LibraryTrack track) {
@@ -98,55 +97,69 @@ public class LibraryView extends VerticalLayout {
     private String gridSignature = "";
     private long shownCoverVersion = -1;
 
-    public LibraryView(Library library, UiState state, UiBroadcaster broadcaster,
-                       SettingsService settingsService, AudiobookCreator audiobookCreator,
-                       AudiobookJobs audiobookJobs) {
+    public LibraryView(
+        Library library,
+        UiState state,
+        UiBroadcaster broadcaster,
+        SettingsService settingsService,
+        AudiobookCreator audiobookCreator,
+        AudiobookJobs audiobookJobs
+    ) {
         this.library = library;
         this.state = state;
         this.broadcaster = broadcaster;
         this.settingsService = settingsService;
         this.audiobookCreator = audiobookCreator;
         this.audiobookJobs = audiobookJobs;
-        this.queuePanel = new AudiobookQueuePanel(audiobookJobs, new AudiobookQueuePanel.Reveal() {
-            @Override
-            public void showInLibrary(AudiobookJobs.Job job) {
-                reveal(job);
-            }
-
-            @Override
-            public void changed() {
-                gridSignature = "";
-                refresh(true);
-            }
-
-            @Override
-            public void retry(AudiobookJobs.Job job) {
-                Optional<LibraryGroups.Group> group = job.groupKey == null ? Optional.empty()
-                        : LibraryGroups.find(library.tracks(), job.groupKey);
-                if (group.isEmpty()) {
-                    Notification.show("The recordings for \u201c" + job.title
-                            + "\u201d are no longer in the library.", 4000,
-                            Notification.Position.BOTTOM_START);
-                    return;
+        this.queuePanel = new AudiobookQueuePanel(
+            audiobookJobs,
+            new AudiobookQueuePanel.Reveal() {
+                @Override
+                public void showInLibrary(AudiobookJobs.Job job) {
+                    reveal(job);
                 }
-                openAudiobookDialog(group.get());
-            }
 
-            @Override
-            public boolean replaced(AudiobookJobs.Job job) {
-                if (job.resultTrackId == null) {
-                    return false;
+                @Override
+                public void changed() {
+                    gridSignature = "";
+                    refresh(true);
                 }
-                for (LibraryGroups.Group group : LibraryGroups.groups(library.tracks())) {
-                    for (LibraryTrack track : group.tracks()) {
-                        if (job.resultTrackId.equals(track.id)) {
-                            return group.isEarlierVersion(track);
+
+                @Override
+                public void retry(AudiobookJobs.Job job) {
+                    Optional<LibraryGroups.Group> group =
+                        job.groupKey == null
+                            ? Optional.empty()
+                            : LibraryGroups.find(library.tracks(), job.groupKey);
+                    if (group.isEmpty()) {
+                        Notification.show(
+                            "The recordings for \u201c" +
+                                job.title +
+                                "\u201d are no longer in the library.",
+                            4000,
+                            Notification.Position.BOTTOM_START
+                        );
+                        return;
+                    }
+                    openAudiobookDialog(group.get());
+                }
+
+                @Override
+                public boolean replaced(AudiobookJobs.Job job) {
+                    if (job.resultTrackId == null) {
+                        return false;
+                    }
+                    for (LibraryGroups.Group group : LibraryGroups.groups(library.tracks())) {
+                        for (LibraryTrack track : group.tracks()) {
+                            if (job.resultTrackId.equals(track.id)) {
+                                return group.isEarlierVersion(track);
+                            }
                         }
                     }
+                    return false;
                 }
-                return false;
             }
-        });
+        );
 
         addClassName("library-view");
         setPadding(false);
@@ -181,24 +194,26 @@ public class LibraryView extends VerticalLayout {
         nowCoverImage.setVisible(false);
         // Never show a broken image: if a cover cannot be loaded (the track just changed, the
         // connection blipped), try once more and show the placeholder until a cover loads.
-        nowCoverImage.getElement().executeJs("""
-                const img = this;
-                const placeholder = img.previousElementSibling;
-                img.addEventListener('load', () => {
-                  img.style.visibility = '';
-                  if (placeholder) placeholder.hidden = true;
-                });
-                img.addEventListener('error', () => {
-                  img.style.visibility = 'hidden';
-                  if (placeholder) placeholder.hidden = false;
-                  const src = img.getAttribute('src') || '';
-                  if (src && !src.includes('&retry=')) {
-                    setTimeout(() => {
-                      if (img.getAttribute('src') === src) img.src = src + '&retry=1';
-                    }, 1500);
-                  }
-                });
-                """);
+        nowCoverImage.getElement().executeJs(
+            """
+            const img = this;
+            const placeholder = img.previousElementSibling;
+            img.addEventListener('load', () => {
+              img.style.visibility = '';
+              if (placeholder) placeholder.hidden = true;
+            });
+            img.addEventListener('error', () => {
+              img.style.visibility = 'hidden';
+              if (placeholder) placeholder.hidden = false;
+              const src = img.getAttribute('src') || '';
+              if (src && !src.includes('&retry=')) {
+                setTimeout(() => {
+                  if (img.getAttribute('src') === src) img.src = src + '&retry=1';
+                }, 1500);
+              }
+            });
+            """
+        );
         nowCover.add(nowCoverPlaceholder, nowCoverImage);
 
         Div body = new Div();
@@ -279,79 +294,102 @@ public class LibraryView extends VerticalLayout {
         grid.addThemeVariants(GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_ROW_STRIPES);
         grid.setAllRowsVisible(true);
         grid.setPartNameGenerator(row -> row.groupRow() ? "album-row" : null);
-        grid.addExpandListener(event -> event.getItems().stream()
+        grid.addExpandListener(event ->
+            event
+                .getItems()
+                .stream()
                 .filter(Row::groupRow)
-                .forEach(row -> expandedGroups.add(row.key())));
-        grid.addCollapseListener(event -> event.getItems().stream()
+                .forEach(row -> expandedGroups.add(row.key()))
+        );
+        grid.addCollapseListener(event ->
+            event
+                .getItems()
+                .stream()
                 .filter(Row::groupRow)
-                .forEach(row -> expandedGroups.remove(row.key())));
+                .forEach(row -> expandedGroups.remove(row.key()))
+        );
 
         grid.addComponentColumn(this::coverCell)
-                .setWidth("64px")
-                .setFlexGrow(0)
-                .setResizable(true)
-                .setKey("cover");
+            .setWidth("64px")
+            .setFlexGrow(0)
+            .setResizable(true)
+            .setKey("cover");
         grid.addComponentHierarchyColumn(this::titleCell)
-                .setHeader("Title")
-                .setFlexGrow(3)
-                .setResizable(true)
-                .setKey("title");
+            .setHeader("Title")
+            .setFlexGrow(3)
+            .setResizable(true)
+            .setKey("title");
         grid.addComponentColumn(row -> {
-                    Span duration = new Span(Fmt.duration(row.groupRow()
-                            ? row.group().durationMs() : row.track().durationMs));
-                    duration.addClassName("cell-number");
-                    duration.getElement().setAttribute("title", "Listening time");
-                    return duration;
-                })
-                .setHeader("Duration")
-                .setAutoWidth(true)
-                .setFlexGrow(0)
-                .setResizable(true)
-                .setKey("duration");
+            Span duration = new Span(
+                Fmt.duration(row.groupRow() ? row.group().durationMs() : row.track().durationMs)
+            );
+            duration.addClassName("cell-number");
+            duration.getElement().setAttribute("title", "Listening time");
+            return duration;
+        })
+            .setHeader("Duration")
+            .setAutoWidth(true)
+            .setFlexGrow(0)
+            .setResizable(true)
+            .setKey("duration");
         grid.addComponentColumn(this::formatCell)
-                .setHeader("Download")
-                .setAutoWidth(true)
-                .setFlexGrow(0)
-                .setResizable(true)
-                .setKey("formats");
+            .setHeader("Download")
+            .setAutoWidth(true)
+            .setFlexGrow(0)
+            .setResizable(true)
+            .setKey("formats");
         grid.addComponentColumn(row -> {
-                    Span size = new Span(Fmt.bytes(row.groupRow()
-                            ? row.group().sizeBytes() : row.track().sizeBytes));
-                    size.addClassName("cell-number");
-                    size.getElement().setAttribute("title", row.groupRow()
-                            ? "Total on disk, including source recordings and .m4b"
-                            : "File size on disk");
-                    return size;
-                })
-                .setHeader("Size")
-                .setAutoWidth(true)
-                .setFlexGrow(0)
-                .setResizable(true)
-                .setKey("size");
+            Span size = new Span(
+                Fmt.bytes(row.groupRow() ? row.group().sizeBytes() : row.track().sizeBytes)
+            );
+            size.addClassName("cell-number");
+            size.getElement().setAttribute(
+                "title",
+                row.groupRow()
+                    ? "Total on disk, including source recordings and .m4b"
+                    : "File size on disk"
+            );
+            return size;
+        })
+            .setHeader("Size")
+            .setAutoWidth(true)
+            .setFlexGrow(0)
+            .setResizable(true)
+            .setKey("size");
         grid.addComponentColumn(row -> {
-                    Span date = new Span(row.groupRow()
-                            ? groupDateHint(row.group()) : Fmt.date(row.track().recordedAtEpochMs));
-                    date.addClassName("cell-date");
-                    date.getElement().setAttribute("title", row.groupRow()
-                            ? "First to last recording in this group"
-                            : "Recording date");
-                    return date;
-                })
-                .setHeader("Recorded")
-                .setWidth("160px")
-                .setFlexGrow(0)
-                .setResizable(true)
-                .setKey("date");
+            Span date = new Span(
+                row.groupRow()
+                    ? groupDateHint(row.group())
+                    : Fmt.date(row.track().recordedAtEpochMs)
+            );
+            date.addClassName("cell-date");
+            date.getElement().setAttribute(
+                "title",
+                row.groupRow() ? "First to last recording in this group" : "Recording date"
+            );
+            return date;
+        })
+            .setHeader("Recorded")
+            .setWidth("160px")
+            .setFlexGrow(0)
+            .setResizable(true)
+            .setKey("date");
         grid.addComponentColumn(this::actionsCell)
-                .setWidth("170px")
-                .setFlexGrow(0)
-                .setKey("actions");
+            .setWidth("170px")
+            .setFlexGrow(0)
+            .setKey("actions");
     }
 
     private Component coverCell(Row row) {
         LibraryTrack coverTrack = row.groupRow()
-                ? row.group().tracks().stream().filter(track -> track.cover).findFirst().orElse(null)
-                : row.track();
+            ? row
+                  .group()
+                  .tracks()
+                  .stream()
+                  .filter(track -> track.cover)
+                  .findFirst()
+                  .orElse(null)
+            : row.track();
         Div holder = new Div();
         holder.addClassName("grid-cover");
         if (coverTrack != null && coverTrack.cover) {
@@ -375,7 +413,9 @@ public class LibraryView extends VerticalLayout {
         Div body = new Div();
         body.addClassName("grid-title");
         body.getElement().setAttribute("data-group-key", group.key());
-        H3 title = new H3(group.title() == null || group.title().isBlank() ? "Untitled" : group.title());
+        H3 title = new H3(
+            group.title() == null || group.title().isBlank() ? "Untitled" : group.title()
+        );
         title.addClassName("grid-title-text");
         Span artist = new Span(group.artist() == null ? "" : group.artist());
         artist.addClassName("grid-artist");
@@ -390,41 +430,69 @@ public class LibraryView extends VerticalLayout {
                 badges.add(badge(chapters(m4b.get().chapterCount), BadgeVariant.CONTRAST));
             } else {
                 Badge noM4b = badge("no m4b", BadgeVariant.CONTRAST);
-                noM4b.getElement().setAttribute("title",
-                        "No audiobook file yet. Create one from the group actions.");
+                noM4b
+                    .getElement()
+                    .setAttribute(
+                        "title",
+                        "No audiobook file yet. Create one from the group actions."
+                    );
                 badges.add(noM4b);
             }
         } else {
             badges.add(badge("album", BadgeVariant.CONTRAST));
         }
         if (m4b.isPresent()) {
-            long books = group.tracks().stream().filter(track -> track.chapterCount != null).count();
+            long books = group
+                .tracks()
+                .stream()
+                .filter(track -> track.chapterCount != null)
+                .count();
             int sources = (int) Math.max(0, group.tracks().size() - books);
             if (sources > 0) {
-                badges.add(badge(sources + (sources == 1 ? " source file" : " source files"),
-                        BadgeVariant.CONTRAST));
+                badges.add(
+                    badge(
+                        sources + (sources == 1 ? " source file" : " source files"),
+                        BadgeVariant.CONTRAST
+                    )
+                );
             }
             if (books > 1) {
                 long earlier = books - 1;
-                Badge versions = badge(earlier + (earlier == 1 ? " earlier version" : " earlier versions"),
-                        BadgeVariant.CONTRAST);
-                versions.getElement().setAttribute("title",
-                        "M4B downloads the newest build. Earlier builds are listed inside the group.");
+                Badge versions = badge(
+                    earlier + (earlier == 1 ? " earlier version" : " earlier versions"),
+                    BadgeVariant.CONTRAST
+                );
+                versions
+                    .getElement()
+                    .setAttribute(
+                        "title",
+                        "M4B downloads the newest build. Earlier builds are listed inside the group."
+                    );
                 badges.add(versions);
             }
         } else {
-            String unit = group.isAudiobook() ? (group.tracks().size() == 1
-                    ? " recording" : " recordings") : (group.tracks().size() == 1 ? " track" : " tracks");
+            String unit = group.isAudiobook()
+                ? group.tracks().size() == 1
+                    ? " recording"
+                    : " recordings"
+                : group.tracks().size() == 1
+                  ? " track"
+                  : " tracks";
             badges.add(badge(group.tracks().size() + unit, BadgeVariant.CONTRAST));
         }
         int duplicates = group.duplicateCount();
         if (duplicates > 0) {
-            Badge duplicateBadge = badge(duplicates
-                            + (duplicates == 1 ? " duplicate take" : " duplicate takes"),
-                    BadgeVariant.WARNING);
-            duplicateBadge.getElement().setAttribute("title",
-                    "ZIP downloads and audiobook assembly use the best take only. "
-                            + "Every take stays downloadable.");
+            Badge duplicateBadge = badge(
+                duplicates + (duplicates == 1 ? " duplicate take" : " duplicate takes"),
+                BadgeVariant.WARNING
+            );
+            duplicateBadge
+                .getElement()
+                .setAttribute(
+                    "title",
+                    "ZIP downloads and audiobook assembly use the best take only. " +
+                        "Every take stays downloadable."
+                );
             badges.add(duplicateBadge);
         }
         body.add(badges);
@@ -432,13 +500,19 @@ public class LibraryView extends VerticalLayout {
     }
 
     private void openAudiobookDialog(LibraryGroups.Group group) {
-        new AudiobookDialog(library, settingsService, audiobookCreator, audiobookJobs, group,
-                job -> {
-                    gridSignature = "";
-                    refresh(true);
-                    queuePanel.scrollIntoView();
-                    showQueued(job);
-                }).open();
+        new AudiobookDialog(
+            library,
+            settingsService,
+            audiobookCreator,
+            audiobookJobs,
+            group,
+            job -> {
+                gridSignature = "";
+                refresh(true);
+                queuePanel.scrollIntoView();
+                showQueued(job);
+            }
+        ).open();
     }
 
     /**
@@ -463,13 +537,21 @@ public class LibraryView extends VerticalLayout {
         }
         // The book's group key changes when the sources are linked to the new .m4b, so look the
         // group up by the result instead of the key the job was queued under.
-        Optional<LibraryGroups.Group> group = LibraryGroups.groups(library.tracks()).stream()
-                .filter(candidate -> candidate.tracks().stream()
-                        .anyMatch(track -> job.resultTrackId.equals(track.id)))
-                .findFirst();
+        Optional<LibraryGroups.Group> group = LibraryGroups.groups(library.tracks())
+            .stream()
+            .filter(candidate ->
+                candidate
+                    .tracks()
+                    .stream()
+                    .anyMatch(track -> job.resultTrackId.equals(track.id))
+            )
+            .findFirst();
         if (group.isEmpty()) {
-            Notification.show("\u201c" + job.title + "\u201d is no longer in the library.", 4000,
-                    Notification.Position.BOTTOM_START);
+            Notification.show(
+                "\u201c" + job.title + "\u201d is no longer in the library.",
+                4000,
+                Notification.Position.BOTTOM_START
+            );
             return;
         }
         String key = group.get().key();
@@ -478,33 +560,38 @@ public class LibraryView extends VerticalLayout {
         expandedCards.add(key);
         gridSignature = "";
         refresh(true);
-        getElement().executeJs("""
-                const key = $0;
-                const scope = this;
-                requestAnimationFrame(() => {
-                  const targets = [...scope.querySelectorAll('[data-group-key]')]
-                      .filter((element) => element.dataset.groupKey === key && element.offsetParent);
-                  const target = targets[0];
-                  if (!target) return;
-                  const row = target.closest('.lib-card') || target;
-                  row.scrollIntoView({block: 'center', behavior: 'smooth'});
-                  row.classList.remove('reveal-flash');
-                  void row.offsetWidth;
-                  row.classList.add('reveal-flash');
-                  setTimeout(() => row.classList.remove('reveal-flash'), 2400);
-                });
-                """, key);
+        getElement().executeJs(
+            """
+            const key = $0;
+            const scope = this;
+            requestAnimationFrame(() => {
+              const targets = [...scope.querySelectorAll('[data-group-key]')]
+                  .filter((element) => element.dataset.groupKey === key && element.offsetParent);
+              const target = targets[0];
+              if (!target) return;
+              const row = target.closest('.lib-card') || target;
+              row.scrollIntoView({block: 'center', behavior: 'smooth'});
+              row.classList.remove('reveal-flash');
+              void row.offsetWidth;
+              row.classList.add('reveal-flash');
+              setTimeout(() => row.classList.remove('reveal-flash'), 2400);
+            });
+            """,
+            key
+        );
     }
 
     private Button audiobookIcon(LibraryGroups.Group group) {
-        Button button = new Button(VaadinIcon.HEADPHONES.create(),
-                event -> openAudiobookDialog(group));
+        Button button = new Button(VaadinIcon.HEADPHONES.create(), event ->
+            openAudiobookDialog(group)
+        );
         button.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         button.addClassName("row-action");
         boolean running = audiobookJobs.isActive(group.key());
         button.setEnabled(!running);
-        String label = running ? "Conversion in progress — see the queue above"
-                : "Create audiobook (.m4b) from these recordings";
+        String label = running
+            ? "Conversion in progress — see the queue above"
+            : "Create audiobook (.m4b) from these recordings";
         button.getElement().setAttribute("title", label);
         button.getElement().setAttribute("aria-label", label);
         return button;
@@ -514,8 +601,9 @@ public class LibraryView extends VerticalLayout {
         LibraryTrack track = row.track();
         Div body = new Div();
         body.addClassName("grid-title");
-        H3 title = new H3(track.title == null || track.title.isBlank()
-                ? track.displayName() : track.title);
+        H3 title = new H3(
+            track.title == null || track.title.isBlank() ? track.displayName() : track.title
+        );
         title.addClassName("grid-title-text");
         Span artist = new Span(track.artist == null ? "" : track.artist);
         artist.addClassName("grid-artist");
@@ -531,9 +619,13 @@ public class LibraryView extends VerticalLayout {
         if (track.chapterCount != null) {
             if (row.group() != null && row.group().isEarlierVersion(track)) {
                 Badge earlier = badge("earlier version", BadgeVariant.CONTRAST);
-                earlier.getElement().setAttribute("title",
-                        "Replaced by a newer build of this audiobook. The group download is the "
-                                + "newest file; delete this one when you no longer need it.");
+                earlier
+                    .getElement()
+                    .setAttribute(
+                        "title",
+                        "Replaced by a newer build of this audiobook. The group download is the " +
+                            "newest file; delete this one when you no longer need it."
+                    );
                 badges.add(earlier);
             } else {
                 badges.add(badge("audiobook", BadgeVariant.SUCCESS));
@@ -557,15 +649,23 @@ public class LibraryView extends VerticalLayout {
         }
         if (track.incomplete) {
             Badge incomplete = badge("incomplete", BadgeVariant.WARNING);
-            incomplete.getElement().setAttribute("title",
-                    "Playback stopped after " + Fmt.duration(track.durationMs)
-                            + " of " + Fmt.duration(track.expectedDurationMs)
-                            + ". The file exists but is shortened.");
+            incomplete
+                .getElement()
+                .setAttribute(
+                    "title",
+                    "Playback stopped after " +
+                        Fmt.duration(track.durationMs) +
+                        " of " +
+                        Fmt.duration(track.expectedDurationMs) +
+                        ". The file exists but is shortened."
+                );
             badges.add(incomplete);
         }
         if (track.status != null && !track.status.equals("ready")) {
-            Badge status = badge(track.status,
-                    "error".equals(track.status) ? BadgeVariant.ERROR : BadgeVariant.WARNING);
+            Badge status = badge(
+                track.status,
+                "error".equals(track.status) ? BadgeVariant.ERROR : BadgeVariant.WARNING
+            );
             if (track.error != null) {
                 status.getElement().setAttribute("title", track.error);
             }
@@ -584,9 +684,14 @@ public class LibraryView extends VerticalLayout {
     }
 
     private static String takeHint(LibraryGroups.Take take) {
-        return "Take " + take.index() + " of " + take.total()
-                + ". ZIP downloads and audiobook assembly use the best take: "
-                + "complete before incomplete, then fewer lost packets, then longer.";
+        return (
+            "Take " +
+            take.index() +
+            " of " +
+            take.total() +
+            ". ZIP downloads and audiobook assembly use the best take: " +
+            "complete before incomplete, then fewer lost packets, then longer."
+        );
     }
 
     private Component formatCell(Row row) {
@@ -620,13 +725,19 @@ public class LibraryView extends VerticalLayout {
                 count++;
             }
         }
-        Anchor chip = new Anchor(AppUrls.relative("api/groups/" + group.key() + "/zip/" + format),
-                "ZIP · " + formatLabel(format) + " ↓");
+        Anchor chip = new Anchor(
+            AppUrls.relative("api/groups/" + group.key() + "/zip/" + format),
+            "ZIP · " + formatLabel(format) + " ↓"
+        );
         chip.addClassName("format-chip");
         chip.addClassName("zip-chip");
-        String hint = "Download " + count + (count == 1 ? " best take" : " best takes")
-                + " as ZIP · " + formatName(format)
-                + (size > 0 ? " · " + Fmt.bytes(size) : "");
+        String hint =
+            "Download " +
+            count +
+            (count == 1 ? " best take" : " best takes") +
+            " as ZIP · " +
+            formatName(format) +
+            (size > 0 ? " · " + Fmt.bytes(size) : "");
         chip.getElement().setAttribute("title", hint);
         chip.getElement().setAttribute("aria-label", hint);
         return chip;
@@ -641,9 +752,14 @@ public class LibraryView extends VerticalLayout {
                 chips.add(downloadChip(track, format));
             } else {
                 Badge unavailable = badge(formatLabel(format), BadgeVariant.CONTRAST);
-                unavailable.getElement().setAttribute("title", "error".equals(track.status)
-                        ? "Export failed — this file is not downloadable"
-                        : "Still processing — not downloadable yet");
+                unavailable
+                    .getElement()
+                    .setAttribute(
+                        "title",
+                        "error".equals(track.status)
+                            ? "Export failed — this file is not downloadable"
+                            : "Still processing — not downloadable yet"
+                    );
                 chips.add(unavailable);
             }
         }
@@ -653,31 +769,43 @@ public class LibraryView extends VerticalLayout {
             if (lostMs >= 1_000) {
                 label += " · " + String.format(Locale.ROOT, "%.1f s", lostMs / 1000.0);
             }
-            Badge chip = badge(label,
-                    lostMs >= 2_000 ? BadgeVariant.ERROR : BadgeVariant.WARNING);
-            StringBuilder hint = new StringBuilder(track.gaps == 1
+            Badge chip = badge(label, lostMs >= 2_000 ? BadgeVariant.ERROR : BadgeVariant.WARNING);
+            StringBuilder hint = new StringBuilder(
+                track.gaps == 1
                     ? "One run of audio packets could not be recovered."
-                    : track.gaps + " runs of audio packets could not be recovered.");
+                    : track.gaps + " runs of audio packets could not be recovered."
+            );
             if (track.gapPackets > 0) {
                 hint.append(' ').append(track.gapPackets).append(" packets in total");
                 hint.append(" (~").append(lostMs).append(" ms)");
-                hint.append(track.filledPackets >= track.gapPackets
-                        ? ", replaced with silence so the timing stays intact." : ".");
+                hint.append(
+                    track.filledPackets >= track.gapPackets
+                        ? ", replaced with silence so the timing stays intact."
+                        : "."
+                );
             }
             if (track.recoveredGaps > 0) {
                 hint.append(' ').append(recoveredHint(track));
             }
-            hint.append(" Most gaps are tiny and inaudible. These are not chapters; "
-                    + "re-record only if you hear dropouts. Lost-packet recovery in Settings "
-                    + "controls how long the receiver waits for retransmits.");
+            hint.append(
+                " Most gaps are tiny and inaudible. These are not chapters; " +
+                    "re-record only if you hear dropouts. Lost-packet recovery in Settings " +
+                    "controls how long the receiver waits for retransmits."
+            );
             chip.getElement().setAttribute("title", hint.toString());
             chips.add(chip);
         }
     }
 
     private static String recoveredHint(LibraryTrack track) {
-        return (track.recoveredGaps == 1 ? "1 other gap was" : track.recoveredGaps + " other gaps were")
-                + " recovered from retransmits (longest wait " + track.maxRecoveryMs + " ms).";
+        return (
+            (track.recoveredGaps == 1
+                ? "1 other gap was"
+                : track.recoveredGaps + " other gaps were") +
+            " recovered from retransmits (longest wait " +
+            track.maxRecoveryMs +
+            " ms)."
+        );
     }
 
     /** One format chip doubles as the download link for exactly that file. */
@@ -691,14 +819,14 @@ public class LibraryView extends VerticalLayout {
     }
 
     private static String fileUrl(LibraryTrack track, String format, boolean download) {
-        return AppUrls.relative("api/tracks/" + track.id + "/file/" + format
-                + (download ? "?download=1" : ""));
+        return AppUrls.relative(
+            "api/tracks/" + track.id + "/file/" + format + (download ? "?download=1" : "")
+        );
     }
 
     private String downloadHint(LibraryTrack track, String format) {
         long size = library.fileSize(track, format);
-        return "Download " + formatName(format)
-                + (size > 0 ? " · " + Fmt.bytes(size) : "");
+        return "Download " + formatName(format) + (size > 0 ? " · " + Fmt.bytes(size) : "");
     }
 
     private static String formatLabel(String format) {
@@ -747,27 +875,45 @@ public class LibraryView extends VerticalLayout {
             boolean active = job.filter(AudiobookJobs.Job::active).isPresent();
             if (active) {
                 AudiobookJobs.Job current = job.get();
-                Badge converting = badge(current.status() == AudiobookJobs.State.QUEUED
-                        ? "queued" : Math.round(current.progress * 100) + "%", BadgeVariant.WARNING);
-                converting.getElement().setAttribute("title", current.step == null
-                        ? "Converting" : current.step);
+                Badge converting = badge(
+                    current.status() == AudiobookJobs.State.QUEUED
+                        ? "queued"
+                        : Math.round(current.progress * 100) + "%",
+                    BadgeVariant.WARNING
+                );
+                converting
+                    .getElement()
+                    .setAttribute("title", current.step == null ? "Converting" : current.step);
                 actions.add(converting);
             } else {
-                job.filter(finished -> finished.status() == AudiobookJobs.State.FAILED)
-                        .ifPresent(failed -> {
-                            Badge failedBadge = badge("failed", BadgeVariant.ERROR);
-                            failedBadge.getElement().setAttribute("title",
-                                    failed.error == null ? "Conversion failed" : failed.error);
-                            actions.add(failedBadge);
-                        });
+                job.filter(finished -> finished.status() == AudiobookJobs.State.FAILED).ifPresent(
+                    failed -> {
+                        Badge failedBadge = badge("failed", BadgeVariant.ERROR);
+                        failedBadge
+                            .getElement()
+                            .setAttribute(
+                                "title",
+                                failed.error == null ? "Conversion failed" : failed.error
+                            );
+                        actions.add(failedBadge);
+                    }
+                );
                 if (group.isAudiobook()) {
-                    Button audiobook = new Button(group.hasM4b() ? "Rebuild M4B…" : "Create M4B…",
-                            event -> openAudiobookDialog(group));
-                    audiobook.addThemeVariants(ButtonVariant.LUMO_SMALL,
-                            ButtonVariant.LUMO_TERTIARY);
+                    Button audiobook = new Button(
+                        group.hasM4b() ? "Rebuild M4B…" : "Create M4B…",
+                        event -> openAudiobookDialog(group)
+                    );
+                    audiobook.addThemeVariants(
+                        ButtonVariant.LUMO_SMALL,
+                        ButtonVariant.LUMO_TERTIARY
+                    );
                     audiobook.addClassName("book-action");
-                    audiobook.getElement().setAttribute("title",
-                            "Create a chaptered audiobook from these recordings");
+                    audiobook
+                        .getElement()
+                        .setAttribute(
+                            "title",
+                            "Create a chaptered audiobook from these recordings"
+                        );
                     actions.add(audiobook);
                 } else if (group.tracks().size() > 1) {
                     actions.add(audiobookIcon(group));
@@ -780,8 +926,11 @@ public class LibraryView extends VerticalLayout {
 
         String format = preferredFormat(track);
         if (format != null && "ready".equals(track.status)) {
-            Button play = player.playButton(fileUrl(track, format, false),
-                    track.displayName(), String.join(" · ", track.files.keySet()));
+            Button play = player.playButton(
+                fileUrl(track, format, false),
+                track.displayName(),
+                String.join(" · ", track.files.keySet())
+            );
 
             Anchor download = new Anchor();
             download.setHref(fileUrl(track, format, true));
@@ -799,11 +948,11 @@ public class LibraryView extends VerticalLayout {
         delete.addClassName("row-action");
         delete.addClassName("danger");
         delete.getElement().setAttribute("title", "Delete");
-        delete.getElement().setAttribute("aria-label",
-                "Delete " + track.displayName());
+        delete.getElement().setAttribute("aria-label", "Delete " + track.displayName());
 
-        boolean audiobookAction = !row.group().isAudiobook() && track.durationMs >= 15 * 60 * 1000L
-                || row.group().isAudiobook() && row.group().tracks().size() == 1;
+        boolean audiobookAction =
+            (!row.group().isAudiobook() && track.durationMs >= 15 * 60 * 1000L) ||
+            (row.group().isAudiobook() && row.group().tracks().size() == 1);
         if (audiobookAction) {
             actions.add(trackMenu(track, row.group()));
         } else {
@@ -817,14 +966,17 @@ public class LibraryView extends VerticalLayout {
         trigger.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         trigger.addClassName("row-action");
         trigger.getElement().setAttribute("title", "Recording actions");
-        trigger.getElement().setAttribute("aria-label",
-                "Recording actions for " + track.displayName());
+        trigger
+            .getElement()
+            .setAttribute("aria-label", "Recording actions for " + track.displayName());
 
         ContextMenu menu = new ContextMenu(trigger);
         menu.setOpenOnClick(true);
         boolean running = audiobookJobs.isActive(group.key());
-        var audiobook = menu.addItem(group.hasM4b() ? "Rebuild audiobook…" : "Create audiobook…",
-                event -> openAudiobookDialog(group));
+        var audiobook = menu.addItem(
+            group.hasM4b() ? "Rebuild audiobook…" : "Create audiobook…",
+            event -> openAudiobookDialog(group)
+        );
         audiobook.setEnabled(!running);
         menu.addItem("Delete recording…", event -> confirmDelete(track));
         return trigger;
@@ -835,13 +987,19 @@ public class LibraryView extends VerticalLayout {
         trigger.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         trigger.addClassName("row-action");
         trigger.getElement().setAttribute("title", "Group actions");
-        trigger.getElement().setAttribute("aria-label", "Group actions for "
-                + (group.title() == null ? "this group" : group.title()));
+        trigger
+            .getElement()
+            .setAttribute(
+                "aria-label",
+                "Group actions for " + (group.title() == null ? "this group" : group.title())
+            );
 
         ContextMenu menu = new ContextMenu(trigger);
         menu.setOpenOnClick(true);
-        var create = menu.addItem(group.hasM4b() ? "Rebuild audiobook…" : "Create audiobook…",
-                event -> openAudiobookDialog(group));
+        var create = menu.addItem(
+            group.hasM4b() ? "Rebuild audiobook…" : "Create audiobook…",
+            event -> openAudiobookDialog(group)
+        );
         create.setEnabled(!audiobookJobs.isActive(group.key()));
         if (group.hasM4b()) {
             menu.addItem("Delete audiobook file…", event -> confirmDeleteM4b(group));
@@ -891,8 +1049,14 @@ public class LibraryView extends VerticalLayout {
         int count = group.tracks().size();
         ConfirmDialog dialog = new ConfirmDialog();
         dialog.setHeader("Delete recordings?");
-        dialog.setText("This removes \"" + group.title() + "\" with " + count
-                + (count == 1 ? " recording" : " recordings") + " from disk.");
+        dialog.setText(
+            "This removes \"" +
+                group.title() +
+                "\" with " +
+                count +
+                (count == 1 ? " recording" : " recordings") +
+                " from disk."
+        );
         dialog.setCancelable(true);
         dialog.setCancelText("Cancel");
         dialog.setConfirmText("Delete all");
@@ -927,25 +1091,38 @@ public class LibraryView extends VerticalLayout {
         boolean live = state.receiving;
         nowCard.removeClassNames("live", "idle");
         nowCard.addClassName(live ? "live" : "idle");
-        boolean hasTrackInfo = !isBlank(state.nowTitle) || !isBlank(state.nowArtist)
-                || state.coverVersion > 0;
-        nowEyebrow.setText(live
-                ? (hasTrackInfo ? "Recording now" : "Recording now · waiting for track info")
-                : "Waiting for a sender");
-        nowTitle.setText(live
-                ? (state.nowTitle == null || state.nowTitle.isBlank() ? "Unknown title" : state.nowTitle)
-                : "Select this receiver in the AirPlay menu");
+        boolean hasTrackInfo =
+            !isBlank(state.nowTitle) || !isBlank(state.nowArtist) || state.coverVersion > 0;
+        nowEyebrow.setText(
+            live
+                ? hasTrackInfo
+                    ? "Recording now"
+                    : "Recording now · waiting for track info"
+                : "Waiting for a sender"
+        );
+        nowTitle.setText(
+            live
+                ? state.nowTitle == null || state.nowTitle.isBlank()
+                    ? "Unknown title"
+                    : state.nowTitle
+                : "Select this receiver in the AirPlay menu"
+        );
         if (live) {
             String artist = state.nowArtist == null ? "" : state.nowArtist;
             String album = state.nowAlbum == null ? "" : state.nowAlbum;
-            nowSub.setText((artist + (album.isBlank() ? "" : (artist.isBlank() ? "" : " · ") + album)).trim());
+            nowSub.setText(
+                (artist + (album.isBlank() ? "" : (artist.isBlank() ? "" : " · ") + album)).trim()
+            );
         } else {
             nowSub.setText("Playback from iPhone, iPad or Mac is recorded track by track.");
         }
-        nowTime.setText(live
-                ? Fmt.duration(state.nowRecordedMs) + " / "
-                + (state.nowDurationMs > 0 ? Fmt.duration(state.nowDurationMs) : "–")
-                : "");
+        nowTime.setText(
+            live
+                ? Fmt.duration(state.nowRecordedMs) +
+                      " / " +
+                      (state.nowDurationMs > 0 ? Fmt.duration(state.nowDurationMs) : "–")
+                : ""
+        );
         if (live) {
             String source = isBlank(state.clientName) ? state.client : state.clientName;
             StringBuilder label = new StringBuilder("from " + (source == null ? "" : source));
@@ -960,8 +1137,10 @@ public class LibraryView extends VerticalLayout {
             nowClient.setText("");
         }
 
-        double percent = live && state.nowDurationMs > 0
-                ? Math.min(100.0, state.nowRecordedMs * 100.0 / state.nowDurationMs) : 0;
+        double percent =
+            live && state.nowDurationMs > 0
+                ? Math.min(100.0, (state.nowRecordedMs * 100.0) / state.nowDurationMs)
+                : 0;
         progressBar.getStyle().set("width", String.format(Locale.ROOT, "%.1f%%", percent));
 
         boolean hasCover = live && state.coverVersion > 0;
@@ -990,15 +1169,21 @@ public class LibraryView extends VerticalLayout {
         for (LibraryGroups.Group group : LibraryGroups.groups(tracks)) {
             for (List<LibraryTrack> takeList : LibraryGroups.takes(group.tracks()).values()) {
                 for (int i = 0; i < takeList.size(); i++) {
-                    takeInfo.put(takeList.get(i).id,
-                            new LibraryGroups.Take(i + 1, takeList.size(), i == 0));
+                    takeInfo.put(
+                        takeList.get(i).id,
+                        new LibraryGroups.Take(i + 1, takeList.size(), i == 0)
+                    );
                 }
             }
 
             boolean groupMatches = query.isBlank() || matchesGroup(group, query);
-            List<LibraryTrack> matchedTracks = query.isBlank() ? group.tracks() : group.tracks().stream()
-                    .filter(track -> matches(track, query))
-                    .toList();
+            List<LibraryTrack> matchedTracks = query.isBlank()
+                ? group.tracks()
+                : group
+                      .tracks()
+                      .stream()
+                      .filter(track -> matches(track, query))
+                      .toList();
             if (!groupMatches && matchedTracks.isEmpty()) {
                 continue;
             }
@@ -1012,7 +1197,12 @@ public class LibraryView extends VerticalLayout {
             List<LibraryTrack> visibleTracks = groupMatches ? group.tracks() : matchedTracks;
             List<Row> rows = new ArrayList<>();
             for (LibraryTrack track : visibleTracks) {
-                if (group.m4b().map(current -> current == track).orElse(false)) {
+                if (
+                    group
+                        .m4b()
+                        .map(current -> current == track)
+                        .orElse(false)
+                ) {
                     continue; // the group header already offers the current .m4b
                 }
                 rows.add(new Row("t" + track.id, group, track));
@@ -1031,7 +1221,10 @@ public class LibraryView extends VerticalLayout {
         trackCount.setText(String.valueOf(visibleTracks));
         groupCount.setText(roots.size() + (roots.size() == 1 ? " group" : " groups"));
         groupCount.setVisible(!roots.isEmpty());
-        long totalBytes = tracks.stream().mapToLong(track -> track.sizeBytes).sum();
+        long totalBytes = tracks
+            .stream()
+            .mapToLong(track -> track.sizeBytes)
+            .sum();
         totalSize.setText(Fmt.bytes(totalBytes));
 
         boolean empty = roots.isEmpty();
@@ -1041,9 +1234,11 @@ public class LibraryView extends VerticalLayout {
         if (empty) {
             if (rawQuery.isBlank()) {
                 emptyTitle.setText("No recordings yet");
-                emptyText.setText("Play something on your iPhone, iPad or Mac and pick \""
-                        + (isBlank(state.deviceName) ? "the recorder" : state.deviceName)
-                        + "\" in the AirPlay menu.");
+                emptyText.setText(
+                    "Play something on your iPhone, iPad or Mac and pick \"" +
+                        (isBlank(state.deviceName) ? "the recorder" : state.deviceName) +
+                        "\" in the AirPlay menu."
+                );
             } else {
                 emptyTitle.setText("No matches");
                 emptyText.setText("No recording matches \"" + rawQuery + "\".");
@@ -1096,8 +1291,15 @@ public class LibraryView extends VerticalLayout {
 
             Div meta = new Div();
             meta.addClassName("card-meta");
-            meta.add(new Span(metaLine(root.group().durationMs(),
-                    root.group().sizeBytes(), groupDateHint(root.group()))));
+            meta.add(
+                new Span(
+                    metaLine(
+                        root.group().durationMs(),
+                        root.group().sizeBytes(),
+                        groupDateHint(root.group())
+                    )
+                )
+            );
             card.add(meta);
 
             Div files = new Div();
@@ -1122,10 +1324,12 @@ public class LibraryView extends VerticalLayout {
                 }
                 boolean expanded = autoExpand || expandedCards.contains(root.group().key());
                 childList.setVisible(expanded);
-                Button toggle = new Button(expanded
-                        ? "Hide recordings" : "Show " + rows.size() + " recordings");
-                toggle.setIcon(expanded ? VaadinIcon.CHEVRON_UP.create()
-                        : VaadinIcon.CHEVRON_DOWN.create());
+                Button toggle = new Button(
+                    expanded ? "Hide recordings" : "Show " + rows.size() + " recordings"
+                );
+                toggle.setIcon(
+                    expanded ? VaadinIcon.CHEVRON_UP.create() : VaadinIcon.CHEVRON_DOWN.create()
+                );
                 toggle.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
                 toggle.addClassName("card-toggle");
                 toggle.getElement().setAttribute("aria-expanded", String.valueOf(expanded));
@@ -1137,10 +1341,12 @@ public class LibraryView extends VerticalLayout {
                     } else {
                         expandedCards.remove(root.group().key());
                     }
-                    toggle.setText(open ? "Hide recordings"
-                            : "Show " + rows.size() + " recordings");
-                    toggle.setIcon(open ? VaadinIcon.CHEVRON_UP.create()
-                            : VaadinIcon.CHEVRON_DOWN.create());
+                    toggle.setText(
+                        open ? "Hide recordings" : "Show " + rows.size() + " recordings"
+                    );
+                    toggle.setIcon(
+                        open ? VaadinIcon.CHEVRON_UP.create() : VaadinIcon.CHEVRON_DOWN.create()
+                    );
                     toggle.getElement().setAttribute("aria-expanded", String.valueOf(open));
                 });
                 card.add(toggle, childList);
@@ -1161,8 +1367,9 @@ public class LibraryView extends VerticalLayout {
         LibraryTrack track = row.track();
         Div meta = new Div();
         meta.addClassName("card-meta");
-        meta.add(new Span(metaLine(track.durationMs, track.sizeBytes,
-                Fmt.date(track.recordedAtEpochMs))));
+        meta.add(
+            new Span(metaLine(track.durationMs, track.sizeBytes, Fmt.date(track.recordedAtEpochMs)))
+        );
         card.add(meta);
 
         Div files = new Div();
@@ -1196,44 +1403,84 @@ public class LibraryView extends VerticalLayout {
     }
 
     private static String groupDateHint(LibraryGroups.Group group) {
-        long first = group.tracks().stream().mapToLong(track -> track.recordedAtEpochMs)
-                .filter(value -> value > 0).min().orElse(0);
-        long last = group.tracks().stream().mapToLong(track -> track.recordedAtEpochMs)
-                .max().orElse(0);
+        long first = group
+            .tracks()
+            .stream()
+            .mapToLong(track -> track.recordedAtEpochMs)
+            .filter(value -> value > 0)
+            .min()
+            .orElse(0);
+        long last = group
+            .tracks()
+            .stream()
+            .mapToLong(track -> track.recordedAtEpochMs)
+            .max()
+            .orElse(0);
         return Fmt.dateRange(first, last);
     }
 
     private static boolean matchesGroup(LibraryGroups.Group group, String query) {
-        String haystack = (group.title() == null ? "" : group.title())
-                + " " + (group.artist() == null ? "" : group.artist());
-        return matchesText(haystack, query)
-                || group.tracks().stream().anyMatch(track -> matches(track, query));
+        String haystack =
+            (group.title() == null ? "" : group.title()) +
+            " " +
+            (group.artist() == null ? "" : group.artist());
+        return (
+            matchesText(haystack, query) ||
+            group
+                .tracks()
+                .stream()
+                .anyMatch(track -> matches(track, query))
+        );
     }
 
     private void appendSignature(StringBuilder signature, Row row) {
         if (row.groupRow()) {
-            signature.append('g').append(row.group().key()).append('|')
-                    .append(row.group().title()).append('|')
-                    .append(row.group().tracks().size()).append('|')
-                    .append(row.group().duplicateCount()).append('|')
-                    .append(jobSignature(row.group().key())).append('|')
-                    .append(row.group().m4b().map(track -> track.sizeBytes + "|" + track.files)
-                            .orElse("no-m4b")).append('|')
-                    .append(row.group().sizeBytes());
+            signature
+                .append('g')
+                .append(row.group().key())
+                .append('|')
+                .append(row.group().title())
+                .append('|')
+                .append(row.group().tracks().size())
+                .append('|')
+                .append(row.group().duplicateCount())
+                .append('|')
+                .append(jobSignature(row.group().key()))
+                .append('|')
+                .append(
+                    row
+                        .group()
+                        .m4b()
+                        .map(track -> track.sizeBytes + "|" + track.files)
+                        .orElse("no-m4b")
+                )
+                .append('|')
+                .append(row.group().sizeBytes());
             return;
         }
         LibraryTrack track = row.track();
-        signature.append(track.id).append('|')
-                .append(track.status).append('|')
-                .append(track.sizeBytes).append('|')
-                .append(track.durationMs).append('|')
-                .append(track.gaps).append('|')
-                .append(track.gapPackets).append('|')
-                .append(track.recoveredGaps).append('|')
-                .append(track.incomplete).append('|')
-                .append(track.chapterCount).append('|')
-                .append(track.bookId).append('|')
-                .append(track.files);
+        signature
+            .append(track.id)
+            .append('|')
+            .append(track.status)
+            .append('|')
+            .append(track.sizeBytes)
+            .append('|')
+            .append(track.durationMs)
+            .append('|')
+            .append(track.gaps)
+            .append('|')
+            .append(track.gapPackets)
+            .append('|')
+            .append(track.recoveredGaps)
+            .append('|')
+            .append(track.incomplete)
+            .append('|')
+            .append(track.chapterCount)
+            .append('|')
+            .append(track.bookId)
+            .append('|')
+            .append(track.files);
         if (row.group() != null) {
             signature.append('|').append(jobSignature(row.group().key()));
         }
@@ -1241,20 +1488,23 @@ public class LibraryView extends VerticalLayout {
 
     /** Queue state of a group, so the grid redraws when a conversion starts, advances or ends. */
     private String jobSignature(String groupKey) {
-        return audiobookJobs.latest(groupKey)
-                .map(job -> job.state + "|" + Math.round(job.progress * 100) + "|" + job.error)
-                .orElse("none");
+        return audiobookJobs
+            .latest(groupKey)
+            .map(job -> job.state + "|" + Math.round(job.progress * 100) + "|" + job.error)
+            .orElse("none");
     }
 
     private static boolean matches(LibraryTrack track, String query) {
         if (query.isBlank()) {
             return true;
         }
-        String haystack = String.join(" ",
-                track.title == null ? "" : track.title,
-                track.artist == null ? "" : track.artist,
-                track.album == null ? "" : track.album,
-                track.baseName == null ? "" : track.baseName);
+        String haystack = String.join(
+            " ",
+            track.title == null ? "" : track.title,
+            track.artist == null ? "" : track.artist,
+            track.album == null ? "" : track.album,
+            track.baseName == null ? "" : track.baseName
+        );
         return matchesText(haystack, query);
     }
 
@@ -1278,10 +1528,12 @@ public class LibraryView extends VerticalLayout {
             }
         });
         UI ui = attachEvent.getUI();
-        resizeRegistration = ui.getPage().addBrowserWindowResizeListener(
-                event -> applyResponsiveLayout(event.getWidth()));
-        ui.getPage().getExtendedClientDetails().refresh(
-                details -> applyResponsiveLayout(details.getWindowInnerWidth()));
+        resizeRegistration = ui
+            .getPage()
+            .addBrowserWindowResizeListener(event -> applyResponsiveLayout(event.getWidth()));
+        ui.getPage()
+            .getExtendedClientDetails()
+            .refresh(details -> applyResponsiveLayout(details.getWindowInnerWidth()));
         refresh(true);
     }
 

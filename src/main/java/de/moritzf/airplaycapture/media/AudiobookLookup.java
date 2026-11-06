@@ -1,10 +1,6 @@
 package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.Log;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
-
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -22,6 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Confirms audiobook candidates against keyless public catalogs: Apple's iTunes Search API has an
@@ -31,12 +30,16 @@ import java.util.concurrent.TimeUnit;
  */
 public final class AudiobookLookup {
 
-    public record Verdict(boolean audiobook, String matchedTitle, String matchedAuthor) {
-    }
+    public record Verdict(boolean audiobook, String matchedTitle, String matchedAuthor) {}
 
     /** One Apple Books edition. Apple has no chapter data, only metadata and cover art. */
-    public record Edition(String id, String title, String author, Integer year, String artworkUrl) {
-    }
+    public record Edition(
+        String id,
+        String title,
+        String author,
+        Integer year,
+        String artworkUrl
+    ) {}
 
     public record Options(boolean apple, boolean musicBrainz, String country, String contact) {
         boolean any() {
@@ -44,8 +47,14 @@ public final class AudiobookLookup {
         }
 
         String signature() {
-            return (apple ? "a" : "") + (musicBrainz ? "m" : "")
-                    + "|" + (country == null ? "" : country) + "|" + (contact == null ? "" : contact);
+            return (
+                (apple ? "a" : "") +
+                (musicBrainz ? "m" : "") +
+                "|" +
+                (country == null ? "" : country) +
+                "|" +
+                (contact == null ? "" : contact)
+            );
         }
     }
 
@@ -62,13 +71,12 @@ public final class AudiobookLookup {
         return thread;
     });
     private final HttpClient http = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+        .connectTimeout(Duration.ofSeconds(5))
+        .build();
 
     private volatile long lastRequestAt;
 
-    private record Cached(Verdict verdict, long expiresAt) {
-    }
+    private record Cached(Verdict verdict, long expiresAt) {}
 
     public void request(String album, String artist, Options options) {
         request(null, album, artist, options);
@@ -94,18 +102,33 @@ public final class AudiobookLookup {
                 long ttl = (verdict.audiobook() ? POSITIVE_TTL : NEGATIVE_TTL).toMillis();
                 cache.put(key, new Cached(verdict, System.currentTimeMillis() + ttl));
                 if (verdict.audiobook()) {
-                    Log.info("lookup", "audiobook confirmed: '" + verdict.matchedTitle()
-                            + "' / " + verdict.matchedAuthor());
+                    Log.info(
+                        "lookup",
+                        "audiobook confirmed: '" +
+                            verdict.matchedTitle() +
+                            "' / " +
+                            verdict.matchedAuthor()
+                    );
                 } else {
-                    Log.info("lookup", "no audiobook match for '" + subject + "'"
-                            + (titleOnly ? "" : " / " + artist));
+                    Log.info(
+                        "lookup",
+                        "no audiobook match for '" +
+                            subject +
+                            "'" +
+                            (titleOnly ? "" : " / " + artist)
+                    );
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 Log.warn("lookup", "audiobook lookup failed: " + e.getMessage());
-                cache.put(key, new Cached(new Verdict(false, null, null),
-                        System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()));
+                cache.put(
+                    key,
+                    new Cached(
+                        new Verdict(false, null, null),
+                        System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()
+                    )
+                );
             } finally {
                 inFlight.remove(key);
             }
@@ -161,20 +184,35 @@ public final class AudiobookLookup {
         }
     }
 
-    private List<Edition> appleEditions(String album, String artist, Options options,
-                                        boolean titleOnly) throws Exception {
+    private List<Edition> appleEditions(
+        String album,
+        String artist,
+        Options options,
+        boolean titleOnly
+    ) throws Exception {
         throttle();
-        String term = titleOnly || artist == null || artist.isBlank() ? album : album + " " + artist;
-        String cc = options.country() == null || options.country().isBlank()
-                ? "US" : options.country().trim().toUpperCase(Locale.ROOT);
-        String url = "https://itunes.apple.com/search?media=audiobook&entity=audiobook&limit=10"
-                + "&country=" + encode(cc)
-                + "&term=" + encode(term);
+        String term =
+            titleOnly || artist == null || artist.isBlank() ? album : album + " " + artist;
+        String cc =
+            options.country() == null || options.country().isBlank()
+                ? "US"
+                : options.country().trim().toUpperCase(Locale.ROOT);
+        String url =
+            "https://itunes.apple.com/search?media=audiobook&entity=audiobook&limit=10" +
+            "&country=" +
+            encode(cc) +
+            "&term=" +
+            encode(term);
         String body = get(url, "AirPlayCapture/1.0");
         return parseEditions(body, album, artist, titleOnly);
     }
 
-    private static String lookupKey(String subject, String artist, Options options, boolean titleOnly) {
+    private static String lookupKey(
+        String subject,
+        String artist,
+        Options options,
+        boolean titleOnly
+    ) {
         return key(subject, titleOnly ? "" : artist, options) + (titleOnly ? "|title" : "");
     }
 
@@ -191,7 +229,7 @@ public final class AudiobookLookup {
     }
 
     private Verdict query(String subject, String artist, Options options, boolean titleOnly)
-            throws Exception {
+        throws Exception {
         if (options.apple()) {
             Verdict verdict = apple(subject, artist, options, titleOnly);
             if (verdict.audiobook()) {
@@ -208,43 +246,55 @@ public final class AudiobookLookup {
     }
 
     private Verdict apple(String album, String artist, Options options, boolean titleOnly)
-            throws Exception {
+        throws Exception {
         throttle();
-        String term = titleOnly || artist == null || artist.isBlank() ? album : album + " " + artist;
-        String cc = options.country() == null || options.country().isBlank()
-                ? "US" : options.country().trim().toUpperCase(Locale.ROOT);
-        String url = "https://itunes.apple.com/search?media=audiobook&entity=audiobook&limit=10"
-                + "&country=" + encode(cc)
-                + "&term=" + encode(term);
+        String term =
+            titleOnly || artist == null || artist.isBlank() ? album : album + " " + artist;
+        String cc =
+            options.country() == null || options.country().isBlank()
+                ? "US"
+                : options.country().trim().toUpperCase(Locale.ROOT);
+        String url =
+            "https://itunes.apple.com/search?media=audiobook&entity=audiobook&limit=10" +
+            "&country=" +
+            encode(cc) +
+            "&term=" +
+            encode(term);
         String body = get(url, "AirPlayCapture/1.0");
         return parse(body, album, artist, titleOnly);
     }
 
     private Verdict musicBrainz(String album, String artist, Options options, boolean titleOnly)
-            throws Exception {
+        throws Exception {
         throttle();
         String query = "releasegroup:\"" + album.replace("\"", "") + "\"";
         if (!titleOnly && artist != null && !artist.isBlank()) {
             query += " AND artist:\"" + artist.replace("\"", "") + "\"";
         }
-        String url = "https://musicbrainz.org/ws/2/release-group/?query=" + encode(query)
-                + "&fmt=json&limit=5";
-        String contact = options.contact() == null || options.contact().isBlank()
-                ? "self-hosted" : options.contact().trim();
+        String url =
+            "https://musicbrainz.org/ws/2/release-group/?query=" +
+            encode(query) +
+            "&fmt=json&limit=5";
+        String contact =
+            options.contact() == null || options.contact().isBlank()
+                ? "self-hosted"
+                : options.contact().trim();
         String body = get(url, "AirPlayCapture/1.0 (" + contact + ")");
         return parseMusicBrainz(body, album, artist, titleOnly);
     }
 
     private String get(String url, String userAgent) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(7))
-                .header("User-Agent", userAgent)
-                .header("Accept", "application/json")
-                .GET()
-                .build();
+            .timeout(Duration.ofSeconds(7))
+            .header("User-Agent", userAgent)
+            .header("Accept", "application/json")
+            .GET()
+            .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
-            throw new IllegalStateException("HTTP " + response.statusCode() + " from " + URI.create(url).getHost());
+            throw new IllegalStateException(
+                "HTTP " + response.statusCode() + " from " + URI.create(url).getHost()
+            );
         }
         return response.body();
     }
@@ -285,8 +335,12 @@ public final class AudiobookLookup {
         return new Verdict(false, null, null);
     }
 
-    static List<Edition> parseEditions(String json, String expected, String artist,
-                                       boolean titleOnly) {
+    static List<Edition> parseEditions(
+        String json,
+        String expected,
+        String artist,
+        boolean titleOnly
+    ) {
         JsonNode results = JSON.readTree(json).path("results");
         List<Edition> editions = new ArrayList<>();
         if (!results.isArray()) {
@@ -309,15 +363,23 @@ public final class AudiobookLookup {
             if (id.isBlank()) {
                 continue;
             }
-            editions.add(new Edition(id, title, author, year(item.path("releaseDate").asString("")),
-                    largeArtwork(item.path("artworkUrl100").asString(""))));
+            editions.add(
+                new Edition(
+                    id,
+                    title,
+                    author,
+                    year(item.path("releaseDate").asString("")),
+                    largeArtwork(item.path("artworkUrl100").asString(""))
+                )
+            );
         }
         return editions;
     }
 
     private static String largeArtwork(String url) {
-        return url == null ? "" : url.replace("/100x100bb.", "/600x600bb.")
-                .replace("/100x100.", "/600x600.");
+        return url == null
+            ? ""
+            : url.replace("/100x100bb.", "/600x600bb.").replace("/100x100.", "/600x600.");
     }
 
     private static Integer year(String releaseDate) {
@@ -336,7 +398,12 @@ public final class AudiobookLookup {
         return parseMusicBrainz(json, album, artist, false);
     }
 
-    static Verdict parseMusicBrainz(String json, String expected, String artist, boolean titleOnly) {
+    static Verdict parseMusicBrainz(
+        String json,
+        String expected,
+        String artist,
+        boolean titleOnly
+    ) {
         JsonNode groups = JSON.readTree(json).path("release-groups");
         if (!groups.isArray()) {
             return new Verdict(false, null, null);
@@ -348,8 +415,12 @@ public final class AudiobookLookup {
             if (types.isArray()) {
                 for (JsonNode type : types) {
                     String value = normalize(type.asString(""));
-                    if (value.equals("audiobook") || value.equals("spokenword")
-                            || value.equals("audio drama") || value.equals("audio book")) {
+                    if (
+                        value.equals("audiobook") ||
+                        value.equals("spokenword") ||
+                        value.equals("audio drama") ||
+                        value.equals("audio book")
+                    ) {
                         audiobookType = true;
                         break;
                     }
@@ -416,8 +487,10 @@ public final class AudiobookLookup {
         if (value == null) {
             return "";
         }
-        String decomposed = Normalizer.normalize(value.toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
+        String decomposed = Normalizer.normalize(
+            value.toLowerCase(Locale.ROOT),
+            Normalizer.Form.NFD
+        ).replaceAll("\\p{M}", "");
         return decomposed.replaceAll("[^a-z0-9]+", " ").trim();
     }
 
@@ -443,7 +516,10 @@ public final class AudiobookLookup {
             current[0] = i;
             for (int j = 1; j <= b.length(); j++) {
                 int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                current[j] = Math.min(Math.min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+                current[j] = Math.min(
+                    Math.min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + cost
+                );
             }
             int[] swap = previous;
             previous = current;

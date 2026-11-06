@@ -3,7 +3,6 @@ package de.moritzf.airplaycapture.raop;
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.Settings;
 import de.moritzf.airplaycapture.recording.RecordingManager;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -33,10 +32,10 @@ final class StreamSession {
     /** Longest loss filled with silence (~60 s); longer jumps are not packet loss. */
     private static final int MAX_SILENCE_PACKETS = 7500;
 
-    private record RawPacket(byte[] data, int length, String origin) {
-    }
+    private record RawPacket(byte[] data, int length, String origin) {}
 
     private static final class Frame {
+
         final long sequence;
         final long rtpTime;
         final byte[] payload;
@@ -81,9 +80,15 @@ final class StreamSession {
     private long lastRtpTime = -1;
     private int lostPackets;
 
-    StreamSession(InetAddress clientAddress, InetAddress localAddress, Sdp sdp,
-                  int remoteControlPort, int remoteTimingPort, RecordingManager recorder,
-                  Settings settings) throws IOException {
+    StreamSession(
+        InetAddress clientAddress,
+        InetAddress localAddress,
+        Sdp sdp,
+        int remoteControlPort,
+        int remoteTimingPort,
+        RecordingManager recorder,
+        Settings settings
+    ) throws IOException {
         this.clientAddress = clientAddress;
         this.localAddress = localAddress;
         this.config = sdp.alac();
@@ -115,11 +120,19 @@ final class StreamSession {
         for (DatagramSocket socket : List.of(audioSocket, controlSocket, timingSocket)) {
             socket.setSoTimeout(200);
         }
-        Log.info("raop", "stream sockets: audio " + audioSocket.getLocalPort()
-                + ", control " + controlSocket.getLocalPort()
-                + ", timing " + timingSocket.getLocalPort()
-                + " (audio buffer " + audioSocket.getReceiveBufferSize() / 1024 + " KiB"
-                + (encrypted ? ", AES-128)" : ", unencrypted)"));
+        Log.info(
+            "raop",
+            "stream sockets: audio " +
+                audioSocket.getLocalPort() +
+                ", control " +
+                controlSocket.getLocalPort() +
+                ", timing " +
+                timingSocket.getLocalPort() +
+                " (audio buffer " +
+                audioSocket.getReceiveBufferSize() / 1024 +
+                " KiB" +
+                (encrypted ? ", AES-128)" : ", unencrypted)")
+        );
     }
 
     int audioPort() {
@@ -156,7 +169,13 @@ final class StreamSession {
                 audioSocket.receive(packet);
                 byte[] copy = new byte[packet.getLength()];
                 System.arraycopy(packet.getData(), packet.getOffset(), copy, 0, packet.getLength());
-                if (!incoming.offer(new RawPacket(copy, copy.length, "audio"), 100, TimeUnit.MILLISECONDS)) {
+                if (
+                    !incoming.offer(
+                        new RawPacket(copy, copy.length, "audio"),
+                        100,
+                        TimeUnit.MILLISECONDS
+                    )
+                ) {
                     Log.warn(label, "audio queue full, dropping packet");
                 }
             } catch (SocketTimeoutException ignored) {
@@ -244,8 +263,11 @@ final class StreamSession {
             return;
         }
         int sequence = ((data[2] & 0xFF) << 8) | (data[3] & 0xFF);
-        long rtpTime = ((long) (data[4] & 0xFF) << 24) | ((data[5] & 0xFF) << 16)
-                | ((data[6] & 0xFF) << 8) | (data[7] & 0xFF);
+        long rtpTime =
+            ((long) (data[4] & 0xFF) << 24) |
+            ((data[5] & 0xFF) << 16) |
+            ((data[6] & 0xFF) << 8) |
+            (data[7] & 0xFF);
         int payloadOffset = RTP_HEADER;
         int payloadLength = data.length - RTP_HEADER;
         if (payloadLength <= 0) {
@@ -253,7 +275,13 @@ final class StreamSession {
         }
         if (encrypted) {
             try {
-                int decrypted = RaopCrypto.decryptPayload(aesKey, aesIv, data, payloadOffset, payloadLength);
+                int decrypted = RaopCrypto.decryptPayload(
+                    aesKey,
+                    aesIv,
+                    data,
+                    payloadOffset,
+                    payloadLength
+                );
                 if (decrypted == 0) {
                     Log.warn(label, "payload too small to decrypt: " + payloadLength);
                 }
@@ -339,12 +367,21 @@ final class StreamSession {
                 // senders keep only a short retransmit window, so repeated requests matter.
                 long requested = Math.min(missing, 512);
                 for (long offset = 0; offset < requested; offset += RESEND_BATCH) {
-                    requestResend(nextSequence + offset,
-                            (int) Math.min(RESEND_BATCH, requested - offset));
+                    requestResend(
+                        nextSequence + offset,
+                        (int) Math.min(RESEND_BATCH, requested - offset)
+                    );
                 }
                 if (!gapRequestLogged) {
-                    Log.info(label, "waiting up to " + settings.packetRecoveryMs
-                            + " ms for " + missing + " missing packet(s) at " + nextSequence);
+                    Log.info(
+                        label,
+                        "waiting up to " +
+                            settings.packetRecoveryMs +
+                            " ms for " +
+                            missing +
+                            " missing packet(s) at " +
+                            nextSequence
+                    );
                     gapRequestLogged = true;
                 }
                 lastResendAt = now;
@@ -363,7 +400,13 @@ final class StreamSession {
     }
 
     private void deliver(Frame frame) {
-        recorder.onAudio(frame.rtpTime, frame.payload, RTP_HEADER, frame.length, config.frameLength());
+        recorder.onAudio(
+            frame.rtpTime,
+            frame.payload,
+            RTP_HEADER,
+            frame.length,
+            config.frameLength()
+        );
         deliveredFrames++;
         lastRtpTime = frame.rtpTime;
     }

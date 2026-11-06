@@ -9,16 +9,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /** Small in-memory log with ring buffer and listeners, used by the web UI. */
 public final class Log {
 
-    public record Line(String time, String level, String scope, String message) {
-    }
+    public record Line(String time, String level, String scope, String message) {}
 
     private static final int MAX_LINES = 400;
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final List<Line> LINES = new ArrayList<>();
     private static final List<Runnable> LISTENERS = new CopyOnWriteArrayList<>();
 
-    private Log() {
-    }
+    private Log() {}
 
     public static void info(String scope, String message) {
         write("INFO", scope, message, false);
@@ -33,8 +31,16 @@ public final class Log {
     }
 
     public static void error(String scope, String message, Throwable t) {
-        write("ERROR", scope, message + " (" + t.getClass().getSimpleName()
-                + (t.getMessage() == null ? "" : ": " + t.getMessage()) + ")", true);
+        write(
+            "ERROR",
+            scope,
+            message +
+                " (" +
+                t.getClass().getSimpleName() +
+                (t.getMessage() == null ? "" : ": " + t.getMessage()) +
+                ")",
+            true
+        );
     }
 
     private static void write(String level, String scope, String message, boolean stderr) {

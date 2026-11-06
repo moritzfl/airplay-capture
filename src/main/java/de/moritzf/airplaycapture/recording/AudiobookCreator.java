@@ -6,7 +6,6 @@ import de.moritzf.airplaycapture.Settings;
 import de.moritzf.airplaycapture.UiState;
 import de.moritzf.airplaycapture.library.CoverHash;
 import de.moritzf.airplaycapture.library.Library;
-import de.moritzf.airplaycapture.ui.AppUrls;
 import de.moritzf.airplaycapture.library.LibraryGroups;
 import de.moritzf.airplaycapture.library.LibraryTrack;
 import de.moritzf.airplaycapture.media.AudiobookAssembler;
@@ -14,7 +13,7 @@ import de.moritzf.airplaycapture.media.AudiobookLookup;
 import de.moritzf.airplaycapture.media.ChapterCatalog;
 import de.moritzf.airplaycapture.media.ChapterSplitter;
 import de.moritzf.airplaycapture.media.FfmpegRunner;
-
+import de.moritzf.airplaycapture.ui.AppUrls;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,9 +38,8 @@ import java.util.regex.Pattern;
  */
 public final class AudiobookCreator {
 
-    private static final Pattern INVALID_FILENAME =
-            Pattern.compile("[\\\\/:*?\"<>|\\p{Cntrl}]");
-    private static final String[] SOURCE_FORMATS = {"alac", "m4a", "mp3", "caf"};
+    private static final Pattern INVALID_FILENAME = Pattern.compile("[\\\\/:*?\"<>|\\p{Cntrl}]");
+    private static final String[] SOURCE_FORMATS = { "alac", "m4a", "mp3", "caf" };
     private static final long PREVIEW_TTL_MS = 60 * 60 * 1000;
 
     public enum ChapterMode {
@@ -50,31 +48,67 @@ public final class AudiobookCreator {
         /** Split at detected pauses. */
         PAUSES,
         /** Every selected recording becomes one chapter. */
-        RECORDINGS
+        RECORDINGS,
     }
 
-    public record Request(String groupKey, String title, String album, String author,
-                          List<LibraryTrack> sources, ChapterMode chapterMode, int bitrateKbps,
-                          ChapterCatalog.Result catalogChapters) {
-        public Request(String groupKey, String title, String album, String author,
-                       List<LibraryTrack> sources, ChapterMode chapterMode, int bitrateKbps) {
+    public record Request(
+        String groupKey,
+        String title,
+        String album,
+        String author,
+        List<LibraryTrack> sources,
+        ChapterMode chapterMode,
+        int bitrateKbps,
+        ChapterCatalog.Result catalogChapters
+    ) {
+        public Request(
+            String groupKey,
+            String title,
+            String album,
+            String author,
+            List<LibraryTrack> sources,
+            ChapterMode chapterMode,
+            int bitrateKbps
+        ) {
             this(groupKey, title, album, author, sources, chapterMode, bitrateKbps, null);
         }
 
         /** Backwards-compatible constructor for callers that only know the split flag. */
-        public Request(String groupKey, String title, String author, List<LibraryTrack> sources,
-                       boolean splitLongRecordings, int bitrateKbps) {
-            this(groupKey, title, null, author, sources,
-                    splitLongRecordings ? ChapterMode.PAUSES : ChapterMode.RECORDINGS, bitrateKbps,
-                    null);
+        public Request(
+            String groupKey,
+            String title,
+            String author,
+            List<LibraryTrack> sources,
+            boolean splitLongRecordings,
+            int bitrateKbps
+        ) {
+            this(
+                groupKey,
+                title,
+                null,
+                author,
+                sources,
+                splitLongRecordings ? ChapterMode.PAUSES : ChapterMode.RECORDINGS,
+                bitrateKbps,
+                null
+            );
         }
     }
 
     /** One catalog edition shown in the picker, with or without chapter data. */
-    public record CatalogMatch(String id, String source, String title, String author, Integer year,
-                               String coverUrl, long durationMs, int chapterCount,
-                               boolean hasChapters, double score,
-                               ChapterCatalog.Result chapters) {
+    public record CatalogMatch(
+        String id,
+        String source,
+        String title,
+        String author,
+        Integer year,
+        String coverUrl,
+        long durationMs,
+        int chapterCount,
+        boolean hasChapters,
+        double score,
+        ChapterCatalog.Result chapters
+    ) {
         public boolean fits(long recordingMs) {
             return durationDeviation(recordingMs) <= ChapterSplitter.CATALOG_TOLERANCE;
         }
@@ -88,18 +122,33 @@ public final class AudiobookCreator {
     }
 
     /** One planned chapter, with the URLs of its boundary preview and full playback. */
-    public record ChapterPreview(int index, String title, long startMs, long durationMs,
-                                 String url, String fullUrl) {
-    }
+    public record ChapterPreview(
+        int index,
+        String title,
+        long startMs,
+        long durationMs,
+        String url,
+        String fullUrl
+    ) {}
 
-    public record Preview(String id, long durationMs, List<ChapterPreview> chapters,
-                          String source, String note) {
-    }
+    public record Preview(
+        String id,
+        long durationMs,
+        List<ChapterPreview> chapters,
+        String source,
+        String note
+    ) {}
 
     /** What a finished conversion produced, for the queue entry and its download button. */
-    public record Result(String trackId, String fileName, long sizeBytes, int chapterCount,
-                         long durationMs, String title, String author) {
-    }
+    public record Result(
+        String trackId,
+        String fileName,
+        long sizeBytes,
+        int chapterCount,
+        long durationMs,
+        String title,
+        String author
+    ) {}
 
     private final AppDirs dirs;
     private final Library library;
@@ -112,8 +161,13 @@ public final class AudiobookCreator {
         this(dirs, library, ui, settings, new ChapterCatalog());
     }
 
-    public AudiobookCreator(AppDirs dirs, Library library, UiState ui, Settings settings,
-                            ChapterCatalog catalog) {
+    public AudiobookCreator(
+        AppDirs dirs,
+        Library library,
+        UiState ui,
+        Settings settings,
+        ChapterCatalog catalog
+    ) {
         this.dirs = dirs;
         this.library = library;
         this.settings = settings;
@@ -125,8 +179,10 @@ public final class AudiobookCreator {
         cleanupExpired();
         Analysis analysis = analyzeInternal(request, null);
         analyses.put(analysis.id, analysis);
-        Log.info("audiobook", "preview ready: " + analysis.chapters.size() + " chapters ("
-                + analysis.id + ")");
+        Log.info(
+            "audiobook",
+            "preview ready: " + analysis.chapters.size() + " chapters (" + analysis.id + ")"
+        );
         return view(analysis);
     }
 
@@ -174,11 +230,30 @@ public final class AudiobookCreator {
                 return full;
             }
             Files.deleteIfExists(full);
-            run(List.of(settings.ffmpegPath, "-hide_banner", "-loglevel", "error", "-y",
-                    "-ss", format(chapter.startMs() / 1000.0),
-                    "-t", format(chapter.durationMs() / 1000.0),
-                    "-i", chapter.source().toString(), "-map", "0:a:0",
-                    "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", full.toString()));
+            run(
+                List.of(
+                    settings.ffmpegPath,
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-ss",
+                    format(chapter.startMs() / 1000.0),
+                    "-t",
+                    format(chapter.durationMs() / 1000.0),
+                    "-i",
+                    chapter.source().toString(),
+                    "-map",
+                    "0:a:0",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "96k",
+                    "-movflags",
+                    "+faststart",
+                    full.toString()
+                )
+            );
             return Files.exists(full) ? full : null;
         }
     }
@@ -195,12 +270,17 @@ public final class AudiobookCreator {
      * queue worker thread; the caller owns scheduling and error handling.
      */
     public Result convert(Request request, AudiobookJobs.Progress progress)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         Analysis analysis = null;
         try {
             analysis = analyzeInternal(request, progress);
-            return assemble(analysis, request.title(), request.author(), request.bitrateKbps(),
-                    progress);
+            return assemble(
+                analysis,
+                request.title(),
+                request.author(),
+                request.bitrateKbps(),
+                progress
+            );
         } finally {
             if (analysis != null) {
                 deleteTree(analysis.work);
@@ -209,11 +289,18 @@ public final class AudiobookCreator {
     }
 
     /** Assemble from an already previewed plan, so the result matches what the user checked. */
-    public Result convert(String previewId, String title, String author, int bitrateKbps,
-                          AudiobookJobs.Progress progress) throws IOException, InterruptedException {
+    public Result convert(
+        String previewId,
+        String title,
+        String author,
+        int bitrateKbps,
+        AudiobookJobs.Progress progress
+    ) throws IOException, InterruptedException {
         Analysis analysis = analyses.remove(previewId);
         if (analysis == null) {
-            throw new IOException("The preview expired. Open the dialog again and create a new one.");
+            throw new IOException(
+                "The preview expired. Open the dialog again and create a new one."
+            );
         }
         try {
             return assemble(analysis, title, author, bitrateKbps, progress);
@@ -227,65 +314,124 @@ public final class AudiobookCreator {
     }
 
     private AudiobookLookup.Options lookupOptions() {
-        return new AudiobookLookup.Options(settings.audiobookLookupEnabled,
-                settings.audiobookLookupMusicBrainz, settings.audiobookLookupCountry,
-                settings.audiobookLookupContact);
+        return new AudiobookLookup.Options(
+            settings.audiobookLookupEnabled,
+            settings.audiobookLookupMusicBrainz,
+            settings.audiobookLookupCountry,
+            settings.audiobookLookupContact
+        );
     }
 
     /** Fetches chapter names and durations from Deezer/MusicBrainz for the given recording length. */
-    public Optional<ChapterCatalog.Result> lookupChapters(String title, String album, String author,
-                                                          long expectedDurationMs) {
+    public Optional<ChapterCatalog.Result> lookupChapters(
+        String title,
+        String album,
+        String author,
+        long expectedDurationMs
+    ) {
         return catalog.lookup(title, album, author, expectedDurationMs, catalogOptions());
     }
 
     /** All matching editions for the picker: chapter editions first, Apple metadata after them. */
-    public List<CatalogMatch> searchCatalog(String title, String album, String author,
-                                            long expectedDurationMs) {
+    public List<CatalogMatch> searchCatalog(
+        String title,
+        String album,
+        String author,
+        long expectedDurationMs
+    ) {
         List<CatalogMatch> matches = new ArrayList<>();
-        for (ChapterCatalog.Result result : catalog.search(title, album, author,
-                expectedDurationMs, catalogOptions())) {
-            matches.add(new CatalogMatch(result.id(), result.source(), result.album(),
-                    result.artist(), result.year(), result.coverUrl(), result.totalMs(),
-                    result.chapters().size(), true, result.score(), result));
+        for (ChapterCatalog.Result result : catalog.search(
+            title,
+            album,
+            author,
+            expectedDurationMs,
+            catalogOptions()
+        )) {
+            matches.add(
+                new CatalogMatch(
+                    result.id(),
+                    result.source(),
+                    result.album(),
+                    result.artist(),
+                    result.year(),
+                    result.coverUrl(),
+                    result.totalMs(),
+                    result.chapters().size(),
+                    true,
+                    result.score(),
+                    result
+                )
+            );
         }
         int apple = 0;
-        for (AudiobookLookup.Edition edition : lookup.search(title, album, author, lookupOptions())) {
+        for (AudiobookLookup.Edition edition : lookup.search(
+            title,
+            album,
+            author,
+            lookupOptions()
+        )) {
             if (apple++ >= 3) {
                 break;
             }
-            matches.add(new CatalogMatch(edition.id(), "Apple Books", edition.title(),
-                    edition.author(), edition.year(), edition.artworkUrl(), 0, 0, false, 0, null));
+            matches.add(
+                new CatalogMatch(
+                    edition.id(),
+                    "Apple Books",
+                    edition.title(),
+                    edition.author(),
+                    edition.year(),
+                    edition.artworkUrl(),
+                    0,
+                    0,
+                    false,
+                    0,
+                    null
+                )
+            );
         }
-        matches.sort(Comparator.comparing(CatalogMatch::hasChapters).reversed()
+        matches.sort(
+            Comparator.comparing(CatalogMatch::hasChapters)
+                .reversed()
                 .thenComparingDouble(match -> match.durationDeviation(expectedDurationMs))
-                .thenComparing(Comparator.comparingDouble(CatalogMatch::score).reversed()));
+                .thenComparing(Comparator.comparingDouble(CatalogMatch::score).reversed())
+        );
         return matches.size() > 8 ? List.copyOf(matches.subList(0, 8)) : List.copyOf(matches);
     }
 
     private ChapterCatalog.Options catalogOptions() {
         boolean enabled = settings.audiobookCatalogChapters;
-        return new ChapterCatalog.Options(enabled,
-                enabled && settings.audiobookLookupMusicBrainz,
-                settings.audiobookLookupContact);
+        return new ChapterCatalog.Options(
+            enabled,
+            enabled && settings.audiobookLookupMusicBrainz,
+            settings.audiobookLookupContact
+        );
     }
 
     // ---------------------------------------------------------------- analysis
 
     private Analysis analyzeInternal(Request request, AudiobookJobs.Progress progress)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         report(progress, "Reading recordings", 0.04);
-        List<LibraryTrack> requested = request.sources().stream()
-                .filter(track -> track != null && track.files != null && track.chapterCount == null)
-                .toList();
-        List<LibraryTrack> tracks = LibraryGroups.bestTakes(requested).stream()
-                .sorted(Comparator
-                        .comparingInt((LibraryTrack track) -> track.trackNumber == null
-                                ? Integer.MAX_VALUE : track.trackNumber)
-                        .thenComparingLong(track -> track.recordedAtEpochMs))
-                .toList();
+        List<LibraryTrack> requested = request
+            .sources()
+            .stream()
+            .filter(track -> track != null && track.files != null && track.chapterCount == null)
+            .toList();
+        List<LibraryTrack> tracks = LibraryGroups.bestTakes(requested)
+            .stream()
+            .sorted(
+                Comparator.comparingInt((LibraryTrack track) ->
+                    track.trackNumber == null ? Integer.MAX_VALUE : track.trackNumber
+                ).thenComparingLong(track -> track.recordedAtEpochMs)
+            )
+            .toList();
         if (tracks.size() < requested.size()) {
-            Log.info("audiobook", "ignoring " + (requested.size() - tracks.size())
-                    + " duplicate take(s) during audiobook creation");
+            Log.info(
+                "audiobook",
+                "ignoring " +
+                    (requested.size() - tracks.size()) +
+                    " duplicate take(s) during audiobook creation"
+            );
         }
         if (tracks.isEmpty()) {
             throw new IOException("no source recordings selected");
@@ -303,10 +449,14 @@ public final class AudiobookCreator {
                 sources = normalize(sources, work);
             }
             List<String> titles = sourceChapterTitles(sources);
-            long totalMs = sources.stream().mapToLong(source -> source.track().durationMs).sum();
+            long totalMs = sources
+                .stream()
+                .mapToLong(source -> source.track().durationMs)
+                .sum();
 
             ChapterSplitter splitter = new ChapterSplitter(settings.ffmpegPath);
-            ChapterMode mode = request.chapterMode() == null ? ChapterMode.PAUSES : request.chapterMode();
+            ChapterMode mode =
+                request.chapterMode() == null ? ChapterMode.PAUSES : request.chapterMode();
             Path combined = null;
             List<ChapterSplitter.Silence> silences = null;
             List<Long> boundaries = List.of();
@@ -318,23 +468,39 @@ public final class AudiobookCreator {
 
             if (mode == ChapterMode.CATALOG) {
                 report(progress, "Looking up catalog chapters", 0.14);
-                Optional<ChapterCatalog.Result> found = request.catalogChapters() != null
+                Optional<ChapterCatalog.Result> found =
+                    request.catalogChapters() != null
                         ? Optional.of(request.catalogChapters())
-                        : catalog.lookup(request.title(), request.album(), request.author(), totalMs,
-                                catalogOptions());
+                        : catalog.lookup(
+                              request.title(),
+                              request.album(),
+                              request.author(),
+                              totalMs,
+                              catalogOptions()
+                          );
                 if (found.isEmpty()) {
                     note = "No catalog chapter list found; using pauses instead.";
                 } else {
                     List<ChapterCatalog.Chapter> chaptersFromCatalog = found.get().chapters();
-                    List<Long> durations = chaptersFromCatalog.stream()
-                            .map(ChapterCatalog.Chapter::durationMs).toList();
-                    report(progress, "Joining " + sources.size()
-                            + (sources.size() == 1 ? " recording" : " recordings"), 0.20);
+                    List<Long> durations = chaptersFromCatalog
+                        .stream()
+                        .map(ChapterCatalog.Chapter::durationMs)
+                        .toList();
+                    report(
+                        progress,
+                        "Joining " +
+                            sources.size() +
+                            (sources.size() == 1 ? " recording" : " recordings"),
+                        0.20
+                    );
                     combined = concatenate(splitter, sources, work);
                     report(progress, "Detecting pauses for chapter cuts", 0.30);
                     silences = splitter.detectSilences(combined, totalMs);
-                    ChapterSplitter.CatalogPlan plan = splitter.catalogPlan(durations, totalMs,
-                            silences);
+                    ChapterSplitter.CatalogPlan plan = splitter.catalogPlan(
+                        durations,
+                        totalMs,
+                        silences
+                    );
                     if (plan.boundaries().size() == durations.size() - 1) {
                         chapters = catalogChapters(chaptersFromCatalog, plan, combined);
                         boundaries = plan.boundaries();
@@ -343,14 +509,20 @@ public final class AudiobookCreator {
                         startMs = plan.startMs();
                         endMs = plan.endMs();
                         if (startMs > 0 || endMs < totalMs) {
-                            note += " · trimmed " + clock(startMs) + " intro / "
-                                    + clock(totalMs - endMs) + " outro";
+                            note +=
+                                " · trimmed " +
+                                clock(startMs) +
+                                " intro / " +
+                                clock(totalMs - endMs) +
+                                " outro";
                         }
                     } else {
-                        note = "Catalog chapters do not fit this recording ("
-                                + found.get().source() + " has "
-                                + Math.round(found.get().totalMs() / 60_000.0)
-                                + " min); using pauses instead.";
+                        note =
+                            "Catalog chapters do not fit this recording (" +
+                            found.get().source() +
+                            " has " +
+                            Math.round(found.get().totalMs() / 60_000.0) +
+                            " min); using pauses instead.";
                         boundaries = List.of();
                     }
                 }
@@ -361,8 +533,13 @@ public final class AudiobookCreator {
 
             if (mode == ChapterMode.PAUSES) {
                 if (combined == null) {
-                    report(progress, "Joining " + sources.size()
-                            + (sources.size() == 1 ? " recording" : " recordings"), 0.20);
+                    report(
+                        progress,
+                        "Joining " +
+                            sources.size() +
+                            (sources.size() == 1 ? " recording" : " recordings"),
+                        0.20
+                    );
                     combined = concatenate(splitter, sources, work);
                 }
                 if (silences == null) {
@@ -371,8 +548,8 @@ public final class AudiobookCreator {
                 }
                 boundaries = planBoundaries(splitter, sources, silences, totalMs);
                 chapters = boundaries.isEmpty()
-                        ? sourceChapters(sources, titles)
-                        : boundaryChapters(sources, titles, boundaries, totalMs, combined);
+                    ? sourceChapters(sources, titles)
+                    : boundaryChapters(sources, titles, boundaries, totalMs, combined);
                 source = boundaries.isEmpty() ? "recordings" : "pauses";
             } else if (mode == ChapterMode.RECORDINGS) {
                 chapters = sourceChapters(sources, titles);
@@ -383,10 +560,22 @@ public final class AudiobookCreator {
             }
             // Chapters without a source recording are ranges of the joined book and must be cut
             // out of it; passing the joined file per chapter would repeat the whole book.
-            boolean split = combined != null
-                    && chapters.stream().anyMatch(chapter -> chapter.track() == null);
-            return new Analysis(id, work, tracks, sources, split,
-                    combined, boundaries, chapters, startMs, endMs, source, note);
+            boolean split =
+                combined != null && chapters.stream().anyMatch(chapter -> chapter.track() == null);
+            return new Analysis(
+                id,
+                work,
+                tracks,
+                sources,
+                split,
+                combined,
+                boundaries,
+                chapters,
+                startMs,
+                endMs,
+                source,
+                note
+            );
         } catch (IOException | InterruptedException | RuntimeException e) {
             deleteTree(work);
             throw e;
@@ -394,13 +583,20 @@ public final class AudiobookCreator {
     }
 
     private static Path concatenate(ChapterSplitter splitter, List<Source> sources, Path work)
-            throws IOException, InterruptedException {
-        return splitter.concatenate(sources.stream().map(Source::path).toList(),
-                work.resolve("book.caf"), work);
+        throws IOException, InterruptedException {
+        return splitter.concatenate(
+            sources.stream().map(Source::path).toList(),
+            work.resolve("book.caf"),
+            work
+        );
     }
 
-    private static List<Long> planBoundaries(ChapterSplitter splitter, List<Source> sources,
-                                             List<ChapterSplitter.Silence> silences, long totalMs) {
+    private static List<Long> planBoundaries(
+        ChapterSplitter splitter,
+        List<Source> sources,
+        List<ChapterSplitter.Silence> silences,
+        long totalMs
+    ) {
         if (sources.size() == 1) {
             return splitter.silenceBoundaries(silences, totalMs);
         }
@@ -419,16 +615,29 @@ public final class AudiobookCreator {
         for (int i = 0; i < sources.size(); i++) {
             Source source = sources.get(i);
             long duration = Math.max(0, source.track().durationMs);
-            chapters.add(new PlannedChapter(titles.get(i), at, 0, duration, source.path(),
-                    source.track(), source.format()));
+            chapters.add(
+                new PlannedChapter(
+                    titles.get(i),
+                    at,
+                    0,
+                    duration,
+                    source.path(),
+                    source.track(),
+                    source.format()
+                )
+            );
             at += duration;
         }
         return chapters;
     }
 
-    private static List<PlannedChapter> boundaryChapters(List<Source> sources, List<String> titles,
-                                                        List<Long> boundaries, long totalMs,
-                                                        Path combined) {
+    private static List<PlannedChapter> boundaryChapters(
+        List<Source> sources,
+        List<String> titles,
+        List<Long> boundaries,
+        long totalMs,
+        Path combined
+    ) {
         List<Long> cuts = new ArrayList<>();
         cuts.add(0L);
         cuts.addAll(boundaries);
@@ -440,17 +649,22 @@ public final class AudiobookCreator {
             if (duration <= 0) {
                 continue;
             }
-            String title = sources.size() == 1
+            String title =
+                sources.size() == 1
                     ? "Chapter " + (chapters.size() + 1)
-                    : (i < titles.size() ? titles.get(i) : "Chapter " + (chapters.size() + 1));
+                    : i < titles.size()
+                      ? titles.get(i)
+                      : "Chapter " + (chapters.size() + 1);
             chapters.add(new PlannedChapter(title, start, start, duration, combined, null, "m4a"));
         }
         return chapters;
     }
 
-    private static List<PlannedChapter> catalogChapters(List<ChapterCatalog.Chapter> catalog,
-                                                        ChapterSplitter.CatalogPlan plan,
-                                                        Path combined) {
+    private static List<PlannedChapter> catalogChapters(
+        List<ChapterCatalog.Chapter> catalog,
+        ChapterSplitter.CatalogPlan plan,
+        Path combined
+    ) {
         List<Long> cuts = new ArrayList<>();
         cuts.add(plan.startMs());
         cuts.addAll(plan.boundaries());
@@ -462,8 +676,10 @@ public final class AudiobookCreator {
             if (duration <= 0) {
                 continue;
             }
-            String title = i < catalog.size() && !catalog.get(i).title().isBlank()
-                    ? catalog.get(i).title() : "Chapter " + (chapters.size() + 1);
+            String title =
+                i < catalog.size() && !catalog.get(i).title().isBlank()
+                    ? catalog.get(i).title()
+                    : "Chapter " + (chapters.size() + 1);
             chapters.add(new PlannedChapter(title, start, start, duration, combined, null, "m4a"));
         }
         return chapters;
@@ -471,28 +687,49 @@ public final class AudiobookCreator {
 
     // ---------------------------------------------------------------- assembly
 
-    private Result assemble(Analysis analysis, String title, String author, int bitrateKbps,
-                            AudiobookJobs.Progress progress)
-            throws IOException, InterruptedException {
+    private Result assemble(
+        Analysis analysis,
+        String title,
+        String author,
+        int bitrateKbps,
+        AudiobookJobs.Progress progress
+    ) throws IOException, InterruptedException {
         String bookTitle = blank(title) ? "Untitled audiobook" : title.trim();
         String bookAuthor = author == null ? "" : author.trim();
 
         List<AudiobookAssembler.Chapter> chapters = new ArrayList<>();
         if (analysis.split) {
             report(progress, "Cutting " + analysis.chapters.size() + " chapters", 0.36);
-            List<ChapterSplitter.Segment> segments = new ChapterSplitter(settings.ffmpegPath)
-                    .split(analysis.combined, analysis.startMs, analysis.endMs,
-                            analysis.boundaries, analysis.work, "chapter");
+            List<ChapterSplitter.Segment> segments = new ChapterSplitter(settings.ffmpegPath).split(
+                analysis.combined,
+                analysis.startMs,
+                analysis.endMs,
+                analysis.boundaries,
+                analysis.work,
+                "chapter"
+            );
             for (int i = 0; i < segments.size(); i++) {
-                String chapterTitle = i < analysis.chapters.size()
-                        ? analysis.chapters.get(i).title() : "Chapter " + (i + 1);
-                chapters.add(new AudiobookAssembler.Chapter(
-                        segments.get(i).file(), chapterTitle, segments.get(i).durationMs()));
+                String chapterTitle =
+                    i < analysis.chapters.size()
+                        ? analysis.chapters.get(i).title()
+                        : "Chapter " + (i + 1);
+                chapters.add(
+                    new AudiobookAssembler.Chapter(
+                        segments.get(i).file(),
+                        chapterTitle,
+                        segments.get(i).durationMs()
+                    )
+                );
             }
         } else {
             for (PlannedChapter chapter : analysis.chapters) {
-                chapters.add(new AudiobookAssembler.Chapter(
-                        chapter.source(), chapter.title(), chapter.durationMs()));
+                chapters.add(
+                    new AudiobookAssembler.Chapter(
+                        chapter.source(),
+                        chapter.title(),
+                        chapter.durationMs()
+                    )
+                );
             }
         }
         if (chapters.isEmpty()) {
@@ -502,29 +739,42 @@ public final class AudiobookCreator {
         long duration = chapters.stream().mapToLong(AudiobookAssembler.Chapter::durationMs).sum();
         Path cover = cover(analysis.tracks);
         String baseName = library.uniqueBaseName(
-                sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle), ".m4b");
+            sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle),
+            ".m4b"
+        );
         Path output = library.libraryDir().resolve(baseName + ".m4b");
         Files.createDirectories(library.libraryDir());
-        report(progress, "Encoding " + chapters.size() + "-chapter audiobook at "
-                + bitrateKbps + " kbps", 0.45);
-        new AudiobookAssembler(settings.ffmpegPath, bitrateKbps)
-                .assemble(chapters, cover, output, bookTitle, bookAuthor,
-                        fraction -> {
-                            // runs on ffmpeg's reader thread: report only, never throw here
-                            if (progress != null && !progress.cancelled()) {
-                                progress.step("Encoding audiobook at " + bitrateKbps + " kbps",
-                                        0.45 + 0.50 * fraction);
-                            }
-                        },
-                        progress == null ? null : progress::cancelled);
+        report(
+            progress,
+            "Encoding " + chapters.size() + "-chapter audiobook at " + bitrateKbps + " kbps",
+            0.45
+        );
+        new AudiobookAssembler(settings.ffmpegPath, bitrateKbps).assemble(
+            chapters,
+            cover,
+            output,
+            bookTitle,
+            bookAuthor,
+            fraction -> {
+                // runs on ffmpeg's reader thread: report only, never throw here
+                if (progress != null && !progress.cancelled()) {
+                    progress.step(
+                        "Encoding audiobook at " + bitrateKbps + " kbps",
+                        0.45 + 0.50 * fraction
+                    );
+                }
+            },
+            progress == null ? null : progress::cancelled
+        );
 
         // A rebuild joins the existing book instead of splitting it into a second group; the new
         // file becomes the current download and the old one stays as an earlier version.
-        String bookId = analysis.tracks.stream()
-                .map(track -> track.bookId)
-                .filter(value -> value != null && !value.isBlank())
-                .findFirst()
-                .orElse(UUID.randomUUID().toString().replace("-", "").substring(0, 16));
+        String bookId = analysis.tracks
+            .stream()
+            .map(track -> track.bookId)
+            .filter(value -> value != null && !value.isBlank())
+            .findFirst()
+            .orElse(UUID.randomUUID().toString().replace("-", "").substring(0, 16));
         LibraryTrack book = new LibraryTrack();
         book.id = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         book.bookId = bookId;
@@ -534,15 +784,22 @@ public final class AudiobookCreator {
         book.genre = "Audiobook";
         book.mediaKind = 8;
         book.durationMs = duration;
-        book.expectedDurationMs = analysis.tracks.stream()
-                .mapToLong(track -> Math.max(track.durationMs, track.expectedDurationMs))
-                .sum();
+        book.expectedDurationMs = analysis.tracks
+            .stream()
+            .mapToLong(track -> Math.max(track.durationMs, track.expectedDurationMs))
+            .sum();
         book.incomplete = analysis.tracks.stream().anyMatch(track -> track.incomplete);
-        book.recordedAtEpochMs = analysis.tracks.stream()
-                .mapToLong(track -> track.recordedAtEpochMs).min().orElse(System.currentTimeMillis());
-        book.source = analysis.tracks.stream().map(track -> track.source)
-                .filter(value -> value != null && !value.isBlank())
-                .findFirst().orElse("");
+        book.recordedAtEpochMs = analysis.tracks
+            .stream()
+            .mapToLong(track -> track.recordedAtEpochMs)
+            .min()
+            .orElse(System.currentTimeMillis());
+        book.source = analysis.tracks
+            .stream()
+            .map(track -> track.source)
+            .filter(value -> value != null && !value.isBlank())
+            .findFirst()
+            .orElse("");
         book.baseName = baseName;
         book.status = "ready";
         book.chapterCount = chapters.size();
@@ -565,14 +822,29 @@ public final class AudiobookCreator {
             track.audiobookChapter = true;
         }
         library.add(book);
-        Log.info("audiobook", "manual audiobook ready: " + baseName + " ("
-                + chapters.size() + " chapters, " + analysis.tracks.size() + " sources)");
+        Log.info(
+            "audiobook",
+            "manual audiobook ready: " +
+                baseName +
+                " (" +
+                chapters.size() +
+                " chapters, " +
+                analysis.tracks.size() +
+                " sources)"
+        );
         if (progress != null) {
             // the book is saved: a late cancel must not turn a finished file into a failure
             progress.step("Ready to download", 0.99);
         }
-        return new Result(book.id, output.getFileName().toString(), book.sizeBytes,
-                chapters.size(), duration, bookTitle, bookAuthor);
+        return new Result(
+            book.id,
+            output.getFileName().toString(),
+            book.sizeBytes,
+            chapters.size(),
+            duration,
+            bookTitle,
+            bookAuthor
+        );
     }
 
     /** Reports a step and stops the conversion here if the user cancelled it. */
@@ -589,25 +861,58 @@ public final class AudiobookCreator {
     // ---------------------------------------------------------------- preview clips
 
     private void writeClip(PlannedChapter chapter, Path clip)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         double start = chapter.startMs() / 1000.0;
         double duration = chapter.durationMs() / 1000.0;
         if (duration <= 0) {
             return;
         }
-        List<String> command = new ArrayList<>(List.of(
-                settings.ffmpegPath, "-hide_banner", "-loglevel", "error", "-y"));
+        List<String> command = new ArrayList<>(
+            List.of(settings.ffmpegPath, "-hide_banner", "-loglevel", "error", "-y")
+        );
         if (duration <= 20.0) {
-            command.addAll(List.of("-ss", format(start), "-t", format(duration),
-                    "-i", chapter.source().toString(),
-                    "-map", "0:a:0", "-c:a", "aac", "-b:a", "64k"));
+            command.addAll(
+                List.of(
+                    "-ss",
+                    format(start),
+                    "-t",
+                    format(duration),
+                    "-i",
+                    chapter.source().toString(),
+                    "-map",
+                    "0:a:0",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "64k"
+                )
+            );
         } else {
             double endStart = start + duration - 8.0;
-            command.addAll(List.of(
-                    "-ss", format(start), "-t", "10", "-i", chapter.source().toString(),
-                    "-ss", format(endStart), "-t", "8", "-i", chapter.source().toString(),
-                    "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1[outa]",
-                    "-map", "[outa]", "-c:a", "aac", "-b:a", "64k"));
+            command.addAll(
+                List.of(
+                    "-ss",
+                    format(start),
+                    "-t",
+                    "10",
+                    "-i",
+                    chapter.source().toString(),
+                    "-ss",
+                    format(endStart),
+                    "-t",
+                    "8",
+                    "-i",
+                    chapter.source().toString(),
+                    "-filter_complex",
+                    "[0:a][1:a]concat=n=2:v=0:a=1[outa]",
+                    "-map",
+                    "[outa]",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "64k"
+                )
+            );
         }
         command.addAll(List.of("-movflags", "+faststart", clip.toString()));
         run(command);
@@ -628,14 +933,24 @@ public final class AudiobookCreator {
         List<ChapterPreview> chapters = new ArrayList<>();
         for (int i = 0; i < analysis.chapters.size(); i++) {
             PlannedChapter chapter = analysis.chapters.get(i);
-            chapters.add(new ChapterPreview(i, chapter.title(),
+            chapters.add(
+                new ChapterPreview(
+                    i,
+                    chapter.title(),
                     Math.max(0, chapter.timelineStartMs() - analysis.startMs),
                     chapter.durationMs(),
                     AppUrls.relative("", "api/audiobook-preview/" + analysis.id + "/" + i),
-                    AppUrls.relative("", "api/audiobook-preview/" + analysis.id + "/" + i + "/full")));
+                    AppUrls.relative("", "api/audiobook-preview/" + analysis.id + "/" + i + "/full")
+                )
+            );
         }
-        return new Preview(analysis.id, analysis.totalMs(), List.copyOf(chapters),
-                analysis.source, analysis.note);
+        return new Preview(
+            analysis.id,
+            analysis.totalMs(),
+            List.copyOf(chapters),
+            analysis.source,
+            analysis.note
+        );
     }
 
     private void cleanupExpired() {
@@ -671,14 +986,27 @@ public final class AudiobookCreator {
     }
 
     private List<Source> normalize(List<Source> sources, Path work)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         List<Source> normalized = new ArrayList<>();
         for (int i = 0; i < sources.size(); i++) {
             Source source = sources.get(i);
             Path target = work.resolve("source-" + (i + 1) + ".caf");
-            run(List.of(settings.ffmpegPath, "-hide_banner", "-loglevel", "error", "-y",
-                    "-i", source.path().toString(), "-map", "0:a:0",
-                    "-c:a", "pcm_s16le", target.toString()));
+            run(
+                List.of(
+                    settings.ffmpegPath,
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-i",
+                    source.path().toString(),
+                    "-map",
+                    "0:a:0",
+                    "-c:a",
+                    "pcm_s16le",
+                    target.toString()
+                )
+            );
             normalized.add(new Source(source.track(), target, "caf"));
         }
         return normalized;
@@ -716,8 +1044,10 @@ public final class AudiobookCreator {
             String title = chapterTitle(source.track());
             if (counts.getOrDefault(title.toLowerCase(Locale.ROOT), 0) > 1) {
                 String artist = source.track().artist;
-                title += " (" + (artist == null || artist.isBlank()
-                        ? "Part " + (titles.size() + 1) : artist) + ")";
+                title +=
+                    " (" +
+                    (artist == null || artist.isBlank() ? "Part " + (titles.size() + 1) : artist) +
+                    ")";
             }
             titles.add(title);
         }
@@ -729,8 +1059,10 @@ public final class AudiobookCreator {
     }
 
     private static String sanitize(String name) {
-        String cleaned = INVALID_FILENAME.matcher(name).replaceAll("_")
-                .replaceAll("\\s+", " ").trim();
+        String cleaned = INVALID_FILENAME.matcher(name)
+            .replaceAll("_")
+            .replaceAll("\\s+", " ")
+            .trim();
         cleaned = cleaned.replaceAll("^\\.+", "").trim();
         if (cleaned.length() > 120) {
             cleaned = cleaned.substring(0, 120).trim();
@@ -759,14 +1091,20 @@ public final class AudiobookCreator {
         }
     }
 
-    private record Source(LibraryTrack track, Path path, String format) {
-    }
+    private record Source(LibraryTrack track, Path path, String format) {}
 
-    private record PlannedChapter(String title, long timelineStartMs, long startMs,
-                                  long durationMs, Path source, LibraryTrack track, String format) {
-    }
+    private record PlannedChapter(
+        String title,
+        long timelineStartMs,
+        long startMs,
+        long durationMs,
+        Path source,
+        LibraryTrack track,
+        String format
+    ) {}
 
     private static final class Analysis {
+
         final String id;
         final Path work;
         final List<LibraryTrack> tracks;
@@ -781,10 +1119,20 @@ public final class AudiobookCreator {
         final String note;
         final long createdAt = System.currentTimeMillis();
 
-        Analysis(String id, Path work, List<LibraryTrack> tracks, List<Source> sources,
-                 boolean split, Path combined, List<Long> boundaries,
-                 List<PlannedChapter> chapters, long startMs, long endMs,
-                 String source, String note) {
+        Analysis(
+            String id,
+            Path work,
+            List<LibraryTrack> tracks,
+            List<Source> sources,
+            boolean split,
+            Path combined,
+            List<Long> boundaries,
+            List<PlannedChapter> chapters,
+            long startMs,
+            long endMs,
+            String source,
+            String note
+        ) {
             this.id = id;
             this.work = work;
             this.tracks = tracks;

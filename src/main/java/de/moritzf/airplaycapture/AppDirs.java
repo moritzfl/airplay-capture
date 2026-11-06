@@ -19,8 +19,11 @@ public final class AppDirs {
             value = System.getenv("AIRPLAY_CAPTURE_DATA");
         }
         if (value == null || value.isBlank()) {
-            value = defaultDataDir(System.getProperty("os.name", "").toLowerCase(),
-                    System.getProperty("user.home", "."), System.getenv("APPDATA"));
+            value = defaultDataDir(
+                System.getProperty("os.name", "").toLowerCase(),
+                System.getProperty("user.home", "."),
+                System.getenv("APPDATA")
+            );
         }
         AppDirs dirs = new AppDirs(Path.of(value));
         dirs.createDirectories();
@@ -33,7 +36,8 @@ public final class AppDirs {
             return home + "/Library/Application Support/AirPlayCapture";
         }
         if (osName.startsWith("windows")) {
-            String base = appData == null || appData.isBlank() ? home + "/AppData/Roaming" : appData;
+            String base =
+                appData == null || appData.isBlank() ? home + "/AppData/Roaming" : appData;
             return base + "/AirPlayCapture";
         }
         return home + "/.airplay-capture";

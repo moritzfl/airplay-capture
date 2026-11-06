@@ -7,8 +7,7 @@ import java.net.ServerSocket;
 /** Picks a free TCP port for the web UI, so a busy port never prevents a start. */
 public final class WebPort {
 
-    private WebPort() {
-    }
+    private WebPort() {}
 
     /**
      * Returns {@code requested} when it is free, otherwise the next free port above it. {@code 0}

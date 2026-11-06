@@ -12,18 +12,28 @@ import java.util.concurrent.TimeUnit;
 /** Test helpers: ffmpeg-generated ALAC packets and a tiny CAF reader. */
 final class TestMedia {
 
-    record CafData(int frameLength, int compatibleVersion, int bitDepth, int pb, int mb, int kb,
-                   int channels, int maxRun, int maxFrameBytes, int avgBitRate, int sampleRate,
-                   List<byte[]> packets) {
-    }
+    record CafData(
+        int frameLength,
+        int compatibleVersion,
+        int bitDepth,
+        int pb,
+        int mb,
+        int kb,
+        int channels,
+        int maxRun,
+        int maxFrameBytes,
+        int avgBitRate,
+        int sampleRate,
+        List<byte[]> packets
+    ) {}
 
-    private TestMedia() {
-    }
+    private TestMedia() {}
 
     static boolean ffmpegAvailable() {
         try {
             Process process = new ProcessBuilder("ffmpeg", "-version")
-                    .redirectErrorStream(true).start();
+                .redirectErrorStream(true)
+                .start();
             process.getInputStream().readAllBytes();
             return process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0;
         } catch (Exception e) {
@@ -33,17 +43,42 @@ final class TestMedia {
 
     static Path createAlacCaf(Path directory, double seconds) throws Exception {
         Path out = directory.resolve("source-" + System.nanoTime() + ".caf");
-        List<String> command = List.of("ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-                "-f", "lavfi", "-i", "sine=frequency=440:duration=" + seconds + ":sample_rate=44100",
-                "-ac", "2", "-c:a", "alac", out.toString());
+        List<String> command = List.of(
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=" + seconds + ":sample_rate=44100",
+            "-ac",
+            "2",
+            "-c:a",
+            "alac",
+            out.toString()
+        );
         run(command);
         return out;
     }
 
     static Path createCover(Path directory) throws Exception {
         Path out = directory.resolve("cover-" + System.nanoTime() + ".jpg");
-        List<String> command = List.of("ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-                "-f", "lavfi", "-i", "color=c=red:s=96x96", "-frames:v", "1", out.toString());
+        List<String> command = List.of(
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=96x96",
+            "-frames:v",
+            "1",
+            out.toString()
+        );
         run(command);
         return out;
     }
@@ -121,19 +156,42 @@ final class TestMedia {
             offset += size;
             packets.add(packet);
         }
-        return new CafData(frameLength, 0, bitDepth, 40, 10, 14, channels, 255, 0, 0, sampleRate, packets);
+        return new CafData(
+            frameLength,
+            0,
+            bitDepth,
+            40,
+            10,
+            14,
+            channels,
+            255,
+            0,
+            0,
+            sampleRate,
+            packets
+        );
     }
 
     static String fmtp(CafData data) {
-        return "96 " + data.frameLength() + " 0 " + data.bitDepth() + " 40 10 14 "
-                + data.channels() + " 255 0 0 " + data.sampleRate();
+        return (
+            "96 " +
+            data.frameLength() +
+            " 0 " +
+            data.bitDepth() +
+            " 40 10 14 " +
+            data.channels() +
+            " 255 0 0 " +
+            data.sampleRate()
+        );
     }
 
     static void run(List<String> command) throws Exception {
         Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (!process.waitFor(120, TimeUnit.SECONDS) || process.exitValue() != 0) {
-            throw new IllegalStateException("command failed: " + String.join(" ", command) + "\n" + output);
+            throw new IllegalStateException(
+                "command failed: " + String.join(" ", command) + "\n" + output
+            );
         }
     }
 

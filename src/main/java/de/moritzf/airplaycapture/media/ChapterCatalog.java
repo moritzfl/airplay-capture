@@ -1,10 +1,6 @@
 package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.Log;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
-
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -18,6 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Fetches chapter lists (names and durations) for an audiobook from keyless catalogs.
@@ -29,11 +28,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ChapterCatalog {
 
-    public record Chapter(String title, long durationMs) {
-    }
+    public record Chapter(String title, long durationMs) {}
 
-    public record Result(String id, String source, String album, String artist, Integer year,
-                         String coverUrl, List<Chapter> chapters, double score) {
+    public record Result(
+        String id,
+        String source,
+        String album,
+        String artist,
+        Integer year,
+        String coverUrl,
+        List<Chapter> chapters,
+        double score
+    ) {
         /** Convenience constructor for callers that only care about the chapter list. */
         public Result(String source, String album, String artist, List<Chapter> chapters) {
             this(null, source, album, artist, null, null, chapters, 0);
@@ -64,24 +70,27 @@ public class ChapterCatalog {
     private final Map<String, Cached> cache = new ConcurrentHashMap<>();
     private final Map<String, CachedSearch> searchCache = new ConcurrentHashMap<>();
     private final HttpClient http = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+        .connectTimeout(Duration.ofSeconds(5))
+        .build();
 
     private long lastDeezerRequestAt;
     private long lastMusicBrainzRequestAt;
 
-    private record Cached(Result result, long expiresAt) {
-    }
+    private record Cached(Result result, long expiresAt) {}
 
-    private record CachedSearch(List<Result> results, long expiresAt) {
-    }
+    private record CachedSearch(List<Result> results, long expiresAt) {}
 
     /**
      * Looks up a chapter list. {@code expectedDurationMs} is the recorded length; it is used to pick
      * the edition that matches the recording instead of an unabridged or abridged sibling.
      */
-    public Optional<Result> lookup(String title, String album, String artist, long expectedDurationMs,
-                                   Options options) {
+    public Optional<Result> lookup(
+        String title,
+        String album,
+        String artist,
+        long expectedDurationMs,
+        Options options
+    ) {
         String subject = subject(title, album);
         if (subject == null || subject.isBlank() || options == null || !options.any()) {
             return Optional.empty();
@@ -99,23 +108,43 @@ public class ChapterCatalog {
             long ttl = (result != null ? POSITIVE_TTL : NEGATIVE_TTL).toMillis();
             cache.put(key, new Cached(result, System.currentTimeMillis() + ttl));
             if (result != null) {
-                Log.info("lookup", "chapter list from " + result.source() + ": '"
-                        + result.album() + "' (" + result.chapters().size() + " chapters, "
-                        + result.totalMs() / 60000 + " min)");
+                Log.info(
+                    "lookup",
+                    "chapter list from " +
+                        result.source() +
+                        ": '" +
+                        result.album() +
+                        "' (" +
+                        result.chapters().size() +
+                        " chapters, " +
+                        result.totalMs() / 60000 +
+                        " min)"
+                );
             } else {
                 Log.info("lookup", "no catalog chapter list for '" + subject + "'");
             }
             return Optional.ofNullable(result);
         } catch (Exception e) {
-            Log.warn("lookup", "chapter list lookup failed for '" + subject + "': " + e.getMessage());
-            cache.put(key, new Cached(null, System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()));
+            Log.warn(
+                "lookup",
+                "chapter list lookup failed for '" + subject + "': " + e.getMessage()
+            );
+            cache.put(
+                key,
+                new Cached(null, System.currentTimeMillis() + Duration.ofMinutes(10).toMillis())
+            );
             return Optional.empty();
         }
     }
 
     /** Returns all matching editions, best first, for the edition picker. */
-    public List<Result> search(String title, String album, String artist, long expectedDurationMs,
-                               Options options) {
+    public List<Result> search(
+        String title,
+        String album,
+        String artist,
+        long expectedDurationMs,
+        Options options
+    ) {
         String subject = subject(title, album);
         if (subject == null || subject.isBlank() || options == null || !options.any()) {
             return List.of();
@@ -144,15 +173,19 @@ public class ChapterCatalog {
             }
         }
         results = dedupe(results);
-        results.sort(Comparator
-                .comparingDouble((Result result) -> deviation(result, expectedDurationMs))
-                .thenComparing(Comparator.comparingDouble(Result::score).reversed()));
+        results.sort(
+            Comparator.comparingDouble((Result result) ->
+                deviation(result, expectedDurationMs)
+            ).thenComparing(Comparator.comparingDouble(Result::score).reversed())
+        );
         if (results.size() > 8) {
             results = new ArrayList<>(results.subList(0, 8));
         }
         long ttl = (results.isEmpty() ? NEGATIVE_TTL : POSITIVE_TTL).toMillis();
-        searchCache.put(key, new CachedSearch(List.copyOf(results),
-                System.currentTimeMillis() + ttl));
+        searchCache.put(
+            key,
+            new CachedSearch(List.copyOf(results), System.currentTimeMillis() + ttl)
+        );
         return List.copyOf(results);
     }
 
@@ -184,8 +217,10 @@ public class ChapterCatalog {
         if (bestMusicBrainz == null) {
             return bestDeezer;
         }
-        return deviation(bestMusicBrainz, expectedDurationMs)
-                < deviation(bestDeezer, expectedDurationMs) ? bestMusicBrainz : bestDeezer;
+        return deviation(bestMusicBrainz, expectedDurationMs) <
+            deviation(bestDeezer, expectedDurationMs)
+            ? bestMusicBrainz
+            : bestDeezer;
     }
 
     private static Result best(List<Result> results) {
@@ -195,7 +230,8 @@ public class ChapterCatalog {
     private static List<Result> dedupe(List<Result> results) {
         Map<String, Result> unique = new java.util.LinkedHashMap<>();
         for (Result result : results) {
-            String key = result.source() + "|" + (result.id() == null ? result.album() : result.id());
+            String key =
+                result.source() + "|" + (result.id() == null ? result.album() : result.id());
             unique.putIfAbsent(key, result);
         }
         return new ArrayList<>(unique.values());
@@ -204,36 +240,63 @@ public class ChapterCatalog {
     // ---------------------------------------------------------------- Deezer
 
     private List<Result> deezer(String subject, String artist, long expectedDurationMs)
-            throws Exception {
+        throws Exception {
         String term = artist == null || artist.isBlank() ? subject : subject + " " + artist;
-        String body = get("https://api.deezer.com/search/album?limit=10&q=" + encode(term),
-                "AirPlayCapture/1.0", true);
+        String body = get(
+            "https://api.deezer.com/search/album?limit=10&q=" + encode(term),
+            "AirPlayCapture/1.0",
+            true
+        );
         List<Candidate> candidates = deezerCandidates(body, subject, artist);
         if (candidates.isEmpty() && artist != null && !artist.isBlank()) {
-            body = get("https://api.deezer.com/search/album?limit=10&q=" + encode(subject),
-                    "AirPlayCapture/1.0", true);
+            body = get(
+                "https://api.deezer.com/search/album?limit=10&q=" + encode(subject),
+                "AirPlayCapture/1.0",
+                true
+            );
             candidates = deezerCandidates(body, subject, null);
         }
         List<Result> results = new ArrayList<>();
-        for (Candidate candidate : candidates.subList(0, Math.min(MAX_CANDIDATES, candidates.size()))) {
+        for (Candidate candidate : candidates.subList(
+            0,
+            Math.min(MAX_CANDIDATES, candidates.size())
+        )) {
             try {
-                String albumJson = get("https://api.deezer.com/album/" + encode(candidate.id()),
-                        "AirPlayCapture/1.0", true);
-                String tracksJson = get("https://api.deezer.com/album/" + encode(candidate.id())
-                        + "/tracks?limit=100", "AirPlayCapture/1.0", true);
-                List<Chapter> chapters = cleanTitles(parseDeezerTracks(tracksJson), candidate.title());
+                String albumJson = get(
+                    "https://api.deezer.com/album/" + encode(candidate.id()),
+                    "AirPlayCapture/1.0",
+                    true
+                );
+                String tracksJson = get(
+                    "https://api.deezer.com/album/" + encode(candidate.id()) + "/tracks?limit=100",
+                    "AirPlayCapture/1.0",
+                    true
+                );
+                List<Chapter> chapters = cleanTitles(
+                    parseDeezerTracks(tracksJson),
+                    candidate.title()
+                );
                 if (!usable(chapters)) {
                     continue;
                 }
                 long total = totalMs(chapters);
-                double score = candidate.similarity() * 0.35
-                        + durationScore(expectedDurationMs, total) * 0.65;
+                double score =
+                    candidate.similarity() * 0.35 + durationScore(expectedDurationMs, total) * 0.65;
                 JsonNode album = safeRead(albumJson);
                 String albumTitle = album.path("title").asString(candidate.title());
                 String albumArtist = album.path("artist").path("name").asString(candidate.artist());
-                results.add(new Result(candidate.id(), "Deezer", albumTitle, albumArtist,
+                results.add(
+                    new Result(
+                        candidate.id(),
+                        "Deezer",
+                        albumTitle,
+                        albumArtist,
                         year(album.path("release_date").asString("")),
-                        album.path("cover_big").asString(""), chapters, score));
+                        album.path("cover_big").asString(""),
+                        chapters,
+                        score
+                    )
+                );
             } catch (Exception e) {
                 Log.warn("lookup", "Deezer album " + candidate.id() + " failed: " + e.getMessage());
             }
@@ -254,8 +317,9 @@ public class ChapterCatalog {
                 continue;
             }
             boolean artistMatches = MetadataEnricher.matchesAuthor(artist, candidateArtist);
-            boolean titleNamesTheSubject = MetadataEnricher.normalize(title)
-                    .startsWith(MetadataEnricher.normalize(subject));
+            boolean titleNamesTheSubject = MetadataEnricher.normalize(title).startsWith(
+                MetadataEnricher.normalize(subject)
+            );
             if (!artistMatches && !titleNamesTheSubject) {
                 continue;
             }
@@ -263,9 +327,17 @@ public class ChapterCatalog {
             if (id.isBlank()) {
                 continue;
             }
-            candidates.add(new Candidate(id, title, candidateArtist,
-                    MetadataEnricher.similarity(MetadataEnricher.normalize(subject),
-                            MetadataEnricher.normalize(title))));
+            candidates.add(
+                new Candidate(
+                    id,
+                    title,
+                    candidateArtist,
+                    MetadataEnricher.similarity(
+                        MetadataEnricher.normalize(subject),
+                        MetadataEnricher.normalize(title)
+                    )
+                )
+            );
         }
         candidates.sort(Comparator.comparingDouble(Candidate::similarity).reversed());
         return candidates;
@@ -280,7 +352,8 @@ public class ChapterCatalog {
         for (JsonNode item : data) {
             String title = item.path("title").asString("");
             long duration = item.path("duration").isNumber()
-                    ? item.path("duration").asLong() * 1000 : 0;
+                ? item.path("duration").asLong() * 1000
+                : 0;
             if (!title.isBlank()) {
                 chapters.add(new Chapter(title, duration));
             }
@@ -290,41 +363,73 @@ public class ChapterCatalog {
 
     // ---------------------------------------------------------------- MusicBrainz
 
-    private List<Result> musicBrainz(String subject, String artist, long expectedDurationMs,
-                                     String contactSetting) throws Exception {
+    private List<Result> musicBrainz(
+        String subject,
+        String artist,
+        long expectedDurationMs,
+        String contactSetting
+    ) throws Exception {
         String query = "releasegroup:\"" + subject.replace("\"", "") + "\"";
         if (artist != null && !artist.isBlank()) {
             query += " AND artist:\"" + artist.replace("\"", "") + "\"";
         }
-        String contact = contactSetting == null || contactSetting.isBlank()
-                ? "self-hosted" : contactSetting.trim();
-        String body = get("https://musicbrainz.org/ws/2/release-group/?query=" + encode(query)
-                + "&fmt=json&limit=5", "AirPlayCapture/1.0 (" + contact + ")", false);
+        String contact =
+            contactSetting == null || contactSetting.isBlank()
+                ? "self-hosted"
+                : contactSetting.trim();
+        String body = get(
+            "https://musicbrainz.org/ws/2/release-group/?query=" +
+                encode(query) +
+                "&fmt=json&limit=5",
+            "AirPlayCapture/1.0 (" + contact + ")",
+            false
+        );
         List<Group> groups = musicBrainzGroups(body, subject, artist);
         if (groups.isEmpty() && artist != null && !artist.isBlank()) {
             String titleOnly = "releasegroup:\"" + subject.replace("\"", "") + "\"";
-            body = get("https://musicbrainz.org/ws/2/release-group/?query=" + encode(titleOnly)
-                    + "&fmt=json&limit=5", "AirPlayCapture/1.0 (" + contact + ")", false);
+            body = get(
+                "https://musicbrainz.org/ws/2/release-group/?query=" +
+                    encode(titleOnly) +
+                    "&fmt=json&limit=5",
+                "AirPlayCapture/1.0 (" + contact + ")",
+                false
+            );
             groups = musicBrainzGroups(body, subject, null);
         }
         List<Result> results = new ArrayList<>();
         for (Group group : groups.subList(0, Math.min(2, groups.size()))) {
             try {
-                String releases = get("https://musicbrainz.org/ws/2/release?release-group="
-                        + encode(group.id()) + "&inc=recordings&fmt=json&limit=10",
-                        "AirPlayCapture/1.0 (" + contact + ")", false);
+                String releases = get(
+                    "https://musicbrainz.org/ws/2/release?release-group=" +
+                        encode(group.id()) +
+                        "&inc=recordings&fmt=json&limit=10",
+                    "AirPlayCapture/1.0 (" + contact + ")",
+                    false
+                );
                 Release release = bestRelease(releases, expectedDurationMs);
                 if (release == null) {
                     continue;
                 }
-                double score = group.similarity() * 0.35
-                        + durationScore(expectedDurationMs, totalMs(release.chapters())) * 0.65;
-                results.add(new Result(group.id(), "MusicBrainz", group.title(), group.artist(),
-                        group.year(), "https://coverartarchive.org/release-group/"
-                        + group.id() + "/front-250", release.chapters(), score));
+                double score =
+                    group.similarity() * 0.35 +
+                    durationScore(expectedDurationMs, totalMs(release.chapters())) * 0.65;
+                results.add(
+                    new Result(
+                        group.id(),
+                        "MusicBrainz",
+                        group.title(),
+                        group.artist(),
+                        group.year(),
+                        "https://coverartarchive.org/release-group/" + group.id() + "/front-250",
+                        release.chapters(),
+                        score
+                    )
+                );
             } catch (Exception e) {
-                Log.warn("lookup", "MusicBrainz release group " + group.id()
-                        + " failed: " + e.getMessage());
+                Log.warn(
+                    "lookup",
+                    "MusicBrainz release group " + group.id() + " failed: " + e.getMessage()
+                );
             }
         }
         return results;
@@ -343,8 +448,9 @@ public class ChapterCatalog {
             }
             String credit = artistCredit(group);
             boolean artistMatches = MetadataEnricher.matchesAuthor(artist, credit);
-            boolean titleNamesTheSubject = MetadataEnricher.normalize(title)
-                    .startsWith(MetadataEnricher.normalize(subject));
+            boolean titleNamesTheSubject = MetadataEnricher.normalize(title).startsWith(
+                MetadataEnricher.normalize(subject)
+            );
             if (!artistMatches && !titleNamesTheSubject) {
                 continue;
             }
@@ -352,10 +458,18 @@ public class ChapterCatalog {
             if (id.isBlank()) {
                 continue;
             }
-            candidates.add(new Group(id, title, credit,
+            candidates.add(
+                new Group(
+                    id,
+                    title,
+                    credit,
                     year(group.path("first-release-date").asString("")),
-                    MetadataEnricher.similarity(MetadataEnricher.normalize(subject),
-                            MetadataEnricher.normalize(title))));
+                    MetadataEnricher.similarity(
+                        MetadataEnricher.normalize(subject),
+                        MetadataEnricher.normalize(title)
+                    )
+                )
+            );
         }
         candidates.sort(Comparator.comparingDouble(Group::similarity).reversed());
         return candidates;
@@ -372,8 +486,12 @@ public class ChapterCatalog {
         }
         for (JsonNode type : types) {
             String value = MetadataEnricher.normalize(type.asString(""));
-            if (value.equals("audiobook") || value.equals("spokenword")
-                    || value.equals("audio drama") || value.equals("audio book")) {
+            if (
+                value.equals("audiobook") ||
+                value.equals("spokenword") ||
+                value.equals("audio drama") ||
+                value.equals("audio book")
+            ) {
                 return true;
             }
         }
@@ -456,12 +574,14 @@ public class ChapterCatalog {
         for (Chapter chapter : chapters) {
             String title = chapter.title();
             int colon = title.lastIndexOf(": ");
-            String colonSuffix = colon > 0 ? MetadataEnricher.normalize(title.substring(colon + 2)) : "";
+            String colonSuffix =
+                colon > 0 ? MetadataEnricher.normalize(title.substring(colon + 2)) : "";
             if (!colonSuffix.isEmpty() && normalizedAlbum.contains(colonSuffix)) {
                 title = title.substring(0, colon).trim();
             } else {
                 int dash = title.lastIndexOf(" - ");
-                String dashSuffix = dash > 0 ? MetadataEnricher.normalize(title.substring(dash + 3)) : "";
+                String dashSuffix =
+                    dash > 0 ? MetadataEnricher.normalize(title.substring(dash + 3)) : "";
                 if (!dashSuffix.isEmpty() && normalizedAlbum.contains(dashSuffix)) {
                     title = title.substring(0, dash).trim();
                 }
@@ -473,9 +593,11 @@ public class ChapterCatalog {
 
     private static boolean likelyChapters(String title) {
         String normalized = MetadataEnricher.normalize(title);
-        return !normalized.contains("soundtrack")
-                && !normalized.contains("karaoke")
-                && !normalized.contains("filmmusik");
+        return (
+            !normalized.contains("soundtrack") &&
+            !normalized.contains("karaoke") &&
+            !normalized.contains("filmmusik")
+        );
     }
 
     private static String subject(String title, String album) {
@@ -540,15 +662,16 @@ public class ChapterCatalog {
     private String get(String url, String userAgent, boolean deezer) throws Exception {
         throttle(deezer);
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(7))
-                .header("User-Agent", userAgent)
-                .header("Accept", "application/json")
-                .GET()
-                .build();
+            .timeout(Duration.ofSeconds(7))
+            .header("User-Agent", userAgent)
+            .header("Accept", "application/json")
+            .GET()
+            .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
-            throw new IllegalStateException("HTTP " + response.statusCode()
-                    + " from " + URI.create(url).getHost());
+            throw new IllegalStateException(
+                "HTTP " + response.statusCode() + " from " + URI.create(url).getHost()
+            );
         }
         return response.body();
     }
@@ -579,24 +702,31 @@ public class ChapterCatalog {
         return id.asString("");
     }
 
-    private static String key(String subject, String artist, long expectedDurationMs,
-                              Options options) {
-        return (options.deezer() ? "d" : "") + (options.musicBrainz() ? "m" : "")
-                + "|" + MetadataEnricher.normalize(subject)
-                + "|" + MetadataEnricher.normalize(artist)
-                + "|" + Math.max(0, expectedDurationMs / 60_000);
+    private static String key(
+        String subject,
+        String artist,
+        long expectedDurationMs,
+        Options options
+    ) {
+        return (
+            (options.deezer() ? "d" : "") +
+            (options.musicBrainz() ? "m" : "") +
+            "|" +
+            MetadataEnricher.normalize(subject) +
+            "|" +
+            MetadataEnricher.normalize(artist) +
+            "|" +
+            Math.max(0, expectedDurationMs / 60_000)
+        );
     }
 
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    private record Candidate(String id, String title, String artist, double similarity) {
-    }
+    private record Candidate(String id, String title, String artist, double similarity) {}
 
-    private record Group(String id, String title, String artist, Integer year, double similarity) {
-    }
+    private record Group(String id, String title, String artist, Integer year, double similarity) {}
 
-    record Release(String title, List<Chapter> chapters) {
-    }
+    record Release(String title, List<Chapter> chapters) {}
 }

@@ -1,20 +1,19 @@
 package de.moritzf.airplaycapture;
 
-import de.moritzf.airplaycapture.recording.AudiobookCreator;
-import de.moritzf.airplaycapture.recording.AudiobookJobs;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Path;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import de.moritzf.airplaycapture.recording.AudiobookCreator;
+import de.moritzf.airplaycapture.recording.AudiobookJobs;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** The conversion queue: states, progress, cancellation, failure and restart behaviour. */
 class AudiobookJobsTest {
@@ -162,8 +161,9 @@ class AudiobookJobsTest {
     void queueSurvivesARestartAndInterruptedJobsAreMarked() throws Exception {
         AppDirs dirs = dirs();
         AudiobookJobs first = new AudiobookJobs(dirs, new UiState());
-        AudiobookJobs.Job done = first.enqueue("group", "Finished Book", "Author",
-                progress -> result("Finished Book"));
+        AudiobookJobs.Job done = first.enqueue("group", "Finished Book", "Author", progress ->
+            result("Finished Book")
+        );
         waitFor(first, done.id, AudiobookJobs.State.DONE);
 
         // Simulate a job that was running when the process died.
@@ -173,10 +173,13 @@ class AudiobookJobsTest {
         running.title = "Interrupted Book";
         running.state = AudiobookJobs.State.RUNNING.name();
         String json = java.nio.file.Files.readString(first.jobsFile());
-        String merged = json.replaceFirst("\\]\\s*$", ",\n  {\n    \"id\": \"interrupted\",\n"
-                + "    \"groupKey\": \"other\",\n    \"title\": \"Interrupted Book\",\n"
-                + "    \"state\": \"RUNNING\",\n    \"step\": \"Encoding\",\n"
-                + "    \"createdAtEpochMs\": 1\n  }\n]");
+        String merged = json.replaceFirst(
+            "\\]\\s*$",
+            ",\n  {\n    \"id\": \"interrupted\",\n" +
+                "    \"groupKey\": \"other\",\n    \"title\": \"Interrupted Book\",\n" +
+                "    \"state\": \"RUNNING\",\n    \"step\": \"Encoding\",\n" +
+                "    \"createdAtEpochMs\": 1\n  }\n]"
+        );
         java.nio.file.Files.writeString(first.jobsFile(), merged);
 
         AudiobookJobs restarted = new AudiobookJobs(dirs, new UiState());
@@ -212,8 +215,11 @@ class AudiobookJobsTest {
         waitFor(jobs, running.id, AudiobookJobs.State.DONE);
     }
 
-    private static AudiobookJobs.Job waitFor(AudiobookJobs jobs, String id,
-                                             AudiobookJobs.State state) throws Exception {
+    private static AudiobookJobs.Job waitFor(
+        AudiobookJobs jobs,
+        String id,
+        AudiobookJobs.State state
+    ) throws Exception {
         long deadline = System.currentTimeMillis() + 15_000;
         while (System.currentTimeMillis() < deadline) {
             AudiobookJobs.Job job = jobs.find(id).orElseThrow();
@@ -222,7 +228,16 @@ class AudiobookJobsTest {
             }
             TimeUnit.MILLISECONDS.sleep(50);
         }
-        throw new AssertionError("job " + id + " did not reach " + state + ": "
-                + jobs.find(id).map(job -> job.state + " / " + job.step).orElse("gone"));
+        throw new AssertionError(
+            "job " +
+                id +
+                " did not reach " +
+                state +
+                ": " +
+                jobs
+                    .find(id)
+                    .map(job -> job.state + " / " + job.step)
+                    .orElse("gone")
+        );
     }
 }

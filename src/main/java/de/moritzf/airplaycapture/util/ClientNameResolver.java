@@ -1,10 +1,5 @@
 package de.moritzf.airplaycapture.util;
 
-import javax.naming.NamingEnumeration;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.DirContext;
-import javax.naming.directory.InitialDirContext;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -13,20 +8,39 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import javax.naming.NamingEnumeration;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.InitialDirContext;
 
 /** Resolves a sender IP to a human-readable LAN name, for example "iPhone-von-Moritz". */
 public final class ClientNameResolver {
 
     private static final Pattern UUID = Pattern.compile(
-            "(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\\..*)?$");
+        "(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\\..*)?$"
+    );
     private static final Pattern IPV4 = Pattern.compile("^\\d{1,3}(\\.\\d{1,3}){3}$");
     private static final Map<String, String> CACHE = new ConcurrentHashMap<>();
     private static final List<String> DEVICE_WORDS = List.of(
-            "iphone", "ipad", "ipod", "macbook", "imac", "mac-", "android", "pixel",
-            "galaxy", "phone", "laptop", "pc-", "desktop", "lylli", "audible");
+        "iphone",
+        "ipad",
+        "ipod",
+        "macbook",
+        "imac",
+        "mac-",
+        "android",
+        "pixel",
+        "galaxy",
+        "phone",
+        "laptop",
+        "pc-",
+        "desktop",
+        "lylli",
+        "audible"
+    );
 
-    private ClientNameResolver() {
-    }
+    private ClientNameResolver() {}
 
     public static String resolve(String address) {
         if (address == null || address.isBlank()) {
@@ -116,7 +130,7 @@ public final class ClientNameResolver {
         DirContext context = null;
         try {
             context = new InitialDirContext(env);
-            Attributes attributes = context.getAttributes(reverse, new String[]{"PTR"});
+            Attributes attributes = context.getAttributes(reverse, new String[] { "PTR" });
             Attribute ptr = attributes.get("PTR");
             if (ptr == null) {
                 return names;

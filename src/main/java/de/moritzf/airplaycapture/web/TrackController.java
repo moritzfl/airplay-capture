@@ -8,26 +8,10 @@ import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.library.LibraryGroups;
 import de.moritzf.airplaycapture.library.LibraryTrack;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,6 +25,21 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /** JSON API used by integrations and by the browser's media elements. */
 @RestController
@@ -52,8 +51,12 @@ public class TrackController {
     private final SettingsService settingsService;
     private final AudiobookCreator audiobookCreator;
 
-    public TrackController(Library library, UiState ui, SettingsService settingsService,
-                           AudiobookCreator audiobookCreator) {
+    public TrackController(
+        Library library,
+        UiState ui,
+        SettingsService settingsService,
+        AudiobookCreator audiobookCreator
+    ) {
         this.library = library;
         this.ui = ui;
         this.settingsService = settingsService;
@@ -136,9 +139,9 @@ public class TrackController {
         }
         MediaType type = file.equals(png) ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG;
         return ResponseEntity.ok()
-                .contentType(type)
-                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
-                .body(new FileSystemResource(file));
+            .contentType(type)
+            .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+            .body(new FileSystemResource(file));
     }
 
     @GetMapping("/now/cover")
@@ -151,16 +154,19 @@ public class TrackController {
         }
         MediaType type = file.equals(png) ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG;
         return ResponseEntity.ok()
-                .contentType(type)
-                .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                .body(new FileSystemResource(file));
+            .contentType(type)
+            .header(HttpHeaders.CACHE_CONTROL, "no-store")
+            .body(new FileSystemResource(file));
     }
 
     @GetMapping("/tracks/{id}/file/{format}")
-    public void file(@PathVariable String id, @PathVariable String format,
-                     @RequestParam(value = "download", required = false) String download,
-                     @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
-                     HttpServletResponse response) throws IOException {
+    public void file(
+        @PathVariable String id,
+        @PathVariable String format,
+        @RequestParam(value = "download", required = false) String download,
+        @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
+        HttpServletResponse response
+    ) throws IOException {
         Optional<LibraryTrack> track = library.find(id);
         if (track.isEmpty()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -180,15 +186,23 @@ public class TrackController {
         // Browsers (especially Safari) derive the saved extension from the MIME type of an inline
         // response, which turned .m4b audiobooks into .m4a/.mp4 downloads. An explicit attachment
         // filename keeps the real container extension and the library's readable base name.
-        stream(path, contentType, path.getFileName().toString(), download != null,
-                rangeHeader, response);
+        stream(
+            path,
+            contentType,
+            path.getFileName().toString(),
+            download != null,
+            rangeHeader,
+            response
+        );
     }
 
     @GetMapping("/audiobook-preview/{previewId}/{index}")
-    public void audiobookPreview(@PathVariable String previewId, @PathVariable int index,
-                                 @RequestHeader(value = HttpHeaders.RANGE, required = false)
-                                 String rangeHeader,
-                                 HttpServletResponse response) throws IOException {
+    public void audiobookPreview(
+        @PathVariable String previewId,
+        @PathVariable int index,
+        @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
+        HttpServletResponse response
+    ) throws IOException {
         Path clip;
         try {
             clip = audiobookCreator.previewClip(previewId, index);
@@ -205,10 +219,12 @@ public class TrackController {
     }
 
     @GetMapping("/audiobook-preview/{previewId}/{index}/full")
-    public void audiobookFullChapter(@PathVariable String previewId, @PathVariable int index,
-                                     @RequestHeader(value = HttpHeaders.RANGE, required = false)
-                                     String rangeHeader,
-                                     HttpServletResponse response) throws IOException {
+    public void audiobookFullChapter(
+        @PathVariable String previewId,
+        @PathVariable int index,
+        @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
+        HttpServletResponse response
+    ) throws IOException {
         Path file;
         try {
             file = audiobookCreator.fullChapter(previewId, index);
@@ -222,22 +238,31 @@ public class TrackController {
             return;
         }
         String name = file.getFileName().toString().toLowerCase(Locale.ROOT);
-        String contentType = name.endsWith(".mp3") ? "audio/mpeg"
-                : name.endsWith(".caf") ? "audio/x-caf" : "audio/mp4";
+        String contentType = name.endsWith(".mp3")
+            ? "audio/mpeg"
+            : name.endsWith(".caf")
+              ? "audio/x-caf"
+              : "audio/mp4";
         stream(file, contentType, "chapter.m4a", false, rangeHeader, response);
     }
 
-    private static void stream(Path path, String contentType, String fileName, boolean attachment,
-                               String rangeHeader, HttpServletResponse response) throws IOException {
+    private static void stream(
+        Path path,
+        String contentType,
+        String fileName,
+        boolean attachment,
+        String rangeHeader,
+        HttpServletResponse response
+    ) throws IOException {
         long length = Files.size(path);
         response.setContentType(contentType);
         response.setHeader(HttpHeaders.ACCEPT_RANGES, "bytes");
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
-        ContentDisposition disposition = (attachment
-                ? ContentDisposition.attachment()
-                : ContentDisposition.inline())
-                .filename(fileName, StandardCharsets.UTF_8)
-                .build();
+        ContentDisposition disposition = (
+            attachment ? ContentDisposition.attachment() : ContentDisposition.inline()
+        )
+            .filename(fileName, StandardCharsets.UTF_8)
+            .build();
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
 
         long start = 0;
@@ -247,7 +272,10 @@ public class TrackController {
             String[] spec = rangeHeader.substring(6).split("-", 2);
             try {
                 start = spec[0].isBlank() ? 0 : Long.parseLong(spec[0].trim());
-                end = spec.length > 1 && !spec[1].isBlank() ? Long.parseLong(spec[1].trim()) : length - 1;
+                end =
+                    spec.length > 1 && !spec[1].isBlank()
+                        ? Long.parseLong(spec[1].trim())
+                        : length - 1;
                 if (start < 0 || start >= length) {
                     start = 0;
                 }
@@ -260,7 +288,10 @@ public class TrackController {
         long count = partial ? end - start + 1 : length;
         if (partial) {
             response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
-            response.setHeader(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + length);
+            response.setHeader(
+                HttpHeaders.CONTENT_RANGE,
+                "bytes " + start + "-" + end + "/" + length
+            );
         }
         response.setContentLengthLong(count);
         try (InputStream in = Files.newInputStream(path)) {
@@ -290,7 +321,14 @@ public class TrackController {
             item.put("audiobook", group.isAudiobook());
             item.put("assembled", group.hasM4b());
             item.put("duplicates", group.duplicateCount());
-            item.put("trackIds", group.tracks().stream().map(track -> track.id).toList());
+            item.put(
+                "trackIds",
+                group
+                    .tracks()
+                    .stream()
+                    .map(track -> track.id)
+                    .toList()
+            );
             item.put("formats", group.formats(true));
             item.put("durationMs", group.durationMs());
             item.put("sizeBytes", group.sizeBytes());
@@ -303,9 +341,12 @@ public class TrackController {
     }
 
     @GetMapping("/groups/{key}/zip/{format}")
-    public void groupZip(@PathVariable String key, @PathVariable String format,
-                         @RequestParam(value = "all", required = false) String all,
-                         HttpServletResponse response) throws IOException {
+    public void groupZip(
+        @PathVariable String key,
+        @PathVariable String format,
+        @RequestParam(value = "all", required = false) String all,
+        HttpServletResponse response
+    ) throws IOException {
         Optional<LibraryGroups.Group> found = LibraryGroups.find(library.tracks(), key);
         if (found.isEmpty()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -331,12 +372,21 @@ public class TrackController {
         String filename = zipName(group.title(), format) + ".zip";
         response.setContentType("application/zip");
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
-        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                .filename(filename, StandardCharsets.UTF_8).build().toString());
+        response.setHeader(
+            HttpHeaders.CONTENT_DISPOSITION,
+            ContentDisposition.attachment()
+                .filename(filename, StandardCharsets.UTF_8)
+                .build()
+                .toString()
+        );
 
         Set<String> used = new HashSet<>();
-        try (ZipOutputStream zip = new ZipOutputStream(response.getOutputStream(),
-                StandardCharsets.UTF_8)) {
+        try (
+            ZipOutputStream zip = new ZipOutputStream(
+                response.getOutputStream(),
+                StandardCharsets.UTF_8
+            )
+        ) {
             for (int i = 0; i < files.size(); i++) {
                 String name = names.get(i);
                 String entry = name;
@@ -353,10 +403,10 @@ public class TrackController {
     }
 
     private static String zipName(String title, String format) {
-        String clean = title == null ? "" : title
-                .replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_")
-                .replaceAll("\\s+", " ")
-                .trim();
+        String clean =
+            title == null
+                ? ""
+                : title.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").replaceAll("\\s+", " ").trim();
         if (clean.length() > 100) {
             clean = clean.substring(0, 100).trim();
         }
@@ -377,7 +427,9 @@ public class TrackController {
             Settings applied = settingsService.apply(incoming);
             return ResponseEntity.ok(settingsView(applied));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", String.valueOf(e.getMessage())));
+            return ResponseEntity.badRequest().body(
+                Map.of("error", String.valueOf(e.getMessage()))
+            );
         }
     }
 
@@ -394,8 +446,18 @@ public class TrackController {
     public Map<String, Object> log() {
         List<Map<String, String>> lines = new ArrayList<>();
         for (Log.Line line : Log.lines()) {
-            lines.add(Map.of("time", line.time(), "level", line.level(),
-                    "scope", line.scope(), "message", line.message()));
+            lines.add(
+                Map.of(
+                    "time",
+                    line.time(),
+                    "level",
+                    line.level(),
+                    "scope",
+                    line.scope(),
+                    "message",
+                    line.message()
+                )
+            );
         }
         return Map.of("lines", lines);
     }

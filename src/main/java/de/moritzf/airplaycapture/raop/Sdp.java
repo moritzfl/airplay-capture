@@ -11,9 +11,19 @@ import java.util.Base64;
 public final class Sdp {
 
     /** ALAC parameters carried in the SDP {@code a=fmtp} line (the ALACSpecificConfig cookie). */
-    public record AlacConfig(int frameLength, int compatibleVersion, int bitDepth, int pb, int mb, int kb,
-                             int channels, int maxRun, int maxFrameBytes, int avgBitRate, int sampleRate) {
-
+    public record AlacConfig(
+        int frameLength,
+        int compatibleVersion,
+        int bitDepth,
+        int pb,
+        int mb,
+        int kb,
+        int channels,
+        int maxRun,
+        int maxFrameBytes,
+        int avgBitRate,
+        int sampleRate
+    ) {
         public byte[] magicCookie() {
             ByteArrayOutputStream out = new ByteArrayOutputStream(24);
             writeInt(out, frameLength);
@@ -111,7 +121,19 @@ public final class Sdp {
             for (int i = 0; i < 11; i++) {
                 v[i] = Integer.parseInt(parts[start + i]);
             }
-            return new AlacConfig(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10]);
+            return new AlacConfig(
+                v[0],
+                v[1],
+                v[2],
+                v[3],
+                v[4],
+                v[5],
+                v[6],
+                v[7],
+                v[8],
+                v[9],
+                v[10]
+            );
         } catch (NumberFormatException e) {
             return null;
         }
@@ -131,7 +153,14 @@ public final class Sdp {
 
     @Override
     public String toString() {
-        return "Sdp[alac=" + (alac == null ? "none" : alac) + ", encrypted=" + isEncrypted()
-                + ", iv=" + (aesIv == null ? "none" : Arrays.toString(aesIv)) + "]";
+        return (
+            "Sdp[alac=" +
+            (alac == null ? "none" : alac) +
+            ", encrypted=" +
+            isEncrypted() +
+            ", iv=" +
+            (aesIv == null ? "none" : Arrays.toString(aesIv)) +
+            "]"
+        );
     }
 }

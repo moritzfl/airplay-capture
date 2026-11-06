@@ -30,30 +30,38 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService(
-            @Value("${airplay-capture.web.user:recorder}") String user,
-            @Value("${airplay-capture.web.password:}") String password) {
+        @Value("${airplay-capture.web.user:recorder}") String user,
+        @Value("${airplay-capture.web.password:}") String password
+    ) {
         if (password == null || password.isBlank()) {
             return new InMemoryUserDetailsManager();
         }
-        return new InMemoryUserDetailsManager(User.withUsername(user)
+        return new InMemoryUserDetailsManager(
+            User.withUsername(user)
                 .password("{noop}" + password)
                 .roles("USER")
-                .build());
+                .build()
+        );
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            @Value("${airplay-capture.web.password:}") String password) throws Exception {
+        HttpSecurity http,
+        @Value("${airplay-capture.web.password:}") String password
+    ) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable);
         if (password == null || password.isBlank()) {
             http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         } else {
-            http.authorizeHttpRequests(auth -> auth
-                            .requestMatchers("/login", "/VAADIN/**", "/favicon.ico", "/error").permitAll()
-                            .anyRequest().authenticated())
-                    .formLogin(Customizer.withDefaults())
-                    .logout(Customizer.withDefaults());
+            http.authorizeHttpRequests(auth ->
+                auth
+                    .requestMatchers("/login", "/VAADIN/**", "/favicon.ico", "/error")
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated()
+            )
+                .formLogin(Customizer.withDefaults())
+                .logout(Customizer.withDefaults());
         }
         return http.build();
     }

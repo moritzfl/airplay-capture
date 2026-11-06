@@ -3,11 +3,6 @@ package de.moritzf.airplaycapture.recording;
 import de.moritzf.airplaycapture.AppDirs;
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.UiState;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.SerializationFeature;
-import tools.jackson.databind.json.JsonMapper;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,6 +17,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Durable queue of audiobook conversions.
@@ -37,19 +36,24 @@ import java.util.concurrent.Executors;
 public final class AudiobookJobs {
 
     private static final ObjectMapper JSON = JsonMapper.builder()
-            .enable(SerializationFeature.INDENT_OUTPUT)
-            .build();
+        .enable(SerializationFeature.INDENT_OUTPUT)
+        .build();
     /** Finished jobs kept in the history; older ones are dropped from the file. */
     private static final int HISTORY_LIMIT = 40;
     /** Progress is persisted at most this often; state changes are always written at once. */
     private static final long SAVE_INTERVAL_MS = 5_000;
 
     public enum State {
-        QUEUED, RUNNING, DONE, FAILED, CANCELLED
+        QUEUED,
+        RUNNING,
+        DONE,
+        FAILED,
+        CANCELLED,
     }
 
     /** One conversion, as shown in the queue panel. */
     public static final class Job {
+
         public String id;
         public String groupKey;
         public String title;
@@ -285,40 +289,43 @@ public final class AudiobookJobs {
         save();
         ui.changed();
         try {
-            AudiobookCreator.Result result = task.run(new Progress() {
-                private long lastSavedAt;
+            AudiobookCreator.Result result = task.run(
+                new Progress() {
+                    private long lastSavedAt;
 
-                @Override
-                public void step(String label, double fraction) {
-                    boolean visible;
-                    synchronized (job) {
-                        if (cancelRequests.containsKey(id)) {
-                            return; // keep "Cancelling…" until the task stops
+                    @Override
+                    public void step(String label, double fraction) {
+                        boolean visible;
+                        synchronized (job) {
+                            if (cancelRequests.containsKey(id)) {
+                                return; // keep "Cancelling…" until the task stops
+                            }
+                            double value = Math.max(0, Math.min(1, fraction));
+                            // ffmpeg reports twice a second; only whole percents or a new step are
+                            // worth a repaint in every open browser.
+                            visible =
+                                !label.equals(job.step) ||
+                                Math.round(value * 100) != Math.round(job.progress * 100);
+                            job.step = label;
+                            job.progress = value;
                         }
-                        double value = Math.max(0, Math.min(1, fraction));
-                        // ffmpeg reports twice a second; only whole percents or a new step are
-                        // worth a repaint in every open browser.
-                        visible = !label.equals(job.step)
-                                || Math.round(value * 100) != Math.round(job.progress * 100);
-                        job.step = label;
-                        job.progress = value;
+                        if (!visible) {
+                            return;
+                        }
+                        long now = System.currentTimeMillis();
+                        if (now - lastSavedAt >= SAVE_INTERVAL_MS) {
+                            lastSavedAt = now;
+                            save();
+                        }
+                        ui.changed();
                     }
-                    if (!visible) {
-                        return;
-                    }
-                    long now = System.currentTimeMillis();
-                    if (now - lastSavedAt >= SAVE_INTERVAL_MS) {
-                        lastSavedAt = now;
-                        save();
-                    }
-                    ui.changed();
-                }
 
-                @Override
-                public boolean cancelled() {
-                    return cancelRequests.containsKey(id);
+                    @Override
+                    public boolean cancelled() {
+                        return cancelRequests.containsKey(id);
+                    }
                 }
-            });
+            );
             synchronized (job) {
                 job.state = State.DONE.name();
                 job.progress = 1;
@@ -332,13 +339,19 @@ public final class AudiobookJobs {
             }
             // A successful build answers earlier failed or cancelled attempts for the same book;
             // their "Try again" would now only mislead.
-            jobs.values().removeIf(other -> other != job && job.groupKey != null
-                    && job.groupKey.equals(other.groupKey)
-                    && (other.status() == State.FAILED || other.status() == State.CANCELLED));
+            jobs.values().removeIf(
+                other ->
+                    other != job &&
+                    job.groupKey != null &&
+                    job.groupKey.equals(other.groupKey) &&
+                    (other.status() == State.FAILED || other.status() == State.CANCELLED)
+            );
             Log.info("audiobook", "ready: " + job.title + " (" + result.fileName() + ")");
         } catch (Exception e) {
-            if (e instanceof java.util.concurrent.CancellationException
-                    || cancelRequests.containsKey(id)) {
+            if (
+                e instanceof java.util.concurrent.CancellationException ||
+                cancelRequests.containsKey(id)
+            ) {
                 synchronized (job) {
                     job.state = State.CANCELLED.name();
                     job.step = "Cancelled · source recordings are unchanged";
@@ -351,8 +364,10 @@ public final class AudiobookJobs {
             synchronized (job) {
                 job.state = State.FAILED.name();
                 job.step = "Conversion failed";
-                job.error = e.getMessage() == null || e.getMessage().isBlank()
-                        ? e.getClass().getSimpleName() : e.getMessage();
+                job.error =
+                    e.getMessage() == null || e.getMessage().isBlank()
+                        ? e.getClass().getSimpleName()
+                        : e.getMessage();
                 job.finishedAtEpochMs = System.currentTimeMillis();
             }
             Log.error("audiobook", "cannot create audiobook: " + job.error);
@@ -396,9 +411,10 @@ public final class AudiobookJobs {
             return;
         }
         try {
-            List<Job> loaded = JSON.readValue(Files.readString(file, StandardCharsets.UTF_8),
-                    new TypeReference<List<Job>>() {
-                    });
+            List<Job> loaded = JSON.readValue(
+                Files.readString(file, StandardCharsets.UTF_8),
+                new TypeReference<List<Job>>() {}
+            );
             if (loaded == null) {
                 return;
             }

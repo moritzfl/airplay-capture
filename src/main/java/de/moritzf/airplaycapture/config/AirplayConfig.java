@@ -10,15 +10,14 @@ import de.moritzf.airplaycapture.raop.RaopServer;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
 import de.moritzf.airplaycapture.recording.RecordingManager;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.stream.Stream;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /** Wires the framework-free receiver and recording core as Spring beans. */
 @Configuration
@@ -36,8 +35,11 @@ public class AirplayConfig {
     public Settings settings(AppDirs dirs) throws IOException {
         Settings settings = Settings.load(dirs.configFile()).normalized();
         String envLibraryDir = System.getenv("AIRPLAY_CAPTURE_LIBRARY_DIR");
-        if (envLibraryDir != null && !envLibraryDir.isBlank()
-                && !envLibraryDir.trim().equals(settings.libraryDir)) {
+        if (
+            envLibraryDir != null &&
+            !envLibraryDir.isBlank() &&
+            !envLibraryDir.trim().equals(settings.libraryDir)
+        ) {
             // The container contract owns the library/output folder. Outside Docker the variable
             // is absent, so the value from settings.json is used.
             settings.libraryDir = envLibraryDir.trim();
@@ -62,14 +64,23 @@ public class AirplayConfig {
     }
 
     @Bean
-    public RecordingManager recordingManager(AppDirs dirs, Library library, Transcoder transcoder,
-                                             UiState uiState, Settings settings) {
+    public RecordingManager recordingManager(
+        AppDirs dirs,
+        Library library,
+        Transcoder transcoder,
+        UiState uiState,
+        Settings settings
+    ) {
         return new RecordingManager(dirs, library, transcoder, uiState, settings);
     }
 
     @Bean
-    public AudiobookCreator audiobookCreator(AppDirs dirs, Library library, UiState uiState,
-                                             Settings settings) {
+    public AudiobookCreator audiobookCreator(
+        AppDirs dirs,
+        Library library,
+        UiState uiState,
+        Settings settings
+    ) {
         return new AudiobookCreator(dirs, library, uiState, settings);
     }
 
@@ -89,15 +100,16 @@ public class AirplayConfig {
             return;
         }
         try (Stream<Path> files = Files.walk(tmp)) {
-            files.sorted(Comparator.reverseOrder())
-                    .filter(path -> !path.equals(tmp))
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (IOException ignored) {
-                            // best effort
-                        }
-                    });
+            files
+                .sorted(Comparator.reverseOrder())
+                .filter(path -> !path.equals(tmp))
+                .forEach(path -> {
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (IOException ignored) {
+                        // best effort
+                    }
+                });
         } catch (IOException e) {
             Log.warn("app", "cannot clean temp folder: " + e.getMessage());
         }

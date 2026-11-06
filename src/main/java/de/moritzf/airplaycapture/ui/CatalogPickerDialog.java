@@ -14,7 +14,6 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.component.textfield.TextField;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -38,8 +37,13 @@ public final class CatalogPickerDialog extends Dialog {
     private AudiobookCreator.CatalogMatch selected;
     private int searchToken;
 
-    public CatalogPickerDialog(AudiobookCreator creator, String title, String author,
-                               long recordingMs, Consumer<AudiobookCreator.CatalogMatch> onSelect) {
+    public CatalogPickerDialog(
+        AudiobookCreator creator,
+        String title,
+        String author,
+        long recordingMs,
+        Consumer<AudiobookCreator.CatalogMatch> onSelect
+    ) {
         this.creator = creator;
         this.recordingMs = recordingMs;
         this.onSelect = onSelect;
@@ -64,9 +68,9 @@ public final class CatalogPickerDialog extends Dialog {
         fields.setAlignItems(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.END);
         fields.setFlexGrow(1, searchTitle, searchAuthor);
 
-        Span recording = new Span(recordingMs > 0
-                ? "Recording: " + Fmt.duration(recordingMs)
-                : "Recording length unknown");
+        Span recording = new Span(
+            recordingMs > 0 ? "Recording: " + Fmt.duration(recordingMs) : "Recording length unknown"
+        );
         recording.addClassName("dialog-note");
         state.addClassName("dialog-note");
         state.getElement().setAttribute("aria-live", "polite");
@@ -123,23 +127,29 @@ public final class CatalogPickerDialog extends Dialog {
         progress.setVisible(true);
         state.setText("Searching Apple Books, Deezer and MusicBrainz…");
         UI ui = UI.getCurrent();
-        Thread.ofVirtual().name("catalog-picker").start(() -> {
-            List<AudiobookCreator.CatalogMatch> matches = creator.searchCatalog(
-                    title, null, author, recordingMs);
-            if (ui == null) {
-                return;
-            }
-            try {
-                ui.access(() -> {
-                    if (token == searchToken) {
-                        progress.setVisible(false);
-                        show(matches);
-                    }
-                });
-            } catch (RuntimeException ignored) {
-                // picker was closed while searching
-            }
-        });
+        Thread.ofVirtual()
+            .name("catalog-picker")
+            .start(() -> {
+                List<AudiobookCreator.CatalogMatch> matches = creator.searchCatalog(
+                    title,
+                    null,
+                    author,
+                    recordingMs
+                );
+                if (ui == null) {
+                    return;
+                }
+                try {
+                    ui.access(() -> {
+                        if (token == searchToken) {
+                            progress.setVisible(false);
+                            show(matches);
+                        }
+                    });
+                } catch (RuntimeException ignored) {
+                    // picker was closed while searching
+                }
+            });
     }
 
     private void show(List<AudiobookCreator.CatalogMatch> matches) {
@@ -152,12 +162,13 @@ public final class CatalogPickerDialog extends Dialog {
             state.setText("No matches.");
             return;
         }
-        boolean anyFit = matches.stream()
-                .anyMatch(match -> match.hasChapters() && match.fits(recordingMs));
+        boolean anyFit = matches
+            .stream()
+            .anyMatch(match -> match.hasChapters() && match.fits(recordingMs));
         boolean recommended = false;
         for (AudiobookCreator.CatalogMatch match : matches) {
-            boolean best = !recommended && match.hasChapters()
-                    && (!anyFit || match.fits(recordingMs));
+            boolean best =
+                !recommended && match.hasChapters() && (!anyFit || match.fits(recordingMs));
             if (best) {
                 recommended = true;
             }
@@ -165,8 +176,12 @@ public final class CatalogPickerDialog extends Dialog {
             cards.add(card);
             results.add(card);
         }
-        state.setText(matches.size() + " editions · recording " + Fmt.duration(recordingMs)
-                + " · sorted by length fit; pick the edition whose chapters you want.");
+        state.setText(
+            matches.size() +
+                " editions · recording " +
+                Fmt.duration(recordingMs) +
+                " · sorted by length fit; pick the edition whose chapters you want."
+        );
     }
 
     private Div card(AudiobookCreator.CatalogMatch match, boolean recommended, boolean anyFit) {
@@ -208,9 +223,11 @@ public final class CatalogPickerDialog extends Dialog {
             badges.add(badge(Fmt.duration(match.durationMs()), "duration"));
         }
         if (match.hasChapters() && recordingMs > 0) {
-            badges.add(match.fits(recordingMs)
+            badges.add(
+                match.fits(recordingMs)
                     ? badge("fits recording", "ok")
-                    : badge("different length", "warning"));
+                    : badge("different length", "warning")
+            );
         }
         if (recommended) {
             badges.add(badge(anyFit ? "Best length match" : "Closest length", "recommended"));
@@ -223,8 +240,9 @@ public final class CatalogPickerDialog extends Dialog {
         card.add(check);
 
         card.addClickListener(event -> select(card, match));
-        card.getElement().addEventListener("keydown", event -> select(card, match))
-                .setFilter("event.key === 'Enter' || event.key === ' '");
+        card.getElement()
+            .addEventListener("keydown", event -> select(card, match))
+            .setFilter("event.key === 'Enter' || event.key === ' '");
         return card;
     }
 
@@ -237,8 +255,13 @@ public final class CatalogPickerDialog extends Dialog {
         card.addClassName("selected");
         card.getElement().setAttribute("aria-checked", "true");
         use.setEnabled(true);
-        use.setText(!match.hasChapters() ? "Use metadata"
-                : match.fits(recordingMs) ? "Use edition" : "Use anyway");
+        use.setText(
+            !match.hasChapters()
+                ? "Use metadata"
+                : match.fits(recordingMs)
+                  ? "Use edition"
+                  : "Use anyway"
+        );
     }
 
     private static String meta(AudiobookCreator.CatalogMatch match) {

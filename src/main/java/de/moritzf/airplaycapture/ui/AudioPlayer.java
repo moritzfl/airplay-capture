@@ -14,14 +14,14 @@ import com.vaadin.flow.dom.Element;
 final class AudioPlayer extends Div {
 
     private static final String PLAY_JS = """
-            const audio = document.getElementById('app-audio');
-            const title = document.getElementById('app-player-title');
-            const formats = document.getElementById('app-player-formats');
-            audio.src = this.dataset.src;
-            title.textContent = this.dataset.title;
-            formats.textContent = this.dataset.formats;
-            audio.play();
-            """;
+    const audio = document.getElementById('app-audio');
+    const title = document.getElementById('app-player-title');
+    const formats = document.getElementById('app-player-formats');
+    audio.src = this.dataset.src;
+    title.textContent = this.dataset.title;
+    formats.textContent = this.dataset.formats;
+    audio.play();
+    """;
 
     private final Element audio = new Element("audio");
 

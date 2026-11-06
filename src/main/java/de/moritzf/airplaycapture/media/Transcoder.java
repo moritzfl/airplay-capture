@@ -2,7 +2,6 @@ package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.Settings;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,12 +14,16 @@ import java.util.concurrent.TimeUnit;
 /** Converts captured ALAC/CAF files to player-friendly formats with embedded tags and artwork. */
 public final class Transcoder {
 
-    public record TrackTags(String title, String artist, String album, String genre,
-                            Integer trackNumber, Integer year) {
-    }
+    public record TrackTags(
+        String title,
+        String artist,
+        String album,
+        String genre,
+        Integer trackNumber,
+        Integer year
+    ) {}
 
-    public record Result(Map<String, String> files, String error) {
-    }
+    public record Result(Map<String, String> files, String error) {}
 
     private volatile Settings settings;
     private volatile Boolean available;
@@ -42,15 +45,18 @@ public final class Transcoder {
         boolean result;
         try {
             Process process = new ProcessBuilder(settings.ffmpegPath, "-version")
-                    .redirectErrorStream(true)
-                    .start();
+                .redirectErrorStream(true)
+                .start();
             process.getInputStream().readAllBytes();
             result = process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0;
         } catch (Exception e) {
             result = false;
         }
         if (!result) {
-            Log.error("ffmpeg", "not available ('" + settings.ffmpegPath + "'); recordings stay as .caf");
+            Log.error(
+                "ffmpeg",
+                "not available ('" + settings.ffmpegPath + "'); recordings stay as .caf"
+            );
         }
         available = result;
         return result;
@@ -61,7 +67,13 @@ public final class Transcoder {
      *
      * @param coverJpeg cover image or {@code null}
      */
-    public Result export(Path caf, Path coverJpeg, TrackTags tags, String baseName, Path outputDir) {
+    public Result export(
+        Path caf,
+        Path coverJpeg,
+        TrackTags tags,
+        String baseName,
+        Path outputDir
+    ) {
         Map<String, String> files = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
         Map<String, String> targets = new LinkedHashMap<>();
@@ -89,7 +101,10 @@ public final class Transcoder {
                 } else {
                     Files.deleteIfExists(out);
                     errors.add(format + ": " + result.output().strip());
-                    Log.error("ffmpeg", "export to " + format + " failed: " + result.output().strip());
+                    Log.error(
+                        "ffmpeg",
+                        "export to " + format + " failed: " + result.output().strip()
+                    );
                 }
             } catch (Exception e) {
                 deleteQuietly(out);
@@ -101,8 +116,17 @@ public final class Transcoder {
     }
 
     private List<String> command(Path caf, Path cover, TrackTags tags, String format, Path out) {
-        List<String> command = new ArrayList<>(List.of(
-                settings.ffmpegPath, "-hide_banner", "-loglevel", "error", "-y", "-i", caf.toString()));
+        List<String> command = new ArrayList<>(
+            List.of(
+                settings.ffmpegPath,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                caf.toString()
+            )
+        );
         if (cover != null) {
             command.add("-i");
             command.add(cover.toString());
@@ -112,16 +136,19 @@ public final class Transcoder {
             command.addAll(List.of("-map", "1:v:0"));
         }
         switch (format) {
-            case "m4a" -> command.addAll(List.of(
-                    "-c:a", "aac", "-b:a", settings.aacBitrateKbps + "k"));
+            case "m4a" -> command.addAll(
+                List.of("-c:a", "aac", "-b:a", settings.aacBitrateKbps + "k")
+            );
             case "alac" -> command.addAll(List.of("-c:a", "copy"));
             case "mp3" -> {
                 if ("cbr".equals(settings.mp3Mode)) {
-                    command.addAll(List.of("-c:a", "libmp3lame",
-                            "-b:a", settings.mp3BitrateKbps + "k"));
+                    command.addAll(
+                        List.of("-c:a", "libmp3lame", "-b:a", settings.mp3BitrateKbps + "k")
+                    );
                 } else {
-                    command.addAll(List.of("-c:a", "libmp3lame",
-                            "-q:a", String.valueOf(settings.mp3Quality)));
+                    command.addAll(
+                        List.of("-c:a", "libmp3lame", "-q:a", String.valueOf(settings.mp3Quality))
+                    );
                 }
             }
             default -> throw new IllegalArgumentException(format);
@@ -138,7 +165,11 @@ public final class Transcoder {
         addTag(command, "artist", tags.artist());
         addTag(command, "album", tags.album());
         addTag(command, "genre", tags.genre());
-        addTag(command, "track", tags.trackNumber() == null ? null : String.valueOf(tags.trackNumber()));
+        addTag(
+            command,
+            "track",
+            tags.trackNumber() == null ? null : String.valueOf(tags.trackNumber())
+        );
         addTag(command, "date", tags.year() == null ? null : String.valueOf(tags.year()));
         command.add(out.toString());
         return command;

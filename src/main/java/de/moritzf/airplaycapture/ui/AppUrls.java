@@ -9,8 +9,7 @@ import com.vaadin.flow.component.UI;
  */
 public final class AppUrls {
 
-    private AppUrls() {
-    }
+    private AppUrls() {}
 
     /** Path from the servlet context root, for example {@code api/tracks/1/cover}. */
     static String relative(String pathFromContextRoot) {
@@ -23,10 +22,11 @@ public final class AppUrls {
     }
 
     public static String relative(String locationPath, String pathFromContextRoot) {
-        int depth = locationPath == null || locationPath.isBlank()
-                ? 0 : locationPath.split("/").length;
+        int depth =
+            locationPath == null || locationPath.isBlank() ? 0 : locationPath.split("/").length;
         String path = pathFromContextRoot.startsWith("/")
-                ? pathFromContextRoot.substring(1) : pathFromContextRoot;
+            ? pathFromContextRoot.substring(1)
+            : pathFromContextRoot;
         // The UI lives under /app/, so leave that segment plus any route segments.
         return "../".repeat(depth + 1) + path;
     }

@@ -16,11 +16,13 @@ import java.util.List;
 /** Picks the LAN interface used for mDNS advertisement and RAOP sockets. */
 public final class NetworkTools {
 
-    public record InterfaceInfo(NetworkInterface networkInterface, InetAddress address, byte[] mac) {
-    }
+    public record InterfaceInfo(
+        NetworkInterface networkInterface,
+        InetAddress address,
+        byte[] mac
+    ) {}
 
-    private NetworkTools() {
-    }
+    private NetworkTools() {}
 
     public static InterfaceInfo pickInterface(String requested) throws IOException {
         if (requested != null && !requested.isBlank()) {
@@ -38,18 +40,32 @@ public final class NetworkTools {
                 continue;
             }
             NetworkInterface networkInterface = NetworkInterface.getByName(name);
-            if (networkInterface == null || !networkInterface.isUp() || networkInterface.isLoopback()) {
+            if (
+                networkInterface == null ||
+                !networkInterface.isUp() ||
+                networkInterface.isLoopback()
+            ) {
                 continue;
             }
             InetAddress address = ipv4Of(networkInterface);
             if (address != null) {
-                return new InterfaceInfo(networkInterface, address, macOf(networkInterface, address));
+                return new InterfaceInfo(
+                    networkInterface,
+                    address,
+                    macOf(networkInterface, address)
+                );
             }
         }
 
         List<NetworkInterface> candidates = new ArrayList<>();
-        for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-            if (!networkInterface.isUp() || networkInterface.isLoopback() || networkInterface.isPointToPoint()) {
+        for (NetworkInterface networkInterface : Collections.list(
+            NetworkInterface.getNetworkInterfaces()
+        )) {
+            if (
+                !networkInterface.isUp() ||
+                networkInterface.isLoopback() ||
+                networkInterface.isPointToPoint()
+            ) {
                 continue;
             }
             if (bridgeLike(networkInterface.getName())) {
@@ -64,7 +80,11 @@ public final class NetworkTools {
         for (NetworkInterface networkInterface : candidates) {
             InetAddress address = ipv4Of(networkInterface);
             if (address != null) {
-                return new InterfaceInfo(networkInterface, address, macOf(networkInterface, address));
+                return new InterfaceInfo(
+                    networkInterface,
+                    address,
+                    macOf(networkInterface, address)
+                );
             }
         }
         InetAddress loopback = InetAddress.getByName("127.0.0.1");
@@ -75,8 +95,13 @@ public final class NetworkTools {
     private static int score(NetworkInterface networkInterface) {
         String name = networkInterface.getName().toLowerCase();
         int score = 0;
-        if (name.startsWith("en") || name.startsWith("eth") || name.startsWith("wlan")
-                || name.startsWith("bond") || name.startsWith("ovs")) {
+        if (
+            name.startsWith("en") ||
+            name.startsWith("eth") ||
+            name.startsWith("wlan") ||
+            name.startsWith("bond") ||
+            name.startsWith("ovs")
+        ) {
             score += 10;
         }
         try {
@@ -95,11 +120,22 @@ public final class NetworkTools {
     /** Interfaces created by Docker/VMs/VPNs; advertising on them would not reach the LAN. */
     private static boolean bridgeLike(String name) {
         String lower = name.toLowerCase();
-        return lower.equals("lo") || lower.startsWith("docker") || lower.startsWith("br-")
-                || lower.startsWith("veth") || lower.startsWith("virbr") || lower.startsWith("vmnet")
-                || lower.startsWith("tun") || lower.startsWith("tap") || lower.startsWith("utun")
-                || lower.startsWith("tailscale") || lower.startsWith("wg") || lower.startsWith("sit")
-                || lower.startsWith("ip6tnl") || lower.startsWith("dummy");
+        return (
+            lower.equals("lo") ||
+            lower.startsWith("docker") ||
+            lower.startsWith("br-") ||
+            lower.startsWith("veth") ||
+            lower.startsWith("virbr") ||
+            lower.startsWith("vmnet") ||
+            lower.startsWith("tun") ||
+            lower.startsWith("tap") ||
+            lower.startsWith("utun") ||
+            lower.startsWith("tailscale") ||
+            lower.startsWith("wg") ||
+            lower.startsWith("sit") ||
+            lower.startsWith("ip6tnl") ||
+            lower.startsWith("dummy")
+        );
     }
 
     /** Interface names that carry the IPv4 default route (Linux); empty on other platforms. */
@@ -131,7 +167,9 @@ public final class NetworkTools {
     public static String describeInterfaces() {
         StringBuilder text = new StringBuilder();
         try {
-            for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+            for (NetworkInterface networkInterface : Collections.list(
+                NetworkInterface.getNetworkInterfaces()
+            )) {
                 if (!networkInterface.isUp()) {
                     continue;
                 }
@@ -144,8 +182,9 @@ public final class NetworkTools {
                 if (text.length() > 0) {
                     text.append(", ");
                 }
-                text.append(networkInterface.getName()).append('=')
-                        .append(addresses.isEmpty() ? "-" : String.join("/", addresses));
+                text.append(networkInterface.getName())
+                    .append('=')
+                    .append(addresses.isEmpty() ? "-" : String.join("/", addresses));
                 if (bridgeLike(networkInterface.getName())) {
                     text.append("(bridge)");
                 }
@@ -158,7 +197,11 @@ public final class NetworkTools {
 
     private static InetAddress ipv4Of(NetworkInterface networkInterface) {
         for (InetAddress address : Collections.list(networkInterface.getInetAddresses())) {
-            if (address instanceof Inet4Address && !address.isLoopbackAddress() && !address.isLinkLocalAddress()) {
+            if (
+                address instanceof Inet4Address &&
+                !address.isLoopbackAddress() &&
+                !address.isLinkLocalAddress()
+            ) {
                 return address;
             }
         }
@@ -176,13 +219,15 @@ public final class NetworkTools {
         }
         try {
             String seed = InetAddress.getLocalHost().getHostName() + "/" + address.getHostAddress();
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(seed.getBytes(StandardCharsets.UTF_8));
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(
+                seed.getBytes(StandardCharsets.UTF_8)
+            );
             byte[] mac = new byte[6];
             System.arraycopy(hash, 0, mac, 0, 6);
             mac[0] = (byte) ((mac[0] & 0xFC) | 0x02); // locally administered, unicast
             return mac;
         } catch (Exception e) {
-            return new byte[]{0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+            return new byte[] { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
         }
     }
 }

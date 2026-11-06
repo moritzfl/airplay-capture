@@ -8,11 +8,13 @@ import java.util.Locale;
 /** Small formatting helpers for the Vaadin views. */
 final class Fmt {
 
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.ROOT);
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern(
+        "dd.MM.yyyy",
+        Locale.ROOT
+    );
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
-    private Fmt() {
-    }
+    private Fmt() {}
 
     static String duration(long millis) {
         if (millis <= 0) {
@@ -32,14 +34,19 @@ final class Fmt {
         if (bytes <= 0) {
             return "";
         }
-        String[] units = {"B", "KB", "MB", "GB"};
+        String[] units = { "B", "KB", "MB", "GB" };
         double value = bytes;
         int unit = 0;
         while (value >= 1024 && unit < units.length - 1) {
             value /= 1024;
             unit++;
         }
-        return String.format(Locale.ROOT, value >= 10 || unit == 0 ? "%.0f %s" : "%.1f %s", value, units[unit]);
+        return String.format(
+            Locale.ROOT,
+            value >= 10 || unit == 0 ? "%.0f %s" : "%.1f %s",
+            value,
+            units[unit]
+        );
     }
 
     static String date(long epochMillis) {
@@ -57,7 +64,8 @@ final class Fmt {
         var when = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault());
         String time = TIME.format(when);
         return when.toLocalDate().equals(java.time.LocalDate.now(ZoneId.systemDefault()))
-                ? time : DATE.format(when) + " " + time;
+            ? time
+            : DATE.format(when) + " " + time;
     }
 
     static String dateRange(long firstEpochMillis, long lastEpochMillis) {

@@ -1,12 +1,12 @@
 package de.moritzf.airplaycapture.library;
 
-import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
+import javax.imageio.ImageIO;
 
 /**
  * Perceptual difference hash (dHash) for cover art. The same cover at a different size or
@@ -15,8 +15,7 @@ import java.util.Locale;
  */
 public final class CoverHash {
 
-    private CoverHash() {
-    }
+    private CoverHash() {}
 
     public static String of(Path file) {
         try {
@@ -34,8 +33,10 @@ public final class CoverHash {
         BufferedImage small = new BufferedImage(9, 8, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = small.createGraphics();
         try {
-            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                    RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            graphics.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR
+            );
             graphics.drawImage(image, 0, 0, 9, 8, null);
         } finally {
             graphics.dispose();
@@ -56,8 +57,10 @@ public final class CoverHash {
         BufferedImage small = new BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = small.createGraphics();
         try {
-            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                    RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            graphics.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR
+            );
             graphics.drawImage(image, 0, 0, 2, 2, null);
         } finally {
             graphics.dispose();
@@ -66,8 +69,15 @@ public final class CoverHash {
         for (int y = 0; y < 2; y++) {
             for (int x = 0; x < 2; x++) {
                 int rgb = small.getRGB(x, y);
-                colors.append(String.format(Locale.ROOT, "%02x%02x%02x",
-                        (rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff));
+                colors.append(
+                    String.format(
+                        Locale.ROOT,
+                        "%02x%02x%02x",
+                        (rgb >> 16) & 0xff,
+                        (rgb >> 8) & 0xff,
+                        rgb & 0xff
+                    )
+                );
             }
         }
         return colors.toString();

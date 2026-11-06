@@ -1,8 +1,5 @@
 package de.moritzf.airplaycapture.raop;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -11,6 +8,9 @@ import java.security.SecureRandom;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Base64;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Crypto used by the RAOP (AirPlay 1) audio protocol.
@@ -22,20 +22,24 @@ import java.util.Base64;
 public final class RaopCrypto {
 
     static final BigInteger MODULUS = new BigInteger(
-            "E7D744F2A2E2788B6C1F55A08EB70544A8FA7945AA8BE6C62CE5F51CBDD4DC6842FE3D1083DD2EDEC1BFD4252DC02E6F"
-                    + "398BDF0E6148EA84855E2E442DA6D62664F674A1F304929ADE4F6893EF2DF6E711A8C77A0D91C9D980822E50D12922AF"
-                    + "EA40EA9F0E14C0F76938C5F3882FC0323DD9FE55155F51BB5921C201629FD73352D5E2EFAABF9BA048D7B813A2B6767F"
-                    + "6C3CCF1EB4CE673D037B0D2EA30C5FFFEB06F8D08ADDE409571A9C689FEF10728855DD8CFB9A8BEF5C8943EF3B5FAA15"
-                    + "DDE698BEDDF3599603EB3E6F61372BB628F6559F599A78BF500687AA7F4976C0562D412956F8989E18A6355BD8159782"
-                    + "5E0FC875343EC782117625CDBF98447B", 16);
+        "E7D744F2A2E2788B6C1F55A08EB70544A8FA7945AA8BE6C62CE5F51CBDD4DC6842FE3D1083DD2EDEC1BFD4252DC02E6F" +
+            "398BDF0E6148EA84855E2E442DA6D62664F674A1F304929ADE4F6893EF2DF6E711A8C77A0D91C9D980822E50D12922AF" +
+            "EA40EA9F0E14C0F76938C5F3882FC0323DD9FE55155F51BB5921C201629FD73352D5E2EFAABF9BA048D7B813A2B6767F" +
+            "6C3CCF1EB4CE673D037B0D2EA30C5FFFEB06F8D08ADDE409571A9C689FEF10728855DD8CFB9A8BEF5C8943EF3B5FAA15" +
+            "DDE698BEDDF3599603EB3E6F61372BB628F6559F599A78BF500687AA7F4976C0562D412956F8989E18A6355BD8159782" +
+            "5E0FC875343EC782117625CDBF98447B",
+        16
+    );
 
     private static final BigInteger PRIVATE_EXPONENT = new BigInteger(
-            "E5F00C72F577D604B9A4CE4122AA84B01743EC995ACFCC7F4AB27C0B187F90665BE359DF1259818DEEED79D3B1EF845E"
-                    + "4DDDDAC9A155373B5E270D8E1315001A2E527D54CDF9000A5768BC98D4446B37BBBD00B29DD8B53062133B2A6E77F4E"
-                    + "E32505622904DA720FB1C12C03996DA713A0506098EDBEDECF936D0FA9CBD5929ABB0EDA35799502F9894DCB8FC569A892"
-                    + "D17780324A2B6C3166E346709134B854041B867706B58FEF2A0DB922B77628B68E69693C7AF43BF2A73D0B732377A0BA1"
-                    + "7B44F051E9BF79849DCB3332571FD8A70933C2D60BDEC479934A3DACA40BB6F2F37C0A9D07106EADC8B369A03F2F41C880"
-                    + "098E8ADD46240DAC68CC5354F361", 16);
+        "E5F00C72F577D604B9A4CE4122AA84B01743EC995ACFCC7F4AB27C0B187F90665BE359DF1259818DEEED79D3B1EF845E" +
+            "4DDDDAC9A155373B5E270D8E1315001A2E527D54CDF9000A5768BC98D4446B37BBBD00B29DD8B53062133B2A6E77F4E" +
+            "E32505622904DA720FB1C12C03996DA713A0506098EDBEDECF936D0FA9CBD5929ABB0EDA35799502F9894DCB8FC569A892" +
+            "D17780324A2B6C3166E346709134B854041B867706B58FEF2A0DB922B77628B68E69693C7AF43BF2A73D0B732377A0BA1" +
+            "7B44F051E9BF79849DCB3332571FD8A70933C2D60BDEC479934A3DACA40BB6F2F37C0A9D07106EADC8B369A03F2F41C880" +
+            "098E8ADD46240DAC68CC5354F361",
+        16
+    );
 
     static final BigInteger PUBLIC_EXPONENT = BigInteger.valueOf(65537);
 
@@ -49,13 +53,13 @@ public final class RaopCrypto {
         }
     });
 
-    private RaopCrypto() {
-    }
+    private RaopCrypto() {}
 
     public static PublicKey publicKey() {
         try {
-            return KeyFactory.getInstance("RSA")
-                    .generatePublic(new RSAPublicKeySpec(MODULUS, PUBLIC_EXPONENT));
+            return KeyFactory.getInstance("RSA").generatePublic(
+                new RSAPublicKeySpec(MODULUS, PUBLIC_EXPONENT)
+            );
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -63,8 +67,9 @@ public final class RaopCrypto {
 
     public static PrivateKey privateKey() {
         try {
-            return KeyFactory.getInstance("RSA")
-                    .generatePrivate(new RSAPrivateKeySpec(MODULUS, PRIVATE_EXPONENT));
+            return KeyFactory.getInstance("RSA").generatePrivate(
+                new RSAPrivateKeySpec(MODULUS, PRIVATE_EXPONENT)
+            );
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -136,7 +141,7 @@ public final class RaopCrypto {
      * @return number of decrypted (16-byte aligned) bytes
      */
     public static int decryptPayload(byte[] key, byte[] iv, byte[] buffer, int offset, int length)
-            throws Exception {
+        throws Exception {
         int aligned = length & ~0xF;
         if (aligned == 0) {
             return 0;

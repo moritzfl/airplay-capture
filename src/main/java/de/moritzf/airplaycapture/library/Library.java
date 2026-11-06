@@ -1,13 +1,8 @@
 package de.moritzf.airplaycapture.library;
 
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.SerializationFeature;
 import de.moritzf.airplaycapture.AppDirs;
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.Settings;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -16,13 +11,17 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Persistent list of exported tracks plus their files and cover images. */
 public final class Library {
 
     private static final ObjectMapper JSON = JsonMapper.builder()
-            .enable(SerializationFeature.INDENT_OUTPUT)
-            .build();
+        .enable(SerializationFeature.INDENT_OUTPUT)
+        .build();
 
     private final AppDirs dirs;
     private final List<LibraryTrack> tracks = new ArrayList<>();
@@ -63,7 +62,10 @@ public final class Library {
     }
 
     public synchronized Optional<LibraryTrack> find(String id) {
-        return tracks.stream().filter(t -> t.id.equals(id)).findFirst();
+        return tracks
+            .stream()
+            .filter(t -> t.id.equals(id))
+            .findFirst();
     }
 
     public synchronized Path file(LibraryTrack track, String format) {
@@ -95,7 +97,11 @@ public final class Library {
     public synchronized void save() {
         try {
             Files.createDirectories(dirs.dataDir());
-            Files.writeString(dirs.libraryFile(), JSON.writeValueAsString(tracks), StandardCharsets.UTF_8);
+            Files.writeString(
+                dirs.libraryFile(),
+                JSON.writeValueAsString(tracks),
+                StandardCharsets.UTF_8
+            );
         } catch (IOException e) {
             Log.error("library", "cannot save library: " + e.getMessage());
         }
@@ -159,8 +165,10 @@ public final class Library {
         }
         try {
             String json = Files.readString(dirs.libraryFile(), StandardCharsets.UTF_8);
-            List<LibraryTrack> loaded = JSON.readValue(json, new TypeReference<List<LibraryTrack>>() {
-            });
+            List<LibraryTrack> loaded = JSON.readValue(
+                json,
+                new TypeReference<List<LibraryTrack>>() {}
+            );
             if (loaded != null) {
                 boolean hashesChanged = false;
                 for (LibraryTrack track : loaded) {
@@ -168,7 +176,9 @@ public final class Library {
                         continue;
                     }
                     // Drop entries whose files vanished (manual cleanup).
-                    track.files.entrySet().removeIf(e -> !Files.exists(libraryDir().resolve(e.getValue())));
+                    track.files
+                        .entrySet()
+                        .removeIf(e -> !Files.exists(libraryDir().resolve(e.getValue())));
                     if (!track.files.isEmpty()) {
                         if (track.coverHash == null || track.coverHash.isBlank()) {
                             String hash = existingCoverHash(track.id);

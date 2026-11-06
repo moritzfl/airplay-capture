@@ -1,12 +1,11 @@
 package de.moritzf.airplaycapture;
 
-import de.moritzf.airplaycapture.util.WebPort;
-import org.junit.jupiter.api.Test;
-
-import java.net.ServerSocket;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
+import de.moritzf.airplaycapture.util.WebPort;
+import java.net.ServerSocket;
+import org.junit.jupiter.api.Test;
 
 class WebPortTest {
 

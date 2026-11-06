@@ -1,7 +1,6 @@
 package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.Log;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,8 +16,7 @@ import java.util.function.BooleanSupplier;
  */
 public final class AudiobookAssembler {
 
-    public record Chapter(Path caf, String title, long durationMs) {
-    }
+    public record Chapter(Path caf, String title, long durationMs) {}
 
     /** Receives the encoder's own progress, 0..1. */
     @FunctionalInterface
@@ -39,14 +37,25 @@ public final class AudiobookAssembler {
      * @param cover    optional cover image
      * @param output   target .m4b file
      */
-    public void assemble(List<Chapter> chapters, Path cover, Path output, String title, String author)
-            throws IOException, InterruptedException {
+    public void assemble(
+        List<Chapter> chapters,
+        Path cover,
+        Path output,
+        String title,
+        String author
+    ) throws IOException, InterruptedException {
         assemble(chapters, cover, output, title, author, null);
     }
 
     /** Same as {@link #assemble(List, Path, Path, String, String)}, reporting encode progress. */
-    public void assemble(List<Chapter> chapters, Path cover, Path output, String title, String author,
-                         Progress progress) throws IOException, InterruptedException {
+    public void assemble(
+        List<Chapter> chapters,
+        Path cover,
+        Path output,
+        String title,
+        String author,
+        Progress progress
+    ) throws IOException, InterruptedException {
         assemble(chapters, cover, output, title, author, progress, null);
     }
 
@@ -54,9 +63,15 @@ public final class AudiobookAssembler {
      * Encodes the audiobook, reporting progress and stopping early when {@code cancelled} turns
      * true. A cancelled or failed encode leaves no output file behind.
      */
-    public void assemble(List<Chapter> chapters, Path cover, Path output, String title, String author,
-                         Progress progress, BooleanSupplier cancelled)
-            throws IOException, InterruptedException {
+    public void assemble(
+        List<Chapter> chapters,
+        Path cover,
+        Path output,
+        String title,
+        String author,
+        Progress progress,
+        BooleanSupplier cancelled
+    ) throws IOException, InterruptedException {
         if (chapters.isEmpty()) {
             throw new IOException("no chapters to assemble");
         }
@@ -66,16 +81,32 @@ public final class AudiobookAssembler {
             Path metadata = work.resolve("chapters.txt");
             List<String> concat = new ArrayList<>();
             for (Chapter chapter : chapters) {
-                concat.add("file '" + chapter.caf().toAbsolutePath().toString().replace("'", "'\\''") + "'");
+                concat.add(
+                    "file '" + chapter.caf().toAbsolutePath().toString().replace("'", "'\\''") + "'"
+                );
             }
             Files.write(list, concat, StandardCharsets.UTF_8);
             Files.write(metadata, chapterMetadata(chapters), StandardCharsets.UTF_8);
 
-            long totalMs = chapters.stream().mapToLong(chapter -> Math.max(0, chapter.durationMs()))
-                    .sum();
-            List<String> command = new ArrayList<>(List.of(
-                    ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-                    "-f", "concat", "-safe", "0", "-i", list.toString()));
+            long totalMs = chapters
+                .stream()
+                .mapToLong(chapter -> Math.max(0, chapter.durationMs()))
+                .sum();
+            List<String> command = new ArrayList<>(
+                List.of(
+                    ffmpeg,
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    list.toString()
+                )
+            );
             int nextInput = 1;
             int coverInput = -1;
             if (cover != null && Files.exists(cover)) {
@@ -83,14 +114,20 @@ public final class AudiobookAssembler {
                 command.addAll(List.of("-i", cover.toString()));
             }
             int metadataInput = nextInput;
-            command.addAll(List.of("-i", metadata.toString(),
-                    "-map", "0:a:0"));
+            command.addAll(List.of("-i", metadata.toString(), "-map", "0:a:0"));
             if (coverInput > 0) {
                 command.addAll(List.of("-map", coverInput + ":v:0"));
             }
-            command.addAll(List.of(
-                    "-map_chapters", String.valueOf(metadataInput),
-                    "-c:a", "aac", "-b:a", bitrateKbps + "k"));
+            command.addAll(
+                List.of(
+                    "-map_chapters",
+                    String.valueOf(metadataInput),
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    bitrateKbps + "k"
+                )
+            );
             if (coverInput > 0) {
                 command.addAll(List.of("-c:v", "mjpeg", "-disposition:v", "attached_pic"));
             }
@@ -98,18 +135,30 @@ public final class AudiobookAssembler {
             addTag(command, "album", title);
             addTag(command, "artist", author);
             addTag(command, "album_artist", author);
-            command.addAll(List.of(
-                    "-metadata", "genre=Audiobook",
-                    "-metadata", "media_type=2",
-                    "-movflags", "+faststart",
-                    "-f", "ipod", output.toString()));
+            command.addAll(
+                List.of(
+                    "-metadata",
+                    "genre=Audiobook",
+                    "-metadata",
+                    "media_type=2",
+                    "-movflags",
+                    "+faststart",
+                    "-f",
+                    "ipod",
+                    output.toString()
+                )
+            );
 
             FfmpegRunner.Result result;
             try {
-                result = FfmpegRunner.run(command, totalMs,
-                        progress == null ? null : ms -> report(progress,
-                                totalMs <= 0 ? 0 : ms / (double) totalMs),
-                        cancelled);
+                result = FfmpegRunner.run(
+                    command,
+                    totalMs,
+                    progress == null
+                        ? null
+                        : ms -> report(progress, totalMs <= 0 ? 0 : ms / (double) totalMs),
+                    cancelled
+                );
             } catch (CancellationException | IOException e) {
                 Files.deleteIfExists(output);
                 throw e;
@@ -134,8 +183,10 @@ public final class AudiobookAssembler {
                 continue;
             }
             long end = start + duration;
-            String title = chapter.title() == null || chapter.title().isBlank()
-                    ? "Chapter " + (i + 1) : chapter.title();
+            String title =
+                chapter.title() == null || chapter.title().isBlank()
+                    ? "Chapter " + (i + 1)
+                    : chapter.title();
             lines.add("[CHAPTER]");
             lines.add("TIMEBASE=1/1000");
             lines.add("START=" + start);

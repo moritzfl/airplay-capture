@@ -9,7 +9,6 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.dom.Element;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
-
 import java.util.List;
 import java.util.Locale;
 
@@ -58,8 +57,12 @@ final class AudiobookQueuePanel extends Div {
         summary.getElement().setAttribute("aria-live", "polite");
         clear.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY_INLINE);
         clear.addClassName("queue-clear");
-        clear.getElement().setAttribute("title",
-                "Remove finished conversions from this list. Files in the library are kept.");
+        clear
+            .getElement()
+            .setAttribute(
+                "title",
+                "Remove finished conversions from this list. Files in the library are kept."
+            );
         clear.addClickListener(event -> {
             jobs.clearFinished();
             reveal.changed();
@@ -84,7 +87,10 @@ final class AudiobookQueuePanel extends Div {
         summary.setText(summary(all));
         clear.setVisible(all.stream().anyMatch(job -> !job.active()));
         list.removeAll();
-        long finished = all.stream().filter(job -> !job.active()).count();
+        long finished = all
+            .stream()
+            .filter(job -> !job.active())
+            .count();
         int shown = 0;
         for (AudiobookJobs.Job job : all) {
             if (!job.active() && shown >= VISIBLE_FINISHED) {
@@ -97,8 +103,12 @@ final class AudiobookQueuePanel extends Div {
         }
         if (finished > VISIBLE_FINISHED) {
             long hidden = finished - VISIBLE_FINISHED;
-            Span more = new Span(hidden + " older " + (hidden == 1 ? "conversion" : "conversions")
-                    + " hidden. Clearing this list never deletes files.");
+            Span more = new Span(
+                hidden +
+                    " older " +
+                    (hidden == 1 ? "conversion" : "conversions") +
+                    " hidden. Clearing this list never deletes files."
+            );
             more.addClassName("queue-more");
             list.add(more);
         }
@@ -107,17 +117,32 @@ final class AudiobookQueuePanel extends Div {
     private static String signature(List<AudiobookJobs.Job> all) {
         StringBuilder builder = new StringBuilder();
         for (AudiobookJobs.Job job : all) {
-            builder.append(job.id).append('|').append(job.state).append('|')
-                    .append(job.step).append('|')
-                    .append(String.format(Locale.ROOT, "%.3f", job.progress)).append('|')
-                    .append(job.resultTrackId).append('|').append(job.error).append(';');
+            builder
+                .append(job.id)
+                .append('|')
+                .append(job.state)
+                .append('|')
+                .append(job.step)
+                .append('|')
+                .append(String.format(Locale.ROOT, "%.3f", job.progress))
+                .append('|')
+                .append(job.resultTrackId)
+                .append('|')
+                .append(job.error)
+                .append(';');
         }
         return builder.toString();
     }
 
     private static String summary(List<AudiobookJobs.Job> all) {
-        long running = all.stream().filter(job -> job.status() == AudiobookJobs.State.RUNNING).count();
-        long queued = all.stream().filter(job -> job.status() == AudiobookJobs.State.QUEUED).count();
+        long running = all
+            .stream()
+            .filter(job -> job.status() == AudiobookJobs.State.RUNNING)
+            .count();
+        long queued = all
+            .stream()
+            .filter(job -> job.status() == AudiobookJobs.State.QUEUED)
+            .count();
         if (running + queued == 0) {
             return "Nothing converting";
         }
@@ -157,11 +182,13 @@ final class AudiobookQueuePanel extends Div {
         boolean replaced = job.status() == AudiobookJobs.State.DONE && reveal.replaced(job);
         Span state = new Span(replaced ? "Replaced" : stateLabel(job));
         state.addClassName("queue-state");
-        state.addClassName(replaced ? "state-cancelled"
-                : "state-" + job.status().name().toLowerCase(Locale.ROOT));
+        state.addClassName(
+            replaced ? "state-cancelled" : "state-" + job.status().name().toLowerCase(Locale.ROOT)
+        );
         if (replaced) {
-            state.getElement().setAttribute("title",
-                    "A newer build of this audiobook is the current download");
+            state
+                .getElement()
+                .setAttribute("title", "A newer build of this audiobook is the current download");
         }
         titleLine.add(state);
         body.add(titleLine);
@@ -171,8 +198,9 @@ final class AudiobookQueuePanel extends Div {
         meta.getElement().setAttribute("title", job.step == null ? "" : job.step);
         body.add(meta);
 
-        if (job.status() == AudiobookJobs.State.FAILED && job.error != null
-                && !job.error.isBlank()) {
+        if (
+            job.status() == AudiobookJobs.State.FAILED && job.error != null && !job.error.isBlank()
+        ) {
             Span error = new Span(job.error);
             error.addClassName("queue-error");
             body.add(error);
@@ -185,8 +213,7 @@ final class AudiobookQueuePanel extends Div {
                 Button cancel = new Button("Cancel", event -> confirmCancel(job));
                 cancel.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
                 cancel.addClassName("queue-cancel");
-                cancel.getElement().setAttribute("aria-label",
-                        "Cancel conversion of " + job.title);
+                cancel.getElement().setAttribute("aria-label", "Cancel conversion of " + job.title);
                 cancel.setEnabled(!"Cancelling…".equals(job.step));
                 actions.add(cancel);
             }
@@ -197,8 +224,7 @@ final class AudiobookQueuePanel extends Div {
                 });
                 cancel.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
                 cancel.addClassName("queue-cancel");
-                cancel.getElement().setAttribute("aria-label",
-                        "Cancel conversion of " + job.title);
+                cancel.getElement().setAttribute("aria-label", "Cancel conversion of " + job.title);
                 actions.add(cancel);
             }
             case DONE -> {
@@ -206,18 +232,23 @@ final class AudiobookQueuePanel extends Div {
                     row.addClassName("queue-replaced");
                 }
                 Anchor download = new Anchor(
-                        AppUrls.relative("api/tracks/" + job.resultTrackId + "/file/m4b?download=1"),
-                        replaced ? "Download" : "Download M4B");
+                    AppUrls.relative("api/tracks/" + job.resultTrackId + "/file/m4b?download=1"),
+                    replaced ? "Download" : "Download M4B"
+                );
                 download.addClassName(replaced ? "queue-download-secondary" : "queue-download");
                 download.getElement().setAttribute("download", job.resultFileName);
-                download.getElement().setAttribute("title",
-                        "Download " + job.resultFileName
-                                + (job.resultSizeBytes > 0 ? " · " + Fmt.bytes(job.resultSizeBytes) : ""));
+                download
+                    .getElement()
+                    .setAttribute(
+                        "title",
+                        "Download " +
+                            job.resultFileName +
+                            (job.resultSizeBytes > 0 ? " · " + Fmt.bytes(job.resultSizeBytes) : "")
+                    );
                 Button show = new Button("Show in library", event -> reveal.showInLibrary(job));
                 show.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
                 show.addClassName("queue-show");
-                show.getElement().setAttribute("title",
-                        "Scroll to this audiobook in the library");
+                show.getElement().setAttribute("title", "Scroll to this audiobook in the library");
                 actions.add(download, show);
                 actions.add(dismiss(job));
             }
@@ -225,8 +256,9 @@ final class AudiobookQueuePanel extends Div {
                 Button retry = new Button("Try again…", event -> reveal.retry(job));
                 retry.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
                 retry.addClassName("queue-retry");
-                retry.getElement().setAttribute("title",
-                        "Open the audiobook dialog for these recordings again");
+                retry
+                    .getElement()
+                    .setAttribute("title", "Open the audiobook dialog for these recordings again");
                 actions.add(retry, dismiss(job));
             }
         }
@@ -238,8 +270,9 @@ final class AudiobookQueuePanel extends Div {
             track.getElement().setAttribute("role", "progressbar");
             track.getElement().setAttribute("aria-valuemin", "0");
             track.getElement().setAttribute("aria-valuemax", "100");
-            track.getElement().setAttribute("aria-valuenow",
-                    String.valueOf(Math.round(job.progress * 100)));
+            track
+                .getElement()
+                .setAttribute("aria-valuenow", String.valueOf(Math.round(job.progress * 100)));
             track.getElement().setAttribute("aria-label", "Converting " + job.title);
             Div bar = new Div();
             bar.addClassName("queue-progress-bar");
@@ -253,8 +286,12 @@ final class AudiobookQueuePanel extends Div {
     private void confirmCancel(AudiobookJobs.Job job) {
         ConfirmDialog dialog = new ConfirmDialog();
         dialog.setHeader("Cancel this conversion?");
-        dialog.setText("\u201c" + job.title + "\u201d stops now and its progress is lost. "
-                + "The source recordings stay in the library.");
+        dialog.setText(
+            "\u201c" +
+                job.title +
+                "\u201d stops now and its progress is lost. " +
+                "The source recordings stay in the library."
+        );
         dialog.setCancelable(true);
         dialog.setCancelText("Keep converting");
         dialog.setConfirmText("Cancel conversion");
@@ -303,14 +340,18 @@ final class AudiobookQueuePanel extends Div {
         return switch (job.status()) {
             case QUEUED -> join(author, "Waiting for the current conversion");
             case RUNNING -> join(author, job.step == null ? "Converting" : job.step);
-            case DONE -> join(finishedAt(job),
-                    job.chapterCount > 0 ? chapters(job.chapterCount) : "",
-                    job.durationMs > 0 ? Fmt.duration(job.durationMs) : "",
-                    job.resultFileName == null ? "" : job.resultFileName);
-            case FAILED -> join(finishedAt(job), author,
-                    job.step == null ? "Conversion failed" : job.step);
-            case CANCELLED -> join(finishedAt(job), author,
-                    "source recordings are unchanged");
+            case DONE -> join(
+                finishedAt(job),
+                job.chapterCount > 0 ? chapters(job.chapterCount) : "",
+                job.durationMs > 0 ? Fmt.duration(job.durationMs) : "",
+                job.resultFileName == null ? "" : job.resultFileName
+            );
+            case FAILED -> join(
+                finishedAt(job),
+                author,
+                job.step == null ? "Conversion failed" : job.step
+            );
+            case CANCELLED -> join(finishedAt(job), author, "source recordings are unchanged");
         };
     }
 

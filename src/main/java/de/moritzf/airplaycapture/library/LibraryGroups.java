@@ -31,13 +31,14 @@ public final class LibraryGroups {
 
     /** An album/book row with the recordings that belong to it. */
     public record Group(String key, String title, String artist, List<LibraryTrack> tracks) {
-
         public boolean expandable() {
             return tracks.size() > 1;
         }
 
         public boolean isAudiobook() {
-            return tracks.stream().anyMatch(track -> track.audiobookChapter || track.chapterCount != null);
+            return tracks
+                .stream()
+                .anyMatch(track -> track.audiobookChapter || track.chapterCount != null);
         }
 
         public boolean hasM4b() {
@@ -60,8 +61,12 @@ public final class LibraryGroups {
 
         /** True for an assembled .m4b that a later rebuild superseded. */
         public boolean isEarlierVersion(LibraryTrack track) {
-            return track.chapterCount != null
-                    && m4b().map(current -> current != track).orElse(false);
+            return (
+                track.chapterCount != null &&
+                m4b()
+                    .map(current -> current != track)
+                    .orElse(false)
+            );
         }
 
         public long durationMs() {
@@ -69,15 +74,25 @@ public final class LibraryGroups {
             if (m4b.isPresent()) {
                 return m4b.get().durationMs;
             }
-            return bestTakes().stream().mapToLong(track -> track.durationMs).sum();
+            return bestTakes()
+                .stream()
+                .mapToLong(track -> track.durationMs)
+                .sum();
         }
 
         public long sizeBytes() {
-            return tracks.stream().mapToLong(track -> track.sizeBytes).sum();
+            return tracks
+                .stream()
+                .mapToLong(track -> track.sizeBytes)
+                .sum();
         }
 
         public long recordedAtEpochMs() {
-            return tracks.stream().mapToLong(track -> track.recordedAtEpochMs).max().orElse(0);
+            return tracks
+                .stream()
+                .mapToLong(track -> track.recordedAtEpochMs)
+                .max()
+                .orElse(0);
         }
 
         public List<LibraryTrack> bestTakes() {
@@ -107,11 +122,9 @@ public final class LibraryGroups {
     }
 
     /** Position of a recording among duplicate takes, for badges. */
-    public record Take(int index, int total, boolean best) {
-    }
+    public record Take(int index, int total, boolean best) {}
 
-    private LibraryGroups() {
-    }
+    private LibraryGroups() {}
 
     public static List<Group> groups(List<LibraryTrack> tracks) {
         Map<String, List<LibraryTrack>> buckets = new LinkedHashMap<>();
@@ -132,10 +145,11 @@ public final class LibraryGroups {
                     groups.add(new Group(key, track.title, track.artist, List.of(track)));
                     continue;
                 }
-                members.sort(Comparator
-                        .comparingInt((LibraryTrack track) -> track.trackNumber == null
-                                ? Integer.MAX_VALUE : track.trackNumber)
-                        .thenComparingLong(track -> track.recordedAtEpochMs));
+                members.sort(
+                    Comparator.comparingInt((LibraryTrack track) ->
+                        track.trackNumber == null ? Integer.MAX_VALUE : track.trackNumber
+                    ).thenComparingLong(track -> track.recordedAtEpochMs)
+                );
                 LibraryTrack anchor = anchor(members);
                 String title = !isBlank(anchor.album) ? anchor.album : displayTitle(anchor);
                 String artist = displayArtist(members);
@@ -178,9 +192,11 @@ public final class LibraryGroups {
                     continue;
                 }
                 int distance = hamming(hash, cluster.hash);
-                if (distance <= COVER_HAMMING_DISTANCE
-                        && colorDistance(hash, cluster.hash) <= COVER_COLOR_DISTANCE
-                        && distance < bestDistance) {
+                if (
+                    distance <= COVER_HAMMING_DISTANCE &&
+                    colorDistance(hash, cluster.hash) <= COVER_COLOR_DISTANCE &&
+                    distance < bestDistance
+                ) {
                     best = cluster;
                     bestDistance = distance;
                 }
@@ -191,15 +207,19 @@ public final class LibraryGroups {
                 best.tracks.add(track);
             }
         }
-        return clusters.stream().map(cluster -> cluster.tracks).toList();
+        return clusters
+            .stream()
+            .map(cluster -> cluster.tracks)
+            .toList();
     }
 
     private static String clusterKey(String baseKey, List<LibraryTrack> members) {
-        String hash = members.stream()
-                .map(track -> track.coverHash)
-                .filter(LibraryGroups::isNotBlank)
-                .min(String::compareTo)
-                .orElse("");
+        String hash = members
+            .stream()
+            .map(track -> track.coverHash)
+            .filter(LibraryGroups::isNotBlank)
+            .min(String::compareTo)
+            .orElse("");
         return hash.isBlank() ? baseKey + "-nocover" : baseKey + "-" + hash;
     }
 
@@ -231,6 +251,7 @@ public final class LibraryGroups {
     }
 
     private static final class Cluster {
+
         final String hash;
         final List<LibraryTrack> tracks;
 
@@ -241,14 +262,19 @@ public final class LibraryGroups {
     }
 
     public static Optional<Group> find(List<LibraryTrack> tracks, String key) {
-        return groups(tracks).stream().filter(group -> group.key().equals(key)).findFirst();
+        return groups(tracks)
+            .stream()
+            .filter(group -> group.key().equals(key))
+            .findFirst();
     }
 
     /** True for an assembled book or one of its chapter files. */
     public static boolean isBookPart(LibraryTrack track) {
-        return (track.bookId != null && !track.bookId.isBlank())
-                || track.audiobookChapter
-                || track.chapterCount != null;
+        return (
+            (track.bookId != null && !track.bookId.isBlank()) ||
+            track.audiobookChapter ||
+            track.chapterCount != null
+        );
     }
 
     /**
@@ -370,10 +396,11 @@ public final class LibraryGroups {
     }
 
     private static LibraryTrack anchor(List<LibraryTrack> members) {
-        return members.stream()
-                .filter(track -> track.chapterCount != null)
-                .findFirst()
-                .orElse(members.get(0));
+        return members
+            .stream()
+            .filter(track -> track.chapterCount != null)
+            .findFirst()
+            .orElse(members.get(0));
     }
 
     private static String displayTitle(LibraryTrack anchor) {
@@ -384,17 +411,19 @@ public final class LibraryGroups {
     }
 
     private static String displayArtist(List<LibraryTrack> members) {
-        Optional<LibraryTrack> m4b = members.stream()
-                .filter(track -> track.chapterCount != null && isNotBlank(track.artist))
-                .findFirst();
+        Optional<LibraryTrack> m4b = members
+            .stream()
+            .filter(track -> track.chapterCount != null && isNotBlank(track.artist))
+            .findFirst();
         if (m4b.isPresent()) {
             return m4b.get().artist;
         }
-        List<String> names = members.stream()
-                .map(track -> track.artist)
-                .filter(LibraryGroups::isNotBlank)
-                .distinct()
-                .toList();
+        List<String> names = members
+            .stream()
+            .map(track -> track.artist)
+            .filter(LibraryGroups::isNotBlank)
+            .distinct()
+            .toList();
         if (names.size() == 1) {
             return names.get(0);
         }

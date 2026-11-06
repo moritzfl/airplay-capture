@@ -6,9 +6,6 @@ import de.moritzf.airplaycapture.UiState;
 import de.moritzf.airplaycapture.recording.RecordingManager;
 import de.moritzf.airplaycapture.util.NetworkTools;
 import de.moritzf.airplaycapture.util.NetworkTools.InterfaceInfo;
-
-import javax.jmdns.JmDNS;
-import javax.jmdns.ServiceInfo;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -20,6 +17,8 @@ import java.net.SocketException;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceInfo;
 
 /**
  * Legacy AirPlay ("RAOP") receiver: advertises {@code _raop._tcp} via mDNS and accepts the RTSP
@@ -65,11 +64,23 @@ public final class RaopServer {
 
         ui.deviceName = settings.deviceName;
         ui.port = chosen;
-        ui.interfaceAddress = networkInterface.networkInterface().getName() + " "
-                + networkInterface.address().getHostAddress();
+        ui.interfaceAddress =
+            networkInterface.networkInterface().getName() +
+            " " +
+            networkInterface.address().getHostAddress();
         Log.info("net", "interfaces: " + NetworkTools.describeInterfaces());
-        Log.info("raop", "listening on " + networkInterface.address().getHostAddress() + ":" + chosen
-                + " via " + networkInterface.networkInterface().getName() + " (" + settings.deviceName + ")");
+        Log.info(
+            "raop",
+            "listening on " +
+                networkInterface.address().getHostAddress() +
+                ":" +
+                chosen +
+                " via " +
+                networkInterface.networkInterface().getName() +
+                " (" +
+                settings.deviceName +
+                ")"
+        );
 
         acceptThread = new Thread(this::acceptLoop, "rtsp-accept");
         acceptThread.setDaemon(true);
@@ -84,7 +95,11 @@ public final class RaopServer {
             return requested;
         }
         IOException last = null;
-        for (int candidate = Settings.PORT_RANGE_START; candidate <= Settings.PORT_RANGE_END; candidate++) {
+        for (
+            int candidate = Settings.PORT_RANGE_START;
+            candidate <= Settings.PORT_RANGE_END;
+            candidate++
+        ) {
             try {
                 serverSocket.bind(new InetSocketAddress(candidate), 50);
                 return candidate;
@@ -100,7 +115,10 @@ public final class RaopServer {
             try {
                 Socket socket = serverSocket.accept();
                 RtspConnection connection = new RtspConnection(this, recorder, socket);
-                Thread thread = new Thread(connection, "rtsp-" + connection.clientAddress().getHostAddress());
+                Thread thread = new Thread(
+                    connection,
+                    "rtsp-" + connection.clientAddress().getHostAddress()
+                );
                 thread.setDaemon(true);
                 thread.start();
             } catch (java.net.SocketTimeoutException ignored) {
@@ -122,11 +140,15 @@ public final class RaopServer {
             ui.advertising = false;
             ui.advertisedAs = "";
             ui.lastError = "mDNS multicast blocked: " + probe.error();
-            Log.error("mdns", "Cannot advertise over mDNS: " + probe.error()
-                    + ". On macOS allow 'Local Network' for the app that started this process "
-                    + "(Terminal, iTerm, IntelliJ IDEA) under System Settings -> Privacy & Security -> "
-                    + "Local Network, then restart it. Also check VPNs or network filters. "
-                    + "The receiver stays invisible in the AirPlay menu until this is fixed.");
+            Log.error(
+                "mdns",
+                "Cannot advertise over mDNS: " +
+                    probe.error() +
+                    ". On macOS allow 'Local Network' for the app that started this process " +
+                    "(Terminal, iTerm, IntelliJ IDEA) under System Settings -> Privacy & Security -> " +
+                    "Local Network, then restart it. Also check VPNs or network filters. " +
+                    "The receiver stays invisible in the AirPlay menu until this is fixed."
+            );
             return;
         }
         Map<String, String> txt = new LinkedHashMap<>();
@@ -156,20 +178,31 @@ public final class RaopServer {
             jmds.registerService(info);
             ui.advertising = true;
             ui.advertisedAs = name;
-            Log.info("mdns", "advertising '" + settings.deviceName + "' as " + name + "._raop._tcp on "
-                    + networkInterface.address().getHostAddress() + " via "
-                    + networkInterface.networkInterface().getName());
+            Log.info(
+                "mdns",
+                "advertising '" +
+                    settings.deviceName +
+                    "' as " +
+                    name +
+                    "._raop._tcp on " +
+                    networkInterface.address().getHostAddress() +
+                    " via " +
+                    networkInterface.networkInterface().getName()
+            );
         } catch (Exception e) {
             ui.advertising = false;
             ui.lastError = "mDNS advertisement failed: " + e.getMessage();
-            Log.error("mdns", "cannot advertise receiver: " + e.getMessage()
-                    + ". Check that UDP 5353 (mDNS) is allowed by the DSM firewall and that the "
-                    + "NAS network is the same LAN/subnet as the AirPlay client.");
+            Log.error(
+                "mdns",
+                "cannot advertise receiver: " +
+                    e.getMessage() +
+                    ". Check that UDP 5353 (mDNS) is allowed by the DSM firewall and that the " +
+                    "NAS network is the same LAN/subnet as the AirPlay client."
+            );
         }
     }
 
-    private record MulticastProbe(boolean available, String error) {
-    }
+    private record MulticastProbe(boolean available, String error) {}
 
     /**
      * Sends a single packet to the mDNS group before starting JmDNS. When macOS denies local network
@@ -180,9 +213,15 @@ public final class RaopServer {
         try (MulticastSocket socket = new MulticastSocket(0)) {
             socket.setNetworkInterface(networkInterface.networkInterface());
             socket.setTimeToLive(255);
-            byte[] payload = new byte[]{0};
-            socket.send(new DatagramPacket(payload, payload.length,
-                    InetAddress.getByName("224.0.0.251"), 5353));
+            byte[] payload = new byte[] { 0 };
+            socket.send(
+                new DatagramPacket(
+                    payload,
+                    payload.length,
+                    InetAddress.getByName("224.0.0.251"),
+                    5353
+                )
+            );
             return new MulticastProbe(true, null);
         } catch (Exception e) {
             return new MulticastProbe(false, e.getClass().getSimpleName() + ": " + e.getMessage());
@@ -194,8 +233,9 @@ public final class RaopServer {
     }
 
     public byte[] macAddress() {
-        return networkInterface == null ? new byte[]{0x02, 0x00, 0x00, 0x00, 0x00, 0x01}
-                : networkInterface.mac();
+        return networkInterface == null
+            ? new byte[] { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 }
+            : networkInterface.mac();
     }
 
     private String macHex() {
@@ -217,6 +257,7 @@ public final class RaopServer {
 
     /** Another device is already streaming to this receiver. */
     public static final class BusyException extends IOException {
+
         public BusyException(String message) {
             super(message);
         }
@@ -226,8 +267,13 @@ public final class RaopServer {
         return running;
     }
 
-    public StreamSession startSession(InetAddress client, InetAddress localAddress, Sdp sdp,
-                                      int controlPort, int timingPort) throws IOException {
+    public StreamSession startSession(
+        InetAddress client,
+        InetAddress localAddress,
+        Sdp sdp,
+        int controlPort,
+        int timingPort
+    ) throws IOException {
         synchronized (this) {
             if (session != null && !client.equals(sessionClient)) {
                 throw new BusyException("receiver busy with " + sessionClient);
@@ -235,8 +281,15 @@ public final class RaopServer {
             if (session != null) {
                 endSession(session);
             }
-            StreamSession created = new StreamSession(client, localAddress, sdp, controlPort, timingPort,
-                    recorder, settings);
+            StreamSession created = new StreamSession(
+                client,
+                localAddress,
+                sdp,
+                controlPort,
+                timingPort,
+                recorder,
+                settings
+            );
             created.start();
             session = created;
             sessionClient = client;

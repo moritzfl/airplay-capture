@@ -29,8 +29,7 @@ public final class FfmpegRunner {
     private static final Pattern PROGRESS_LINE = Pattern.compile("^[a-z0-9_]+=\\S*$");
 
     /** Exit code and every output line that is not part of the progress stream. */
-    public record Result(int exitCode, String output) {
-    }
+    public record Result(int exitCode, String output) {}
 
     /** Receives the furthest output position ffmpeg has reached. */
     @FunctionalInterface
@@ -38,8 +37,7 @@ public final class FfmpegRunner {
         void at(long encodedMs);
     }
 
-    private FfmpegRunner() {
-    }
+    private FfmpegRunner() {}
 
     public static Result run(List<String> command) throws IOException, InterruptedException {
         return run(command, 0, null, null);
@@ -52,14 +50,22 @@ public final class FfmpegRunner {
      * @param cancelled  optional cancel signal; a cancelled run throws {@link CancellationException}
      * @throws IOException when ffmpeg stalls or overruns {@code expectedMs}
      */
-    public static Result run(List<String> command, long expectedMs, Progress progress,
-                             BooleanSupplier cancelled) throws IOException, InterruptedException {
+    public static Result run(
+        List<String> command,
+        long expectedMs,
+        Progress progress,
+        BooleanSupplier cancelled
+    ) throws IOException, InterruptedException {
         return run(command, expectedMs, progress, cancelled, STALL_TIMEOUT_MS);
     }
 
-    static Result run(List<String> command, long expectedMs, Progress progress,
-                      BooleanSupplier cancelled, long stallTimeoutMs)
-            throws IOException, InterruptedException {
+    static Result run(
+        List<String> command,
+        long expectedMs,
+        Progress progress,
+        BooleanSupplier cancelled,
+        long stallTimeoutMs
+    ) throws IOException, InterruptedException {
         List<String> full = new ArrayList<>(command.size() + 3);
         full.add(command.get(0));
         full.addAll(List.of("-nostats", "-progress", "pipe:2"));
@@ -81,20 +87,32 @@ public final class FfmpegRunner {
             if (cancelled != null && cancelled.getAsBoolean()) {
                 abort.compareAndSet(null, new CancellationException("conversion cancelled"));
             } else if (expectedMs > 0 && encodedMs.get() > overrunMs) {
-                abort.compareAndSet(null, new IOException("encoder produced "
-                        + describe(encodedMs.get()) + " of audio, planned " + describe(expectedMs)
-                        + "; stopped to avoid a broken file"));
+                abort.compareAndSet(
+                    null,
+                    new IOException(
+                        "encoder produced " +
+                            describe(encodedMs.get()) +
+                            " of audio, planned " +
+                            describe(expectedMs) +
+                            "; stopped to avoid a broken file"
+                    )
+                );
             } else if (System.currentTimeMillis() - lastProgressAt.get() > stallTimeoutMs) {
-                abort.compareAndSet(null, new IOException("ffmpeg made no progress for "
-                        + describe(stallTimeoutMs)));
+                abort.compareAndSet(
+                    null,
+                    new IOException("ffmpeg made no progress for " + describe(stallTimeoutMs))
+                );
             }
             if (abort.get() != null) {
                 process.destroyForcibly();
             }
         };
         Thread reader = new Thread(() -> {
-            try (BufferedReader in = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            try (
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
+                )
+            ) {
                 String line;
                 while ((line = in.readLine()) != null) {
                     if (!PROGRESS_LINE.matcher(line).matches()) {

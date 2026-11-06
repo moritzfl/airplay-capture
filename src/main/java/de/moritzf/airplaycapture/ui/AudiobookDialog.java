@@ -24,7 +24,6 @@ import de.moritzf.airplaycapture.library.LibraryTrack;
 import de.moritzf.airplaycapture.media.ChapterCatalog;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -36,14 +35,14 @@ import java.util.Set;
 /** User-controlled audiobook assembly: sources, metadata lookup and chapter options. */
 public final class AudiobookDialog extends Dialog {
 
-    private static final String[] SOURCE_FORMATS = {"alac", "m4a", "mp3", "caf"};
+    private static final String[] SOURCE_FORMATS = { "alac", "m4a", "mp3", "caf" };
     private static final String PREVIEW_PLAY_JS = """
-            const audio = document.getElementById('app-book-preview');
-            if (audio) {
-                audio.src = this.dataset.src;
-                audio.play();
-            }
-            """;
+    const audio = document.getElementById('app-book-preview');
+    if (audio) {
+        audio.src = this.dataset.src;
+        audio.play();
+    }
+    """;
 
     private final Library library;
     private final SettingsService settingsService;
@@ -74,9 +73,14 @@ public final class AudiobookDialog extends Dialog {
     private ChapterCatalog.Result selectedCatalog;
     private boolean submitted;
 
-    public AudiobookDialog(Library library, SettingsService settingsService,
-                           AudiobookCreator creator, AudiobookJobs jobs, LibraryGroups.Group group,
-                           java.util.function.Consumer<AudiobookJobs.Job> onSubmitted) {
+    public AudiobookDialog(
+        Library library,
+        SettingsService settingsService,
+        AudiobookCreator creator,
+        AudiobookJobs jobs,
+        LibraryGroups.Group group,
+        java.util.function.Consumer<AudiobookJobs.Job> onSubmitted
+    ) {
         this.library = library;
         this.settingsService = settingsService;
         this.creator = creator;
@@ -103,8 +107,10 @@ public final class AudiobookDialog extends Dialog {
 
         Button cancel = new Button("Cancel", event -> close());
         cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        Button create = new Button(group.hasM4b() ? "Create another audiobook" : "Create audiobook",
-                event -> create());
+        Button create = new Button(
+            group.hasM4b() ? "Create another audiobook" : "Create audiobook",
+            event -> create()
+        );
         create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         getFooter().add(cancel, create);
         getFooter().getElement().getStyle().set("flex-wrap", "wrap");
@@ -142,7 +148,12 @@ public final class AudiobookDialog extends Dialog {
         sourceOrder.addAll(playable);
         sources.setItemLabelGenerator(this::sourceLabel);
         Set<LibraryTrack> best = new LinkedHashSet<>(group.bestTakes());
-        sources.select(playable.stream().filter(best::contains).toArray(LibraryTrack[]::new));
+        sources.select(
+            playable
+                .stream()
+                .filter(best::contains)
+                .toArray(LibraryTrack[]::new)
+        );
         sources.addValueChangeListener(event -> {
             updateDuplicateNote();
             invalidatePreview();
@@ -152,12 +163,16 @@ public final class AudiobookDialog extends Dialog {
         heading.addClassName("dialog-heading");
         HorizontalLayout headingRow = new HorizontalLayout(heading);
         headingRow.setWidthFull();
-        headingRow.setAlignItems(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER);
+        headingRow.setAlignItems(
+            com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER
+        );
         headingRow.setJustifyContentMode(
-                com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode.BETWEEN);
+            com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode.BETWEEN
+        );
         if (playable.size() > 1) {
-            Button selectAll = new Button("Select all",
-                    event -> sources.setValue(new LinkedHashSet<>(playable)));
+            Button selectAll = new Button("Select all", event ->
+                sources.setValue(new LinkedHashSet<>(playable))
+            );
             Button clear = new Button("Clear", event -> sources.clear());
             selectAll.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
             clear.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
@@ -166,8 +181,10 @@ public final class AudiobookDialog extends Dialog {
             headingRow.add(selection);
         }
 
-        Span note = new Span("Duplicate takes stay separate. Best takes are preselected; "
-                + "uncheck anything that should not go into the book.");
+        Span note = new Span(
+            "Duplicate takes stay separate. Best takes are preselected; " +
+                "uncheck anything that should not go into the book."
+        );
         note.addClassName("dialog-note");
         duplicateNote.addClassName("dialog-note");
         content.add(headingRow, note, sources, duplicateNote);
@@ -175,8 +192,11 @@ public final class AudiobookDialog extends Dialog {
 
         if (playable.size() < group.tracks().size()) {
             int hidden = group.tracks().size() - playable.size();
-            Span skipped = new Span(hidden + (hidden == 1 ? " recording is" : " recordings are")
-                    + " an existing audiobook or have no source file and are hidden.");
+            Span skipped = new Span(
+                hidden +
+                    (hidden == 1 ? " recording is" : " recordings are") +
+                    " an existing audiobook or have no source file and are hidden."
+            );
             skipped.addClassName("dialog-note");
             content.add(skipped);
         }
@@ -191,8 +211,10 @@ public final class AudiobookDialog extends Dialog {
         List<LibraryTrack> chosen = new ArrayList<>(selected);
         List<LibraryTrack> deduped = LibraryGroups.bestTakes(chosen);
         if (deduped.size() < chosen.size()) {
-            duplicateNote.setText("Duplicate takes selected: only the best take per title "
-                    + "will be used for the audiobook.");
+            duplicateNote.setText(
+                "Duplicate takes selected: only the best take per title " +
+                    "will be used for the audiobook."
+            );
         } else {
             duplicateNote.setText("");
         }
@@ -205,12 +227,15 @@ public final class AudiobookDialog extends Dialog {
         author.setWidthFull();
         lookupState.addClassName("dialog-note");
 
-        Button find = new Button("Find editions", VaadinIcon.SEARCH.create(),
-                event -> openPicker());
+        Button find = new Button("Find editions", VaadinIcon.SEARCH.create(), event ->
+            openPicker()
+        );
         find.addThemeVariants(ButtonVariant.LUMO_SMALL);
         lookupState.setText("Searches Apple Books, Deezer and MusicBrainz.");
         HorizontalLayout lookupRow = new HorizontalLayout(find, lookupState);
-        lookupRow.setAlignItems(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER);
+        lookupRow.setAlignItems(
+            com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER
+        );
         lookupRow.setSpacing(true);
 
         VerticalLayout fields = new VerticalLayout(title, author, lookupRow);
@@ -228,21 +253,28 @@ public final class AudiobookDialog extends Dialog {
         bitrate.setWidthFull();
         long playableCount = sources.getListDataView().getItems().count();
         chapterMode.setItems(AudiobookCreator.ChapterMode.values());
-        chapterMode.setItemLabelGenerator(mode -> switch (mode) {
-            case CATALOG -> "From catalog · chapter names and markers";
-            case PAUSES -> "At pauses · detect silence";
-            case RECORDINGS -> "One chapter per recording";
-        });
-        chapterMode.setValue(settings.audiobookCatalogChapters
+        chapterMode.setItemLabelGenerator(
+            mode ->
+                switch (mode) {
+                    case CATALOG -> "From catalog · chapter names and markers";
+                    case PAUSES -> "At pauses · detect silence";
+                    case RECORDINGS -> "One chapter per recording";
+                }
+        );
+        chapterMode.setValue(
+            settings.audiobookCatalogChapters
                 ? AudiobookCreator.ChapterMode.CATALOG
-                : (settings.audiobookSplitLongTracks && playableCount <= 1
-                        ? AudiobookCreator.ChapterMode.PAUSES
-                        : AudiobookCreator.ChapterMode.RECORDINGS));
+                : settings.audiobookSplitLongTracks && playableCount <= 1
+                  ? AudiobookCreator.ChapterMode.PAUSES
+                  : AudiobookCreator.ChapterMode.RECORDINGS
+        );
         chapterMode.addValueChangeListener(event -> invalidatePreview());
-        chapterMode.setHelperText("Catalog uses chapter names and durations from Deezer/MusicBrainz "
-                + "and aligns the cuts to pauses. Pauses splits at silence of at least 2.5 s with "
-                + "at least 5 minutes per chapter. One chapter per recording keeps every selected "
-                + "recording whole. Catalog falls back to pauses when no matching edition is found.");
+        chapterMode.setHelperText(
+            "Catalog uses chapter names and durations from Deezer/MusicBrainz " +
+                "and aligns the cuts to pauses. Pauses splits at silence of at least 2.5 s with " +
+                "at least 5 minutes per chapter. One chapter per recording keeps every selected " +
+                "recording whole. Catalog falls back to pauses when no matching edition is found."
+        );
         chapterState.addClassName("dialog-note");
         chapterState.getElement().setAttribute("aria-live", "polite");
         if (settings.audiobookCatalogChapters) {
@@ -256,29 +288,37 @@ public final class AudiobookDialog extends Dialog {
         chapterRow.setWidthFull();
         chapterRow.setSpacing(false);
         chapterRow.setAlignItems(
-                com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER);
+            com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER
+        );
         chapterRow.setFlexGrow(1, chapterState);
 
         bitrate.setItems(List.of(32, 48, 64, 80, 96, 128, 160, 192));
-        bitrate.setItemLabelGenerator(kbps -> switch (kbps) {
-            case 32 -> "32 kbps · voice";
-            case 48 -> "48 kbps · voice";
-            case 64 -> "64 kbps · compact";
-            case 80 -> "80 kbps";
-            case 96 -> "96 kbps · recommended";
-            case 128 -> "128 kbps · higher";
-            case 160 -> "160 kbps";
-            default -> "192 kbps · maximum";
-        });
+        bitrate.setItemLabelGenerator(
+            kbps ->
+                switch (kbps) {
+                    case 32 -> "32 kbps · voice";
+                    case 48 -> "48 kbps · voice";
+                    case 64 -> "64 kbps · compact";
+                    case 80 -> "80 kbps";
+                    case 96 -> "96 kbps · recommended";
+                    case 128 -> "128 kbps · higher";
+                    case 160 -> "160 kbps";
+                    default -> "192 kbps · maximum";
+                }
+        );
         selectBitrate(settings.audiobookBitrateKbps);
 
-        Span note = new Span("Uses the best available file per recording "
-                + "(ALAC > M4A > MP3 > CAF). Source recordings are never deleted. "
-                + "M4A sources are re-encoded once, so prefer ALAC in Settings for perfect quality.");
+        Span note = new Span(
+            "Uses the best available file per recording " +
+                "(ALAC > M4A > MP3 > CAF). Source recordings are never deleted. " +
+                "M4A sources are re-encoded once, so prefer ALAC in Settings for perfect quality."
+        );
         note.addClassName("dialog-note");
         if (group.hasM4b()) {
-            Span rebuild = new Span("This group already has an audiobook. Creating another one "
-                    + "keeps the existing .m4b and adds a second file.");
+            Span rebuild = new Span(
+                "This group already has an audiobook. Creating another one " +
+                    "keeps the existing .m4b and adds a second file."
+            );
             rebuild.addClassName("dialog-note");
             content.add(heading, chapterMode, chapterRow, bitrate, rebuild, note);
         } else {
@@ -313,7 +353,9 @@ public final class AudiobookDialog extends Dialog {
         previewAudioSlot.setVisible(false);
 
         HorizontalLayout controls = new HorizontalLayout(previewButton, previewProgress);
-        controls.setAlignItems(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER);
+        controls.setAlignItems(
+            com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER
+        );
         controls.setSpacing(true);
         content.add(heading, controls, previewState, previewAudioSlot, chapterList);
     }
@@ -328,50 +370,56 @@ public final class AudiobookDialog extends Dialog {
         int token = ++previewToken;
         previewButton.setEnabled(false);
         previewProgress.setVisible(true);
-        previewState.setText(switch (chapterMode.getValue()) {
-            case CATALOG -> "Looking up catalog chapters and pauses…";
-            case PAUSES -> "Analyzing pauses…";
-            case RECORDINGS -> "Preparing chapters…";
-        });
+        previewState.setText(
+            switch (chapterMode.getValue()) {
+                case CATALOG -> "Looking up catalog chapters and pauses…";
+                case PAUSES -> "Analyzing pauses…";
+                case RECORDINGS -> "Preparing chapters…";
+            }
+        );
         AudiobookCreator.Request request = request(selected);
         UI ui = UI.getCurrent();
-        Thread.ofVirtual().name("book-preview").start(() -> {
-            try {
-                AudiobookCreator.Preview result = creator.analyze(request);
-                if (ui == null) {
-                    creator.discard(result.id());
-                    return;
-                }
+        Thread.ofVirtual()
+            .name("book-preview")
+            .start(() -> {
                 try {
-                    ui.access(() -> {
-                        if (token != previewToken) {
-                            creator.discard(result.id());
-                            return;
-                        }
-                        previewButton.setEnabled(true);
-                        previewProgress.setVisible(false);
-                        showPreview(result);
-                    });
-                } catch (RuntimeException e) {
-                    creator.discard(result.id());
-                }
-            } catch (Exception e) {
-                if (ui == null) {
-                    return;
-                }
-                try {
-                    ui.access(() -> {
-                        if (token == previewToken) {
+                    AudiobookCreator.Preview result = creator.analyze(request);
+                    if (ui == null) {
+                        creator.discard(result.id());
+                        return;
+                    }
+                    try {
+                        ui.access(() -> {
+                            if (token != previewToken) {
+                                creator.discard(result.id());
+                                return;
+                            }
                             previewButton.setEnabled(true);
                             previewProgress.setVisible(false);
-                            previewState.setText("Preview failed: " + shortError(e.getMessage()));
-                        }
-                    });
-                } catch (RuntimeException ignored) {
-                    // dialog was closed while analyzing
+                            showPreview(result);
+                        });
+                    } catch (RuntimeException e) {
+                        creator.discard(result.id());
+                    }
+                } catch (Exception e) {
+                    if (ui == null) {
+                        return;
+                    }
+                    try {
+                        ui.access(() -> {
+                            if (token == previewToken) {
+                                previewButton.setEnabled(true);
+                                previewProgress.setVisible(false);
+                                previewState.setText(
+                                    "Preview failed: " + shortError(e.getMessage())
+                                );
+                            }
+                        });
+                    } catch (RuntimeException ignored) {
+                        // dialog was closed while analyzing
+                    }
                 }
-            }
-        });
+            });
     }
 
     private void showPreview(AudiobookCreator.Preview result) {
@@ -380,14 +428,15 @@ public final class AudiobookDialog extends Dialog {
         for (AudiobookCreator.ChapterPreview chapter : result.chapters()) {
             Div row = new Div();
             row.addClassName("preview-row");
-            Span index = new Span((chapter.index() + 1) + ".");
+            Span index = new Span(chapter.index() + 1 + ".");
             index.addClassName("preview-index");
             Div text = new Div();
             text.addClassName("preview-text");
             Span label = new Span(chapter.title());
             label.addClassName("preview-title");
-            Span meta = new Span(Fmt.duration(chapter.durationMs())
-                    + " · starts " + Fmt.duration(chapter.startMs()));
+            Span meta = new Span(
+                Fmt.duration(chapter.durationMs()) + " · starts " + Fmt.duration(chapter.startMs())
+            );
             meta.addClassName("preview-meta");
             text.add(label, meta);
 
@@ -396,8 +445,12 @@ public final class AudiobookDialog extends Dialog {
             sample.addClassName("row-action");
             sample.addClassName("preview-sample");
             sample.getElement().setAttribute("title", "Play first 10 s and last 8 s");
-            sample.getElement().setAttribute("aria-label",
-                    "Play boundary sample for chapter " + (chapter.index() + 1));
+            sample
+                .getElement()
+                .setAttribute(
+                    "aria-label",
+                    "Play boundary sample for chapter " + (chapter.index() + 1)
+                );
             sample.getElement().setAttribute("data-src", chapter.url());
             sample.getElement().setAttribute("onclick", PREVIEW_PLAY_JS);
 
@@ -406,8 +459,10 @@ public final class AudiobookDialog extends Dialog {
             full.addClassName("row-action");
             full.addClassName("preview-full");
             full.getElement().setAttribute("title", "Play the whole chapter");
-            full.getElement().setAttribute("aria-label",
-                    "Play full chapter " + (chapter.index() + 1));
+            full.getElement().setAttribute(
+                "aria-label",
+                "Play full chapter " + (chapter.index() + 1)
+            );
             full.getElement().setAttribute("data-src", chapter.fullUrl());
             full.getElement().setAttribute("onclick", PREVIEW_PLAY_JS);
             row.add(index, text, sample, full);
@@ -419,11 +474,17 @@ public final class AudiobookDialog extends Dialog {
             default -> "chapters from " + result.source();
         };
         String note = result.note() == null || result.note().isBlank() ? "" : " · " + result.note();
-        previewState.setText(Fmt.duration(result.durationMs()) + " · "
-                + result.chapters().size() + " chapter"
-                + (result.chapters().size() == 1 ? "" : "s")
-                + " · " + source + note
-                + " · Sample plays the start and end, Full plays the whole chapter.");
+        previewState.setText(
+            Fmt.duration(result.durationMs()) +
+                " · " +
+                result.chapters().size() +
+                " chapter" +
+                (result.chapters().size() == 1 ? "" : "s") +
+                " · " +
+                source +
+                note +
+                " · Sample plays the start and end, Full plays the whole chapter."
+        );
         previewAudioSlot.setVisible(true);
         chapterList.getElement().executeJs("this.scrollIntoView({block:'nearest'})");
     }
@@ -442,34 +503,37 @@ public final class AudiobookDialog extends Dialog {
     }
 
     private AudiobookCreator.Request request(Set<LibraryTrack> selected) {
-        List<LibraryTrack> ordered = sourceOrder.stream()
-                .filter(selected::contains)
-                .toList();
+        List<LibraryTrack> ordered = sourceOrder.stream().filter(selected::contains).toList();
         return new AudiobookCreator.Request(
-                group.key(),
-                nvl(title.getValue()).trim(),
-                nvl(group.title()).trim(),
-                nvl(author.getValue()).trim(),
-                ordered,
-                chapterMode.getValue() == null
-                        ? AudiobookCreator.ChapterMode.PAUSES : chapterMode.getValue(),
-                bitrate.getValue() == null ? 96 : bitrate.getValue(),
-                selectedCatalog);
+            group.key(),
+            nvl(title.getValue()).trim(),
+            nvl(group.title()).trim(),
+            nvl(author.getValue()).trim(),
+            ordered,
+            chapterMode.getValue() == null
+                ? AudiobookCreator.ChapterMode.PAUSES
+                : chapterMode.getValue(),
+            bitrate.getValue() == null ? 96 : bitrate.getValue(),
+            selectedCatalog
+        );
     }
 
     private String sourceLabel(LibraryTrack track) {
         LibraryGroups.Take take = LibraryGroups.take(group.tracks(), track);
         StringBuilder label = new StringBuilder();
         label.append(sourceOrder.indexOf(track) + 1).append(". ");
-        label.append(track.title == null || track.title.isBlank() ? track.displayName() : track.title);
-        if (track.artist != null && !track.artist.isBlank()
-                && !track.artist.equals(track.title)) {
+        label.append(
+            track.title == null || track.title.isBlank() ? track.displayName() : track.title
+        );
+        if (track.artist != null && !track.artist.isBlank() && !track.artist.equals(track.title)) {
             label.append(" · ").append(track.artist);
         }
         label.append(" · ").append(Fmt.duration(track.durationMs));
         if (track.gaps > 0) {
-            label.append(" · ").append(track.gaps)
-                    .append(track.gaps == 1 ? " gap" : " gaps");
+            label
+                .append(" · ")
+                .append(track.gaps)
+                .append(track.gaps == 1 ? " gap" : " gaps");
         }
         if (track.incomplete) {
             label.append(" · incomplete");
@@ -482,10 +546,17 @@ public final class AudiobookDialog extends Dialog {
 
     private void openPicker() {
         String currentTitle = isBlank(group.title()) ? title.getValue() : group.title();
-        String currentAuthor = isBlank(group.artist()) || "Various artists".equals(group.artist())
-                ? author.getValue() : group.artist();
-        CatalogPickerDialog picker = new CatalogPickerDialog(creator, currentTitle,
-                currentAuthor, selectedDurationMs(), this::applyEdition);
+        String currentAuthor =
+            isBlank(group.artist()) || "Various artists".equals(group.artist())
+                ? author.getValue()
+                : group.artist();
+        CatalogPickerDialog picker = new CatalogPickerDialog(
+            creator,
+            currentTitle,
+            currentAuthor,
+            selectedDurationMs(),
+            this::applyEdition
+        );
         picker.open();
     }
 
@@ -501,10 +572,19 @@ public final class AudiobookDialog extends Dialog {
         lookupState.setText("Selected " + match.source() + " edition.");
         if (match.hasChapters()) {
             chapterMode.setValue(AudiobookCreator.ChapterMode.CATALOG);
-            String fit = match.fits(selectedDurationMs()) ? ""
-                    : " · does not fit this recording; preview will fall back to pauses";
-            chapterState.setText(match.chapterCount() + " chapters from " + match.source()
-                    + " · " + Fmt.duration(match.durationMs()) + " · " + match.title() + fit);
+            String fit = match.fits(selectedDurationMs())
+                ? ""
+                : " · does not fit this recording; preview will fall back to pauses";
+            chapterState.setText(
+                match.chapterCount() +
+                    " chapters from " +
+                    match.source() +
+                    " · " +
+                    Fmt.duration(match.durationMs()) +
+                    " · " +
+                    match.title() +
+                    fit
+            );
         } else {
             chapterMode.setValue(AudiobookCreator.ChapterMode.PAUSES);
             chapterState.setText("Apple Books has no chapter list; pauses will be used.");
@@ -524,33 +604,47 @@ public final class AudiobookDialog extends Dialog {
         String currentTitle = title.getValue();
         String currentAuthor = author.getValue();
         long expected = selectedDurationMs();
-        Thread.ofVirtual().name("book-chapters").start(() -> {
-            Optional<ChapterCatalog.Result> found = creator.lookupChapters(
-                    currentTitle, album, currentAuthor, expected);
-            if (ui == null) {
-                return;
-            }
-            try {
-                ui.access(() -> {
-                    if (token == catalogToken && selectedCatalog == null) {
-                        showCatalog(found);
-                    }
-                });
-            } catch (RuntimeException ignored) {
-                // dialog was closed while looking up
-            }
-        });
+        Thread.ofVirtual()
+            .name("book-chapters")
+            .start(() -> {
+                Optional<ChapterCatalog.Result> found = creator.lookupChapters(
+                    currentTitle,
+                    album,
+                    currentAuthor,
+                    expected
+                );
+                if (ui == null) {
+                    return;
+                }
+                try {
+                    ui.access(() -> {
+                        if (token == catalogToken && selectedCatalog == null) {
+                            showCatalog(found);
+                        }
+                    });
+                } catch (RuntimeException ignored) {
+                    // dialog was closed while looking up
+                }
+            });
     }
 
     private void showCatalog(Optional<ChapterCatalog.Result> found) {
         if (found.isEmpty()) {
-            chapterState.setText("No catalog chapter list found. Pauses can still split the recording.");
+            chapterState.setText(
+                "No catalog chapter list found. Pauses can still split the recording."
+            );
             return;
         }
         ChapterCatalog.Result result = found.get();
-        chapterState.setText(result.chapters().size() + " chapters from " + result.source()
-                + " · " + Fmt.duration(result.totalMs())
-                + " · " + result.album());
+        chapterState.setText(
+            result.chapters().size() +
+                " chapters from " +
+                result.source() +
+                " · " +
+                Fmt.duration(result.totalMs()) +
+                " · " +
+                result.album()
+        );
     }
 
     private long selectedDurationMs() {
@@ -559,8 +653,10 @@ public final class AudiobookDialog extends Dialog {
             return 0;
         }
         List<LibraryTrack> chosen = sourceOrder.stream().filter(selected::contains).toList();
-        return LibraryGroups.bestTakes(chosen).stream()
-                .mapToLong(track -> track.durationMs).sum();
+        return LibraryGroups.bestTakes(chosen)
+            .stream()
+            .mapToLong(track -> track.durationMs)
+            .sum();
     }
 
     private static boolean isBlank(String value) {
@@ -581,11 +677,21 @@ public final class AudiobookDialog extends Dialog {
         submitted = true;
         String preview = previewId;
         previewId = null;
-        AudiobookJobs.Job job = jobs.enqueue(group.key(), request.title(), request.author(),
-                progress -> preview != null
-                        ? creator.convert(preview, request.title(), request.author(),
-                                request.bitrateKbps(), progress)
-                        : creator.convert(request, progress));
+        AudiobookJobs.Job job = jobs.enqueue(
+            group.key(),
+            request.title(),
+            request.author(),
+            progress ->
+                preview != null
+                    ? creator.convert(
+                          preview,
+                          request.title(),
+                          request.author(),
+                          request.bitrateKbps(),
+                          progress
+                      )
+                    : creator.convert(request, progress)
+        );
         close();
         onSubmitted.accept(job);
     }

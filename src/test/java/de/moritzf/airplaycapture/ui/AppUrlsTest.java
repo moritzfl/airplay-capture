@@ -1,15 +1,17 @@
 package de.moritzf.airplaycapture.ui;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 class AppUrlsTest {
 
     @Test
     void libraryRouteStaysInsideTheProxyPrefix() {
-        assertEquals("../api/tracks/1/file/m4a?download=1",
-                AppUrls.relative("", "api/tracks/1/file/m4a?download=1"));
+        assertEquals(
+            "../api/tracks/1/file/m4a?download=1",
+            AppUrls.relative("", "api/tracks/1/file/m4a?download=1")
+        );
     }
 
     @Test

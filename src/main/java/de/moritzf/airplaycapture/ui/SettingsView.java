@@ -22,7 +22,6 @@ import de.moritzf.airplaycapture.Settings;
 import de.moritzf.airplaycapture.UiState;
 import de.moritzf.airplaycapture.config.SettingsService;
 import de.moritzf.airplaycapture.library.Library;
-
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -45,28 +44,47 @@ public class SettingsView extends VerticalLayout {
     private final ComboBox<Integer> mp3Quality = new ComboBox<>("MP3 quality (VBR)");
     private final ComboBox<Integer> mp3Bitrate = new ComboBox<>("MP3 bitrate (CBR)");
     private final ComboBox<Integer> packetRecovery = new ComboBox<>("Lost-packet recovery");
-    private final IntegerField minTrackSeconds = new IntegerField("Discard tracks shorter than (s)");
+    private final IntegerField minTrackSeconds = new IntegerField(
+        "Discard tracks shorter than (s)"
+    );
     private final IntegerField idleSeconds = new IntegerField("Finalize after silence (s)");
     private final Checkbox keepRaw = new Checkbox("Keep intermediate .caf files");
-    private final Checkbox metadataEnrichment = new Checkbox("Fill missing tags from Apple catalog");
-    private final Checkbox metadataEnrichmentDeezer = new Checkbox("Also use Deezer when Apple misses");
+    private final Checkbox metadataEnrichment = new Checkbox(
+        "Fill missing tags from Apple catalog"
+    );
+    private final Checkbox metadataEnrichmentDeezer = new Checkbox(
+        "Also use Deezer when Apple misses"
+    );
     private final TextField ffmpegPath = new TextField("ffmpeg binary");
-    private final Checkbox audiobookEnabled = new Checkbox("Detect audiobooks and offer conversion");
-    private final Checkbox audiobookAutoAssemble =
-            new Checkbox("Assemble detected audiobooks automatically");
+    private final Checkbox audiobookEnabled = new Checkbox(
+        "Detect audiobooks and offer conversion"
+    );
+    private final Checkbox audiobookAutoAssemble = new Checkbox(
+        "Assemble detected audiobooks automatically"
+    );
     private final TextField audiobookGenres = new TextField("Audiobook genre keywords");
-    private final IntegerField audiobookLongTrackSeconds = new IntegerField("Long-track detection (s)");
-    private final IntegerField audiobookIdleSeconds = new IntegerField("Assemble book after silence (s)");
+    private final IntegerField audiobookLongTrackSeconds = new IntegerField(
+        "Long-track detection (s)"
+    );
+    private final IntegerField audiobookIdleSeconds = new IntegerField(
+        "Assemble book after silence (s)"
+    );
     private final Checkbox audiobookLookup = new Checkbox("Confirm via Apple Books catalog");
     private final Checkbox audiobookLookupMusicBrainz = new Checkbox("Also check MusicBrainz");
     private final TextField audiobookLookupCountry = new TextField("Catalog country (ISO)");
-    private final TextField audiobookLookupContact = new TextField("MusicBrainz contact (optional)");
+    private final TextField audiobookLookupContact = new TextField(
+        "MusicBrainz contact (optional)"
+    );
     private final ComboBox<Integer> audiobookBitrateKbps = new ComboBox<>("Audiobook bitrate");
-    private final Checkbox audiobookKeepChapters = new Checkbox("Keep chapter files after assembling");
-    private final Checkbox audiobookSplitLongTracks =
-            new Checkbox("Split single-file audiobooks at long pauses");
-    private final Checkbox audiobookCatalogChapters =
-            new Checkbox("Use catalog chapters in Create audiobook");
+    private final Checkbox audiobookKeepChapters = new Checkbox(
+        "Keep chapter files after assembling"
+    );
+    private final Checkbox audiobookSplitLongTracks = new Checkbox(
+        "Split single-file audiobooks at long pauses"
+    );
+    private final Checkbox audiobookCatalogChapters = new Checkbox(
+        "Use catalog chapters in Create audiobook"
+    );
 
     private final Span libraryPath = new Span();
     private final Span ffmpegState = new Span();
@@ -101,8 +119,14 @@ public class SettingsView extends VerticalLayout {
         general.setColspan(outputHeading, 2);
 
         H3 recordingHeading = sectionHeading("Recording");
-        general.add(recordingHeading, minTrackSeconds, idleSeconds, packetRecovery,
-                ffmpegPath, keepRaw);
+        general.add(
+            recordingHeading,
+            minTrackSeconds,
+            idleSeconds,
+            packetRecovery,
+            ffmpegPath,
+            keepRaw
+        );
         general.setColspan(recordingHeading, 2);
 
         H3 metadataHeading = sectionHeading("Metadata");
@@ -111,11 +135,22 @@ public class SettingsView extends VerticalLayout {
 
         H3 audiobookHeading = sectionHeading("Audiobooks");
         FormLayout audiobooks = formLayout();
-        audiobooks.add(audiobookHeading, audiobookEnabled, audiobookAutoAssemble,
-                audiobookGenres, audiobookLookup, audiobookLookupMusicBrainz,
-                audiobookLookupCountry, audiobookLookupContact, audiobookLongTrackSeconds,
-                audiobookIdleSeconds, audiobookBitrateKbps, audiobookKeepChapters,
-                audiobookSplitLongTracks, audiobookCatalogChapters);
+        audiobooks.add(
+            audiobookHeading,
+            audiobookEnabled,
+            audiobookAutoAssemble,
+            audiobookGenres,
+            audiobookLookup,
+            audiobookLookupMusicBrainz,
+            audiobookLookupCountry,
+            audiobookLookupContact,
+            audiobookLongTrackSeconds,
+            audiobookIdleSeconds,
+            audiobookBitrateKbps,
+            audiobookKeepChapters,
+            audiobookSplitLongTracks,
+            audiobookCatalogChapters
+        );
         audiobooks.setColspan(audiobookHeading, 2);
 
         Button save = new Button("Save settings", event -> save());
@@ -143,8 +178,9 @@ public class SettingsView extends VerticalLayout {
         FormLayout layout = new FormLayout();
         layout.addClassName("settings-form");
         layout.setResponsiveSteps(
-                new FormLayout.ResponsiveStep("0", 1),
-                new FormLayout.ResponsiveStep("720px", 2));
+            new FormLayout.ResponsiveStep("0", 1),
+            new FormLayout.ResponsiveStep("720px", 2)
+        );
         return layout;
     }
 
@@ -162,12 +198,15 @@ public class SettingsView extends VerticalLayout {
         interfaceAddress.setHelperText("Optional IPv4 address to advertise on.");
 
         formats.setItems("m4a", "mp3", "alac");
-        formats.setItemLabelGenerator(item -> switch (item) {
-            case "m4a" -> "AAC (.m4a)";
-            case "mp3" -> "MP3";
-            case "alac" -> "ALAC (lossless)";
-            default -> item;
-        });
+        formats.setItemLabelGenerator(
+            item ->
+                switch (item) {
+                    case "m4a" -> "AAC (.m4a)";
+                    case "mp3" -> "MP3";
+                    case "alac" -> "ALAC (lossless)";
+                    default -> item;
+                }
+        );
         formats.addThemeVariants(CheckboxGroupVariant.LUMO_VERTICAL);
         formats.setHelperText("ffmpeg converts each song after recording.");
 
@@ -176,11 +215,13 @@ public class SettingsView extends VerticalLayout {
         aacBitrate.setHelperText("AAC average bitrate. 192 kbps is the usual music setting.");
 
         mp3Mode.setItems("vbr", "cbr");
-        mp3Mode.setItemLabelGenerator(mode -> "vbr".equals(mode)
-                ? "Variable bitrate (VBR)"
-                : "Constant bitrate (CBR)");
-        mp3Mode.setHelperText("VBR keeps quality constant and lets the bitrate vary; "
-                + "CBR gives a predictable size for old players.");
+        mp3Mode.setItemLabelGenerator(mode ->
+            "vbr".equals(mode) ? "Variable bitrate (VBR)" : "Constant bitrate (CBR)"
+        );
+        mp3Mode.setHelperText(
+            "VBR keeps quality constant and lets the bitrate vary; " +
+                "CBR gives a predictable size for old players."
+        );
         mp3Mode.addValueChangeListener(event -> updateMp3Mode());
 
         mp3Quality.setItems(List.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
@@ -192,9 +233,11 @@ public class SettingsView extends VerticalLayout {
 
         packetRecovery.setItems(List.of(500, 1000, 1500, 2500, 4000, 6000, 10000));
         packetRecovery.setItemLabelGenerator(SettingsView::recoveryLabel);
-        packetRecovery.setHelperText("How long the receiver keeps asking the sender to retransmit "
-                + "missing packets. AirPlay 1 senders choose the transmission buffer itself; "
-                + "a longer window recovers more dropouts, a shorter one finalizes sooner.");
+        packetRecovery.setHelperText(
+            "How long the receiver keeps asking the sender to retransmit " +
+                "missing packets. AirPlay 1 senders choose the transmission buffer itself; " +
+                "a longer window recovers more dropouts, a shorter one finalizes sooner."
+        );
 
         minTrackSeconds.setMin(0);
         minTrackSeconds.setMax(600);
@@ -205,12 +248,18 @@ public class SettingsView extends VerticalLayout {
         idleSeconds.setStepButtonsVisible(true);
 
         ffmpegPath.setHelperText("Command name or absolute path.");
-        metadataEnrichment.setHelperText("Only fills empty album/genre/year/track/cover; sender values win.");
+        metadataEnrichment.setHelperText(
+            "Only fills empty album/genre/year/track/cover; sender values win."
+        );
         metadataEnrichmentDeezer.setHelperText("Keyless fallback catalog for tag completion.");
 
-        audiobookEnabled.setHelperText("Marks chapters and shows Create audiobook… in the library.");
-        audiobookAutoAssemble.setHelperText("Off by default: check sources and metadata first. "
-                + "On: assemble as soon as a book ends.");
+        audiobookEnabled.setHelperText(
+            "Marks chapters and shows Create audiobook… in the library."
+        );
+        audiobookAutoAssemble.setHelperText(
+            "Off by default: check sources and metadata first. " +
+                "On: assemble as soon as a book ends."
+        );
         audiobookGenres.setHelperText("Comma separated, e.g. audiobook,hörbuch");
         audiobookLongTrackSeconds.setMin(0);
         audiobookLongTrackSeconds.setMax(7200);
@@ -219,23 +268,35 @@ public class SettingsView extends VerticalLayout {
         audiobookIdleSeconds.setMin(30);
         audiobookIdleSeconds.setMax(7200);
         audiobookIdleSeconds.setStepButtonsVisible(true);
-        audiobookIdleSeconds.setHelperText("Automatic mode only: how long to wait after the last chapter.");
-        audiobookLookup.setHelperText("Sends album and artist to itunes.apple.com; no API key needed.");
+        audiobookIdleSeconds.setHelperText(
+            "Automatic mode only: how long to wait after the last chapter."
+        );
+        audiobookLookup.setHelperText(
+            "Sends album and artist to itunes.apple.com; no API key needed."
+        );
         audiobookLookupCountry.setMaxLength(2);
-        audiobookLookupCountry.setHelperText("Apple catalog country for lookups and tag completion.");
+        audiobookLookupCountry.setHelperText(
+            "Apple catalog country for lookups and tag completion."
+        );
         audiobookLookupMusicBrainz.setHelperText("Keyless; 1 request/s, cached per album.");
         audiobookLookupContact.setHelperText("Recommended by MusicBrainz, e.g. an email address.");
         audiobookBitrateKbps.setItems(List.of(32, 48, 64, 80, 96, 128, 160, 192));
         audiobookBitrateKbps.setItemLabelGenerator(SettingsView::audiobookBitrateLabel);
-        audiobookBitrateKbps.setHelperText("AAC bitrate for the assembled .m4b; "
-                + "96 kbps is the usual spoken-word setting.");
-        audiobookSplitLongTracks.setHelperText("Fallback for the dialog: long pauses (>2.5 s) and at "
-                + "least 5 minutes per chapter.");
-        audiobookCatalogChapters.setHelperText("Fetches chapter names and durations from Deezer "
-                + "(MusicBrainz when enabled above) for the dialog and aligns them to the recording. "
-                + "Falls back to pauses when no matching edition is found.");
-        audiobookKeepChapters.setHelperText("Automatic mode only: uncheck to delete individual "
-                + "chapters after the book is ready.");
+        audiobookBitrateKbps.setHelperText(
+            "AAC bitrate for the assembled .m4b; " + "96 kbps is the usual spoken-word setting."
+        );
+        audiobookSplitLongTracks.setHelperText(
+            "Fallback for the dialog: long pauses (>2.5 s) and at " + "least 5 minutes per chapter."
+        );
+        audiobookCatalogChapters.setHelperText(
+            "Fetches chapter names and durations from Deezer " +
+                "(MusicBrainz when enabled above) for the dialog and aligns them to the recording. " +
+                "Falls back to pauses when no matching edition is found."
+        );
+        audiobookKeepChapters.setHelperText(
+            "Automatic mode only: uncheck to delete individual " +
+                "chapters after the book is ready."
+        );
 
         deviceName.setValueChangeMode(ValueChangeMode.LAZY);
     }
@@ -327,7 +388,9 @@ public class SettingsView extends VerticalLayout {
     private void load(Settings settings) {
         deviceName.setValue(settings.deviceName);
         port.setValue(settings.port);
-        interfaceAddress.setValue(settings.interfaceAddress == null ? "" : settings.interfaceAddress);
+        interfaceAddress.setValue(
+            settings.interfaceAddress == null ? "" : settings.interfaceAddress
+        );
         formats.setValue(new LinkedHashSet<>(settings.formats));
         selectPreset(aacBitrate, settings.aacBitrateKbps);
         mp3Mode.setValue(settings.mp3Mode);
@@ -353,8 +416,9 @@ public class SettingsView extends VerticalLayout {
         audiobookLookup.setValue(settings.audiobookLookupEnabled);
         audiobookLookupCountry.setValue(settings.audiobookLookupCountry);
         audiobookLookupMusicBrainz.setValue(settings.audiobookLookupMusicBrainz);
-        audiobookLookupContact.setValue(settings.audiobookLookupContact == null
-                ? "" : settings.audiobookLookupContact);
+        audiobookLookupContact.setValue(
+            settings.audiobookLookupContact == null ? "" : settings.audiobookLookupContact
+        );
         libraryPath.setText("Library: " + library.libraryDir());
         ffmpegState.setText(state.ffmpegAvailable ? "ffmpeg available" : "ffmpeg not found");
     }
@@ -366,51 +430,68 @@ public class SettingsView extends VerticalLayout {
         }
         Set<String> selected = formats.getValue();
         if (selected == null || selected.isEmpty()) {
-            Notification.show("Select at least one output format", 3000, Notification.Position.MIDDLE);
+            Notification.show(
+                "Select at least one output format",
+                3000,
+                Notification.Position.MIDDLE
+            );
             return;
         }
         Settings next = settingsService.current().copy();
         next.deviceName = deviceName.getValue().trim();
         next.port = port.getValue() == null ? 0 : port.getValue();
-        next.interfaceAddress = interfaceAddress.getValue() == null ? "" : interfaceAddress.getValue().trim();
+        next.interfaceAddress =
+            interfaceAddress.getValue() == null ? "" : interfaceAddress.getValue().trim();
         next.formats = new java.util.ArrayList<>(List.copyOf(selected));
         next.aacBitrateKbps = aacBitrate.getValue() == null ? 192 : aacBitrate.getValue();
         next.mp3Quality = mp3Quality.getValue() == null ? 2 : mp3Quality.getValue();
         next.mp3Mode = mp3Mode.getValue() == null ? "vbr" : mp3Mode.getValue();
         next.mp3BitrateKbps = mp3Bitrate.getValue() == null ? 192 : mp3Bitrate.getValue();
-        next.packetRecoveryMs = packetRecovery.getValue() == null ? 2500 : packetRecovery.getValue();
+        next.packetRecoveryMs =
+            packetRecovery.getValue() == null ? 2500 : packetRecovery.getValue();
         next.minTrackSeconds = minTrackSeconds.getValue() == null ? 3 : minTrackSeconds.getValue();
         next.idleFinalizeSeconds = idleSeconds.getValue() == null ? 6 : idleSeconds.getValue();
         next.keepRaw = keepRaw.getValue();
         next.metadataEnrichmentEnabled = metadataEnrichment.getValue();
         next.metadataEnrichmentDeezer = metadataEnrichmentDeezer.getValue();
-        next.ffmpegPath = ffmpegPath.getValue() == null || ffmpegPath.getValue().isBlank()
-                ? "ffmpeg" : ffmpegPath.getValue().trim();
+        next.ffmpegPath =
+            ffmpegPath.getValue() == null || ffmpegPath.getValue().isBlank()
+                ? "ffmpeg"
+                : ffmpegPath.getValue().trim();
         next.audiobookEnabled = audiobookEnabled.getValue();
         next.audiobookAutoAssemble = audiobookAutoAssemble.getValue();
-        next.audiobookGenres = audiobookGenres.getValue() == null ? "" : audiobookGenres.getValue().trim();
-        next.audiobookLongTrackSeconds = audiobookLongTrackSeconds.getValue() == null
-                ? 0 : audiobookLongTrackSeconds.getValue();
-        next.audiobookIdleSeconds = audiobookIdleSeconds.getValue() == null
-                ? 300 : audiobookIdleSeconds.getValue();
-        next.audiobookBitrateKbps = audiobookBitrateKbps.getValue() == null
-                ? 96 : audiobookBitrateKbps.getValue();
+        next.audiobookGenres =
+            audiobookGenres.getValue() == null ? "" : audiobookGenres.getValue().trim();
+        next.audiobookLongTrackSeconds =
+            audiobookLongTrackSeconds.getValue() == null ? 0 : audiobookLongTrackSeconds.getValue();
+        next.audiobookIdleSeconds =
+            audiobookIdleSeconds.getValue() == null ? 300 : audiobookIdleSeconds.getValue();
+        next.audiobookBitrateKbps =
+            audiobookBitrateKbps.getValue() == null ? 96 : audiobookBitrateKbps.getValue();
         next.audiobookKeepChapters = audiobookKeepChapters.getValue();
         next.audiobookSplitLongTracks = audiobookSplitLongTracks.getValue();
         next.audiobookCatalogChapters = audiobookCatalogChapters.getValue();
         next.audiobookLookupEnabled = audiobookLookup.getValue();
-        next.audiobookLookupCountry = audiobookLookupCountry.getValue() == null
-                ? "US" : audiobookLookupCountry.getValue().trim();
+        next.audiobookLookupCountry =
+            audiobookLookupCountry.getValue() == null
+                ? "US"
+                : audiobookLookupCountry.getValue().trim();
         next.audiobookLookupMusicBrainz = audiobookLookupMusicBrainz.getValue();
-        next.audiobookLookupContact = audiobookLookupContact.getValue() == null
-                ? "" : audiobookLookupContact.getValue().trim();
+        next.audiobookLookupContact =
+            audiobookLookupContact.getValue() == null
+                ? ""
+                : audiobookLookupContact.getValue().trim();
 
         try {
             Settings applied = settingsService.apply(next);
             load(applied);
             Notification.show("Settings saved", 2500, Notification.Position.BOTTOM_START);
         } catch (Exception e) {
-            Notification.show("Could not save: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
+            Notification.show(
+                "Could not save: " + e.getMessage(),
+                5000,
+                Notification.Position.MIDDLE
+            );
         }
     }
 }

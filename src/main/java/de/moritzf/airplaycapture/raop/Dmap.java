@@ -14,10 +14,17 @@ public final class Dmap {
     private static final java.util.Set<String> CONTAINERS = java.util.Set.of("mlit", "mcon");
 
     private static final java.util.Set<String> NUMERIC = java.util.Set.of(
-            "astn", "asyr", "asbr", "asdm", "astm", "mstn", "mikd", "mper");
+        "astn",
+        "asyr",
+        "asbr",
+        "asdm",
+        "astm",
+        "mstn",
+        "mikd",
+        "mper"
+    );
 
-    private Dmap() {
-    }
+    private Dmap() {}
 
     public static Map<String, Object> parse(byte[] data) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -29,10 +36,11 @@ public final class Dmap {
         int position = offset;
         while (position + 8 <= end) {
             String tag = new String(data, position, 4, StandardCharsets.US_ASCII);
-            long lengthLong = ((long) (data[position + 4] & 0xFF) << 24)
-                    | ((data[position + 5] & 0xFF) << 16)
-                    | ((data[position + 6] & 0xFF) << 8)
-                    | (data[position + 7] & 0xFF);
+            long lengthLong =
+                ((long) (data[position + 4] & 0xFF) << 24) |
+                ((data[position + 5] & 0xFF) << 16) |
+                ((data[position + 6] & 0xFF) << 8) |
+                (data[position + 7] & 0xFF);
             position += 8;
             if (lengthLong < 0 || lengthLong > end - position) {
                 break;

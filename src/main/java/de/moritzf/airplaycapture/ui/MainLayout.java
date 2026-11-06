@@ -34,8 +34,12 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
     private final Anchor logout;
     private Registration registration;
 
-    public MainLayout(UiState state, UiBroadcaster broadcaster, AudiobookJobs audiobookJobs,
-                      @Value("${airplay-capture.web.password:}") String password) {
+    public MainLayout(
+        UiState state,
+        UiBroadcaster broadcaster,
+        AudiobookJobs audiobookJobs,
+        @Value("${airplay-capture.web.password:}") String password
+    ) {
         this.state = state;
         this.broadcaster = broadcaster;
         this.audiobookJobs = audiobookJobs;
@@ -71,8 +75,11 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
 
         Div nav = new Div();
         nav.addClassName("app-nav");
-        nav.add(navLink("Library", LibraryView.class), navLink("Settings", SettingsView.class),
-                navLink("Logs", LogsView.class));
+        nav.add(
+            navLink("Library", LibraryView.class),
+            navLink("Settings", SettingsView.class),
+            navLink("Logs", LogsView.class)
+        );
         logout = authEnabled ? anchorLink("Log out", AppUrls.relative("logout")) : null;
         if (logout != null) {
             nav.add(logout);
@@ -82,8 +89,10 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         queuePill.setVisible(false);
         queuePill.getElement().setAttribute("tabindex", "0");
         queuePill.getElement().setAttribute("aria-label", "Audiobook conversions");
-        queuePill.getElement().addEventListener("keydown",
-                event -> openLibraryQueue()).setFilter("event.key === 'Enter' || event.key === ' '");
+        queuePill
+            .getElement()
+            .addEventListener("keydown", event -> openLibraryQueue())
+            .setFilter("event.key === 'Enter' || event.key === ' '");
         queuePill.getElement().setAttribute("role", "status");
         queuePill.addClickListener(event -> openLibraryQueue());
 
@@ -101,11 +110,18 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         refreshStatus();
     }
 
-    private RouterLink navLink(String label, Class<? extends com.vaadin.flow.component.Component> view) {
+    private RouterLink navLink(
+        String label,
+        Class<? extends com.vaadin.flow.component.Component> view
+    ) {
         RouterLink link = new RouterLink(label, view);
         link.addClassName("nav-link");
-        link.setHighlightCondition((target, event) -> event.getActiveChain().stream()
-                .anyMatch(component -> component.getClass().equals(view)));
+        link.setHighlightCondition((target, event) ->
+            event
+                .getActiveChain()
+                .stream()
+                .anyMatch(component -> component.getClass().equals(view))
+        );
         link.setHighlightAction((target, highlight) -> {
             if (highlight) {
                 target.addClassName("active");
@@ -145,29 +161,40 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
             return;
         }
         queuePill.removeClassNames("running", "waiting");
-        long running = active.stream()
-                .filter(job -> job.status() == AudiobookJobs.State.RUNNING).count();
+        long running = active
+            .stream()
+            .filter(job -> job.status() == AudiobookJobs.State.RUNNING)
+            .count();
         boolean isRunning = running > 0;
         queuePill.addClassName(isRunning ? "running" : "waiting");
         AudiobookJobs.Job first = active.get(0);
         String label = isRunning
-                ? "Converting · " + Math.round(first.progress * 100) + "%"
-                : active.size() + " waiting";
+            ? "Converting · " + Math.round(first.progress * 100) + "%"
+            : active.size() + " waiting";
         if (active.size() > 1) {
             label += " · " + active.size() + " in queue";
         }
         queuePill.setText(label);
-        queuePill.getElement().setAttribute("title", isRunning
-                ? "Converting \u201c" + first.title + "\u201d \u2014 open the library to see the queue"
-                : "Audiobook conversions \u2014 open the library to see the queue");
+        queuePill
+            .getElement()
+            .setAttribute(
+                "title",
+                isRunning
+                    ? "Converting \u201c" +
+                          first.title +
+                          "\u201d \u2014 open the library to see the queue"
+                    : "Audiobook conversions \u2014 open the library to see the queue"
+            );
     }
 
     /** Opens the library, where the conversion queue sits above the recordings. */
     private void openLibraryQueue() {
         getUI().ifPresent(ui -> {
             ui.navigate(LibraryView.class);
-            ui.getPage().executeJs("requestAnimationFrame(() => document.querySelector('.queue-card')"
-                    + "?.scrollIntoView({block: 'nearest', behavior: 'smooth'}))");
+            ui.getPage().executeJs(
+                "requestAnimationFrame(() => document.querySelector('.queue-card')" +
+                    "?.scrollIntoView({block: 'nearest', behavior: 'smooth'}))"
+            );
         });
     }
 
@@ -177,19 +204,32 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         statusPill.removeClassNames("live", "ok", "offline");
         if (state.receiving) {
             statusPill.addClassName("live");
-            String source = state.clientName == null || state.clientName.isBlank()
-                    ? state.client : state.clientName;
-            statusText.setText(source == null || source.isBlank()
+            String source =
+                state.clientName == null || state.clientName.isBlank()
+                    ? state.client
+                    : state.clientName;
+            statusText.setText(
+                source == null || source.isBlank()
                     ? "Recording"
-                    : "Recording from " + source
-                    + (state.senderApp == null || state.senderApp.isBlank()
-                            ? "" : " · " + state.senderApp));
-            statusPill.getElement().setAttribute("title",
-                    state.client == null || state.client.isBlank() ? "" : "IP " + state.client);
+                    : "Recording from " +
+                          source +
+                          (state.senderApp == null || state.senderApp.isBlank()
+                              ? ""
+                              : " · " + state.senderApp)
+            );
+            statusPill
+                .getElement()
+                .setAttribute(
+                    "title",
+                    state.client == null || state.client.isBlank() ? "" : "IP " + state.client
+                );
         } else if (state.advertising) {
             statusPill.addClassName("ok");
-            statusText.setText("Ready on port " + state.port
-                    + (state.interfaceAddress.isBlank() ? "" : " via " + state.interfaceAddress));
+            statusText.setText(
+                "Ready on port " +
+                    state.port +
+                    (state.interfaceAddress.isBlank() ? "" : " via " + state.interfaceAddress)
+            );
         } else {
             statusPill.addClassName("offline");
             String error = state.lastError == null ? "" : state.lastError;

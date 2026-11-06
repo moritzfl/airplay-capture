@@ -1,14 +1,13 @@
 package de.moritzf.airplaycapture;
 
 import de.moritzf.airplaycapture.util.WebPort;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /** Spring Boot entry point; keeps the previous {@code --data} / {@code --web-port} options. */
 @SpringBootApplication
@@ -87,8 +86,13 @@ public class Main {
             return;
         }
         if (!WebPort.isFree(port)) {
-            Log.info("app", "port " + port + " is busy; waiting up to 20 s for the previous "
-                    + "container to release it");
+            Log.info(
+                "app",
+                "port " +
+                    port +
+                    " is busy; waiting up to 20 s for the previous " +
+                    "container to release it"
+            );
         }
         int chosen = WebPort.pick(port, 20_000);
         if (chosen != port) {

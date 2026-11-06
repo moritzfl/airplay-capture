@@ -8,9 +8,8 @@ import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.media.Transcoder;
 import de.moritzf.airplaycapture.raop.RaopServer;
 import de.moritzf.airplaycapture.recording.RecordingManager;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
+import org.springframework.stereotype.Service;
 
 /** Applies settings changes to every component and restarts the receiver when its identity changes. */
 @Service
@@ -24,8 +23,15 @@ public class SettingsService {
     private final RaopServer raopServer;
     private final UiState ui;
 
-    public SettingsService(AppDirs dirs, Settings settings, Library library, Transcoder transcoder,
-                           RecordingManager recorder, RaopServer raopServer, UiState ui) {
+    public SettingsService(
+        AppDirs dirs,
+        Settings settings,
+        Library library,
+        Transcoder transcoder,
+        RecordingManager recorder,
+        RaopServer raopServer,
+        UiState ui
+    ) {
         this.dirs = dirs;
         this.settings = settings;
         this.library = library;
@@ -41,9 +47,10 @@ public class SettingsService {
 
     public synchronized Settings apply(Settings incoming) throws IOException {
         Settings next = incoming.copy();
-        boolean receiverChanged = !settings.deviceName.equals(next.deviceName)
-                || settings.port != next.port
-                || !settings.interfaceAddress.equals(next.interfaceAddress);
+        boolean receiverChanged =
+            !settings.deviceName.equals(next.deviceName) ||
+            settings.port != next.port ||
+            !settings.interfaceAddress.equals(next.interfaceAddress);
         boolean libraryChanged = !settings.libraryDir.equals(next.libraryDir);
 
         next.save(dirs.configFile());

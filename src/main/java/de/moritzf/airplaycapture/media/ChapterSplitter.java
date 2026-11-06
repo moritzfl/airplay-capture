@@ -1,7 +1,6 @@
 package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.Log;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -31,8 +30,7 @@ public final class ChapterSplitter {
         }
     }
 
-    public record Segment(Path file, long durationMs) {
-    }
+    public record Segment(Path file, long durationMs) {}
 
     /** A catalog plan with the book range inside the recording and the absolute chapter cuts. */
     public record CatalogPlan(long startMs, long endMs, List<Long> boundaries) {
@@ -53,10 +51,12 @@ public final class ChapterSplitter {
     static final long CATALOG_SNAP_TOLERANCE_MS = 8_000;
     private static final long MIN_GAP_MS = 1_000;
 
-    private static final Pattern SILENCE_START =
-            Pattern.compile("silence_start:\\s*(-?[0-9]+(?:\\.[0-9]+)?)");
-    private static final Pattern SILENCE_END =
-            Pattern.compile("silence_end:\\s*(-?[0-9]+(?:\\.[0-9]+)?)");
+    private static final Pattern SILENCE_START = Pattern.compile(
+        "silence_start:\\s*(-?[0-9]+(?:\\.[0-9]+)?)"
+    );
+    private static final Pattern SILENCE_END = Pattern.compile(
+        "silence_end:\\s*(-?[0-9]+(?:\\.[0-9]+)?)"
+    );
 
     private final String ffmpeg;
 
@@ -65,9 +65,19 @@ public final class ChapterSplitter {
     }
 
     public List<Silence> detectSilences(Path audio, long totalMs)
-            throws IOException, InterruptedException {
-        List<String> command = List.of(ffmpeg, "-hide_banner", "-nostats", "-i", audio.toString(),
-                "-af", "silencedetect=noise=-35dB:d=1.0", "-f", "null", "-");
+        throws IOException, InterruptedException {
+        List<String> command = List.of(
+            ffmpeg,
+            "-hide_banner",
+            "-nostats",
+            "-i",
+            audio.toString(),
+            "-af",
+            "silencedetect=noise=-35dB:d=1.0",
+            "-f",
+            "null",
+            "-"
+        );
         FfmpegRunner.Result result = run(command);
         List<Silence> silences = new ArrayList<>();
         Long start = null;
@@ -100,13 +110,22 @@ public final class ChapterSplitter {
         return snapToSilence(targets, silences, totalMs, SNAP_TOLERANCE_MS);
     }
 
-    public List<Long> snapToSilence(List<Long> targets, List<Silence> silences, long totalMs,
-                                    long toleranceMs) {
+    public List<Long> snapToSilence(
+        List<Long> targets,
+        List<Silence> silences,
+        long totalMs,
+        long toleranceMs
+    ) {
         return snapToSilence(targets, silences, 0, totalMs, toleranceMs);
     }
 
-    private List<Long> snapToSilence(List<Long> targets, List<Silence> silences, long startMs,
-                                     long endMs, long toleranceMs) {
+    private List<Long> snapToSilence(
+        List<Long> targets,
+        List<Silence> silences,
+        long startMs,
+        long endMs,
+        long toleranceMs
+    ) {
         List<Long> boundaries = new ArrayList<>();
         long previous = startMs;
         for (long target : targets) {
@@ -136,8 +155,11 @@ public final class ChapterSplitter {
      * longer than the catalog is searched for a start offset, so an Audible announcement before
      * the book (and a trailing announcement) is trimmed instead of shifting every chapter.
      */
-    public CatalogPlan catalogPlan(List<Long> chapterDurations, long totalMs,
-                                   List<Silence> silences) {
+    public CatalogPlan catalogPlan(
+        List<Long> chapterDurations,
+        long totalMs,
+        List<Silence> silences
+    ) {
         if (chapterDurations == null || chapterDurations.size() < 2 || totalMs <= 0) {
             return new CatalogPlan(0, totalMs, List.of());
         }
@@ -180,14 +202,22 @@ public final class ChapterSplitter {
                 targets.add(target);
             }
         }
-        List<Long> boundaries = snapToSilence(targets, silences, startMs, endMs,
-                CATALOG_SNAP_TOLERANCE_MS);
+        List<Long> boundaries = snapToSilence(
+            targets,
+            silences,
+            startMs,
+            endMs,
+            CATALOG_SNAP_TOLERANCE_MS
+        );
         return new CatalogPlan(startMs, endMs, boundaries);
     }
 
     /** Convenience for callers that only need the cuts. */
-    public List<Long> catalogBoundaries(List<Long> chapterDurations, long totalMs,
-                                        List<Silence> silences) {
+    public List<Long> catalogBoundaries(
+        List<Long> chapterDurations,
+        long totalMs,
+        List<Silence> silences
+    ) {
         return catalogPlan(chapterDurations, totalMs, silences).boundaries();
     }
 
@@ -195,8 +225,12 @@ public final class ChapterSplitter {
      * Finds the start offset that best aligns catalog boundaries with pauses. The remaining extra
      * audio is treated as a trailing announcement. Without pauses, an intro is assumed.
      */
-    private long bestStart(List<Long> chapterDurations, long totalMs, long extra,
-                           List<Silence> silences) {
+    private long bestStart(
+        List<Long> chapterDurations,
+        long totalMs,
+        long extra,
+        List<Silence> silences
+    ) {
         if (silences.isEmpty() || extra <= 0) {
             return -1;
         }
@@ -231,15 +265,18 @@ public final class ChapterSplitter {
         long bestEnd = totalMs - (extra - bestStart);
         long startDistance = nearestDistance(midpoints, bestStart);
         long endDistance = nearestDistance(midpoints, bestEnd);
-        if (startDistance > CATALOG_SNAP_TOLERANCE_MS
-                && endDistance > CATALOG_SNAP_TOLERANCE_MS) {
+        if (startDistance > CATALOG_SNAP_TOLERANCE_MS && endDistance > CATALOG_SNAP_TOLERANCE_MS) {
             return -1;
         }
         return bestStart;
     }
 
-    private static double scaledScore(List<Long> chapterDurations, long totalMs, long catalogMs,
-                                      List<Long> midpoints) {
+    private static double scaledScore(
+        List<Long> chapterDurations,
+        long totalMs,
+        long catalogMs,
+        List<Long> midpoints
+    ) {
         double scale = totalMs / (double) catalogMs;
         double score = 0;
         long at = 0;
@@ -250,8 +287,13 @@ public final class ChapterSplitter {
         return score;
     }
 
-    private static double offsetScore(List<Long> chapterDurations, long totalMs, long extra,
-                                      long start, List<Long> midpoints) {
+    private static double offsetScore(
+        List<Long> chapterDurations,
+        long totalMs,
+        long extra,
+        long start,
+        List<Long> midpoints
+    ) {
         long end = totalMs - (extra - start);
         double score = 0;
         long at = 0;
@@ -319,30 +361,55 @@ public final class ChapterSplitter {
 
     /** Concatenates CAF files losslessly into one temporary CAF. */
     public Path concatenate(List<Path> files, Path output, Path workDir)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         Path list = workDir.resolve("concat.txt");
         List<String> lines = new ArrayList<>();
         for (Path file : files) {
             lines.add("file '" + file.toAbsolutePath().toString().replace("'", "'\\''") + "'");
         }
         Files.write(list, lines, StandardCharsets.UTF_8);
-        FfmpegRunner.Result result = run(List.of(ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-                "-f", "concat", "-safe", "0", "-i", list.toString(),
-                "-c:a", "pcm_s16le", output.toString()));
+        FfmpegRunner.Result result = run(
+            List.of(
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                list.toString(),
+                "-c:a",
+                "pcm_s16le",
+                output.toString()
+            )
+        );
         if (result.exitCode() != 0) {
             throw new IOException("concat failed: " + result.output().strip());
         }
         return output;
     }
 
-    public List<Segment> split(Path audio, List<Long> boundaries, long totalMs, Path workDir,
-                               String prefix) throws IOException, InterruptedException {
+    public List<Segment> split(
+        Path audio,
+        List<Long> boundaries,
+        long totalMs,
+        Path workDir,
+        String prefix
+    ) throws IOException, InterruptedException {
         return split(audio, 0, totalMs, boundaries, workDir, prefix);
     }
 
-    public List<Segment> split(Path audio, long startMs, long endMs, List<Long> boundaries,
-                               Path workDir, String prefix)
-            throws IOException, InterruptedException {
+    public List<Segment> split(
+        Path audio,
+        long startMs,
+        long endMs,
+        List<Long> boundaries,
+        Path workDir,
+        String prefix
+    ) throws IOException, InterruptedException {
         List<Long> cuts = new ArrayList<>();
         cuts.add(startMs);
         cuts.addAll(boundaries);
@@ -355,11 +422,26 @@ public final class ChapterSplitter {
                 continue;
             }
             Path segment = workDir.resolve(prefix + "-" + (i + 1) + ".caf");
-            FfmpegRunner.Result result = run(List.of(ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-                    "-ss", String.format(java.util.Locale.ROOT, "%.3f", start / 1000.0),
-                    "-i", audio.toString(),
-                    "-t", String.format(java.util.Locale.ROOT, "%.3f", duration / 1000.0),
-                    "-map", "0:a:0", "-c:a", "pcm_s16le", segment.toString()));
+            FfmpegRunner.Result result = run(
+                List.of(
+                    ffmpeg,
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-ss",
+                    String.format(java.util.Locale.ROOT, "%.3f", start / 1000.0),
+                    "-i",
+                    audio.toString(),
+                    "-t",
+                    String.format(java.util.Locale.ROOT, "%.3f", duration / 1000.0),
+                    "-map",
+                    "0:a:0",
+                    "-c:a",
+                    "pcm_s16le",
+                    segment.toString()
+                )
+            );
             if (result.exitCode() != 0) {
                 throw new IOException("chapter split failed: " + result.output().strip());
             }
@@ -377,11 +459,13 @@ public final class ChapterSplitter {
     }
 
     private static FfmpegRunner.Result run(List<String> command)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         FfmpegRunner.Result result = FfmpegRunner.run(command);
         if (result.exitCode() != 0) {
-            Log.warn("audiobook", "ffmpeg failed: " + command.get(0) + " (exit "
-                    + result.exitCode() + ")");
+            Log.warn(
+                "audiobook",
+                "ffmpeg failed: " + command.get(0) + " (exit " + result.exitCode() + ")"
+            );
         }
         return result;
     }

@@ -1,7 +1,6 @@
 package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.raop.Sdp;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -47,7 +46,7 @@ public final class CafWriter implements Closeable {
     }
 
     public synchronized long durationMillis(int sampleRate) {
-        return sampleRate <= 0 ? 0 : Math.round(framesWritten * 1000.0 / sampleRate);
+        return sampleRate <= 0 ? 0 : Math.round((framesWritten * 1000.0) / sampleRate);
     }
 
     public synchronized void writeFrame(byte[] data, int offset, int length) throws IOException {
@@ -88,9 +87,15 @@ public final class CafWriter implements Closeable {
         if (channels < 1 || channels > 2) {
             return null;
         }
-        long bits = 3 + 4 + 12 + 1 + 2 + 1                   // element header
-                + (long) config.frameLength() * channels * config.bitDepth()   // zero samples
-                + 3;                                         // END element
+        long bits =
+            3 +
+            4 +
+            12 +
+            1 +
+            2 +
+            1 + // element header
+            (long) config.frameLength() * channels * config.bitDepth() + // zero samples
+            3; // END element
         byte[] frame = new byte[(int) ((bits + 7) / 8)];
         // element tag: SCE = 0, CPE = 1 (3 bits); instance tag and unused bits stay 0; no explicit
         // sample count; no shifted bits; escape flag = 1 (uncompressed)
@@ -160,7 +165,7 @@ public final class CafWriter implements Closeable {
         }
         closed = true;
         long end = file.getFilePointer();
-        long dataSize = (end - dataPayloadStart) + 4; // include edit count
+        long dataSize = end - dataPayloadStart + 4; // include edit count
 
         // Patch the data chunk size.
         file.seek(dataPayloadStart - 12);

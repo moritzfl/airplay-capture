@@ -1,22 +1,32 @@
 package de.moritzf.airplaycapture;
 
-import de.moritzf.airplaycapture.raop.Dmap;
-import de.moritzf.airplaycapture.raop.Sdp;
-import org.junit.jupiter.api.Test;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import de.moritzf.airplaycapture.raop.Dmap;
+import de.moritzf.airplaycapture.raop.Sdp;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 class ProtocolParsingTest {
 
     @Test
     void parsesDmapInsideContainer() {
-        byte[] blob = dmap("minm", "Song", "asar", "Artist", "asal", "Album", "asgn", "Rock", "astn", 3);
+        byte[] blob = dmap(
+            "minm",
+            "Song",
+            "asar",
+            "Artist",
+            "asal",
+            "Album",
+            "asgn",
+            "Rock",
+            "astn",
+            3
+        );
         Map<String, Object> metadata = Dmap.parse(blob);
         assertEquals("Song", Dmap.text(metadata, "minm"));
         assertEquals("Artist", Dmap.text(metadata, "asar"));
@@ -28,17 +38,17 @@ class ProtocolParsingTest {
     @Test
     void parsesSdpWithSessionKey() {
         String sdp = """
-                v=0\r
-                o=iTunes 123 0 IN IP4 192.168.1.2\r
-                s=iTunes\r
-                c=IN IP4 192.168.1.2\r
-                t=0 0\r
-                m=audio 0 RTP/AVP 96\r
-                a=rtpmap:96 AppleLossless\r
-                a=fmtp:96 352 0 16 40 10 14 2 255 0 0 44100\r
-                a=rsaaeskey:AAECAwQFBgcICQoLDA0ODw==\r
-                a=aesiv:EBESExQVFhcYGRobHB0eHw==\r
-                """;
+        v=0\r
+        o=iTunes 123 0 IN IP4 192.168.1.2\r
+        s=iTunes\r
+        c=IN IP4 192.168.1.2\r
+        t=0 0\r
+        m=audio 0 RTP/AVP 96\r
+        a=rtpmap:96 AppleLossless\r
+        a=fmtp:96 352 0 16 40 10 14 2 255 0 0 44100\r
+        a=rsaaeskey:AAECAwQFBgcICQoLDA0ODw==\r
+        a=aesiv:EBESExQVFhcYGRobHB0eHw==\r
+        """;
         Sdp parsed = Sdp.parse(sdp);
         assertNotNull(parsed.alac());
         assertEquals(352, parsed.alac().frameLength());
@@ -56,7 +66,7 @@ class ProtocolParsingTest {
             String tag = (String) entries[i];
             byte[] value;
             if (entries[i + 1] instanceof Integer number) {
-                value = new byte[]{(byte) (number.intValue() >> 8), (byte) number.intValue()};
+                value = new byte[] { (byte) (number.intValue() >> 8), (byte) number.intValue() };
             } else {
                 value = ((String) entries[i + 1]).getBytes(StandardCharsets.UTF_8);
             }

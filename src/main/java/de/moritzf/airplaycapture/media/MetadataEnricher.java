@@ -1,10 +1,6 @@
 package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.Log;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
-
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -20,6 +16,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Fills gaps in sender metadata from keyless catalogs (Apple first, Deezer as fallback). Only used
@@ -28,15 +27,24 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class MetadataEnricher {
 
-    public record Result(String album, String genre, Integer year, Integer trackNumber, String artworkUrl) {
-    }
+    public record Result(
+        String album,
+        String genre,
+        Integer year,
+        Integer trackNumber,
+        String artworkUrl
+    ) {}
 
-    record AlbumInfo(String collectionId, String title, String genre, Integer year,
-                     String artworkUrl, List<TrackInfo> tracks) {
-    }
+    record AlbumInfo(
+        String collectionId,
+        String title,
+        String genre,
+        Integer year,
+        String artworkUrl,
+        List<TrackInfo> tracks
+    ) {}
 
-    record TrackInfo(String title, Integer trackNumber, String artworkUrl) {
-    }
+    record TrackInfo(String title, Integer trackNumber, String artworkUrl) {}
 
     private static final ObjectMapper JSON = JsonMapper.builder().build();
     private static final long MIN_REQUEST_INTERVAL_MS = 1100;
@@ -46,8 +54,8 @@ public final class MetadataEnricher {
     private final String country;
     private final boolean deezerEnabled;
     private final HttpClient http = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+        .connectTimeout(Duration.ofSeconds(5))
+        .build();
     private final Map<String, CachedAlbums> albumCache = new ConcurrentHashMap<>();
     private final Map<String, CachedTracks> trackCache = new ConcurrentHashMap<>();
     private final Map<String, CachedAlbums> deezerAlbumCache = new ConcurrentHashMap<>();
@@ -55,14 +63,13 @@ public final class MetadataEnricher {
     private final Map<Integer, String> deezerGenres = new ConcurrentHashMap<>();
     private volatile long lastRequestAt;
 
-    private record CachedAlbums(Optional<AlbumInfo> info, long expiresAt) {
-    }
+    private record CachedAlbums(Optional<AlbumInfo> info, long expiresAt) {}
 
-    private record CachedTracks(Optional<Result> result, long expiresAt) {
-    }
+    private record CachedTracks(Optional<Result> result, long expiresAt) {}
 
     public MetadataEnricher(String country, boolean deezerEnabled) {
-        this.country = country == null || country.isBlank() ? "US" : country.trim().toUpperCase(Locale.ROOT);
+        this.country =
+            country == null || country.isBlank() ? "US" : country.trim().toUpperCase(Locale.ROOT);
         this.deezerEnabled = deezerEnabled;
     }
 
@@ -70,7 +77,8 @@ public final class MetadataEnricher {
         if (title == null || title.isBlank()) {
             return Optional.empty();
         }
-        Optional<Result> apple = album != null && !album.isBlank()
+        Optional<Result> apple =
+            album != null && !album.isBlank()
                 ? appleAlbum(album, artist, title, trackNumber)
                 : appleSong(title, artist);
         if (apple.isPresent() || !deezerEnabled) {
@@ -79,17 +87,24 @@ public final class MetadataEnricher {
         return deezerEnrich(title, artist, album, trackNumber);
     }
 
-    private Optional<Result> appleAlbum(String album, String artist, String title, Integer trackNumber) {
+    private Optional<Result> appleAlbum(
+        String album,
+        String artist,
+        String title,
+        Integer trackNumber
+    ) {
         Optional<AlbumInfo> info = albumInfo(album, artist);
         if (info.isEmpty()) {
             return Optional.empty();
         }
         AlbumInfo value = info.get();
         Optional<TrackInfo> match = matchTrack(value.tracks(), title, trackNumber);
-        String artwork = match.map(TrackInfo::artworkUrl).filter(url -> !url.isBlank())
-                .orElse(value.artworkUrl());
-        Integer number = trackNumber != null ? trackNumber
-                : match.map(TrackInfo::trackNumber).orElse(null);
+        String artwork = match
+            .map(TrackInfo::artworkUrl)
+            .filter(url -> !url.isBlank())
+            .orElse(value.artworkUrl());
+        Integer number =
+            trackNumber != null ? trackNumber : match.map(TrackInfo::trackNumber).orElse(null);
         return Optional.of(new Result(value.title(), value.genre(), value.year(), number, artwork));
     }
 
@@ -99,8 +114,14 @@ public final class MetadataEnricher {
 
     // ---------------------------------------------------------------- Deezer fallback
 
-    private Optional<Result> deezerEnrich(String title, String artist, String album, Integer trackNumber) {
-        Optional<AlbumInfo> info = album != null && !album.isBlank()
+    private Optional<Result> deezerEnrich(
+        String title,
+        String artist,
+        String album,
+        Integer trackNumber
+    ) {
+        Optional<AlbumInfo> info =
+            album != null && !album.isBlank()
                 ? deezerAlbumInfo(album, artist)
                 : deezerTrackInfo(title, artist);
         if (info.isEmpty()) {
@@ -108,10 +129,12 @@ public final class MetadataEnricher {
         }
         AlbumInfo value = info.get();
         Optional<TrackInfo> match = matchTrack(value.tracks(), title, trackNumber);
-        String artwork = match.map(TrackInfo::artworkUrl).filter(url -> !url.isBlank())
-                .orElse(value.artworkUrl());
-        Integer number = trackNumber != null ? trackNumber
-                : match.map(TrackInfo::trackNumber).orElse(null);
+        String artwork = match
+            .map(TrackInfo::artworkUrl)
+            .filter(url -> !url.isBlank())
+            .orElse(value.artworkUrl());
+        Integer number =
+            trackNumber != null ? trackNumber : match.map(TrackInfo::trackNumber).orElse(null);
         return Optional.of(new Result(value.title(), value.genre(), value.year(), number, artwork));
     }
 
@@ -137,8 +160,13 @@ public final class MetadataEnricher {
             return Optional.of(detail);
         } catch (Exception e) {
             Log.warn("lookup", "Deezer album lookup failed for '" + album + "': " + e.getMessage());
-            deezerAlbumCache.put(key, new CachedAlbums(Optional.empty(),
-                    System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()));
+            deezerAlbumCache.put(
+                key,
+                new CachedAlbums(
+                    Optional.empty(),
+                    System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()
+                )
+            );
             return Optional.empty();
         }
     }
@@ -165,8 +193,13 @@ public final class MetadataEnricher {
             return Optional.of(detail);
         } catch (Exception e) {
             Log.warn("lookup", "Deezer track lookup failed for '" + title + "': " + e.getMessage());
-            deezerTrackCache.put(key, new CachedAlbums(Optional.empty(),
-                    System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()));
+            deezerTrackCache.put(
+                key,
+                new CachedAlbums(
+                    Optional.empty(),
+                    System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()
+                )
+            );
             return Optional.empty();
         }
     }
@@ -177,10 +210,17 @@ public final class MetadataEnricher {
         Integer genreId = album.path("genre_id").isNumber() ? album.path("genre_id").asInt() : null;
         String genre = deezerGenre(genreId);
         AlbumInfo withAlbum = parseDeezerAlbum(albumJson, genre, base);
-        String tracksJson = get("https://api.deezer.com/album/" + encode(base.collectionId())
-                + "/tracks?limit=100");
-        return new AlbumInfo(withAlbum.collectionId(), withAlbum.title(), withAlbum.genre(),
-                withAlbum.year(), withAlbum.artworkUrl(), parseDeezerTracks(tracksJson));
+        String tracksJson = get(
+            "https://api.deezer.com/album/" + encode(base.collectionId()) + "/tracks?limit=100"
+        );
+        return new AlbumInfo(
+            withAlbum.collectionId(),
+            withAlbum.title(),
+            withAlbum.genre(),
+            withAlbum.year(),
+            withAlbum.artworkUrl(),
+            parseDeezerTracks(tracksJson)
+        );
     }
 
     private String deezerGenre(Integer id) throws Exception {
@@ -208,8 +248,13 @@ public final class MetadataEnricher {
         }
         try {
             String term = artist == null || artist.isBlank() ? album : album + " " + artist;
-            String body = get("https://itunes.apple.com/search?media=music&entity=album&limit=5"
-                    + "&country=" + encode(country) + "&term=" + encode(term));
+            String body = get(
+                "https://itunes.apple.com/search?media=music&entity=album&limit=5" +
+                    "&country=" +
+                    encode(country) +
+                    "&term=" +
+                    encode(term)
+            );
             Optional<AlbumInfo> info = parseAlbumSearch(body, album, artist);
             if (info.isPresent()) {
                 AlbumInfo detail = lookupTracks(info.get());
@@ -220,15 +265,24 @@ public final class MetadataEnricher {
             return Optional.empty();
         } catch (Exception e) {
             Log.warn("lookup", "album lookup failed for '" + album + "': " + e.getMessage());
-            albumCache.put(key, new CachedAlbums(Optional.empty(),
-                    System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()));
+            albumCache.put(
+                key,
+                new CachedAlbums(
+                    Optional.empty(),
+                    System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()
+                )
+            );
             return Optional.empty();
         }
     }
 
     private AlbumInfo lookupTracks(AlbumInfo info) throws Exception {
-        String body = get("https://itunes.apple.com/lookup?entity=song&country=" + encode(country)
-                + "&id=" + encode(info.collectionId()));
+        String body = get(
+            "https://itunes.apple.com/lookup?entity=song&country=" +
+                encode(country) +
+                "&id=" +
+                encode(info.collectionId())
+        );
         return parseTrackLookup(body, info);
     }
 
@@ -243,15 +297,25 @@ public final class MetadataEnricher {
         }
         try {
             String term = artist == null || artist.isBlank() ? title : title + " " + artist;
-            String body = get("https://itunes.apple.com/search?media=music&entity=song&limit=10"
-                    + "&country=" + encode(country) + "&term=" + encode(term));
+            String body = get(
+                "https://itunes.apple.com/search?media=music&entity=song&limit=10" +
+                    "&country=" +
+                    encode(country) +
+                    "&term=" +
+                    encode(term)
+            );
             Optional<Result> result = parseSongSearch(body, title, artist);
             trackCache.put(key, new CachedTracks(result, expiresAt(result.isPresent())));
             return result;
         } catch (Exception e) {
             Log.warn("lookup", "song lookup failed for '" + title + "': " + e.getMessage());
-            trackCache.put(key, new CachedTracks(Optional.empty(),
-                    System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()));
+            trackCache.put(
+                key,
+                new CachedTracks(
+                    Optional.empty(),
+                    System.currentTimeMillis() + Duration.ofMinutes(10).toMillis()
+                )
+            );
             return Optional.empty();
         }
     }
@@ -267,11 +331,11 @@ public final class MetadataEnricher {
         }
         lastRequestAt = System.currentTimeMillis();
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(7))
-                .header("User-Agent", "AirPlayCapture/1.0")
-                .header("Accept", "application/json")
-                .GET()
-                .build();
+            .timeout(Duration.ofSeconds(7))
+            .header("User-Agent", "AirPlayCapture/1.0")
+            .header("Accept", "application/json")
+            .GET()
+            .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
             throw new IllegalStateException("HTTP " + response.statusCode());
@@ -285,14 +349,18 @@ public final class MetadataEnricher {
             return false;
         }
         try {
-            String large = url.replace("/100x100bb.", "/600x600bb.")
-                    .replace("/100x100.", "/600x600.");
+            String large = url
+                .replace("/100x100bb.", "/600x600bb.")
+                .replace("/100x100.", "/600x600.");
             HttpRequest request = HttpRequest.newBuilder(URI.create(large))
-                    .timeout(Duration.ofSeconds(10))
-                    .header("User-Agent", "AirPlayCapture/1.0")
-                    .GET()
-                    .build();
-            HttpResponse<byte[]> response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());
+                .timeout(Duration.ofSeconds(10))
+                .header("User-Agent", "AirPlayCapture/1.0")
+                .GET()
+                .build();
+            HttpResponse<byte[]> response = http.send(
+                request,
+                HttpResponse.BodyHandlers.ofByteArray()
+            );
             if (response.statusCode() != 200 || response.body().length > 5 * 1024 * 1024) {
                 return false;
             }
@@ -341,8 +409,16 @@ public final class MetadataEnricher {
         if (id.isBlank()) {
             return Optional.empty();
         }
-        return Optional.of(new AlbumInfo(id, best.path("title").asString(""), "",
-                null, best.path("cover_xl").asString(""), new ArrayList<>()));
+        return Optional.of(
+            new AlbumInfo(
+                id,
+                best.path("title").asString(""),
+                "",
+                null,
+                best.path("cover_xl").asString(""),
+                new ArrayList<>()
+            )
+        );
     }
 
     static Optional<AlbumInfo> parseDeezerTrackSearch(String json, String title, String artist) {
@@ -361,8 +437,16 @@ public final class MetadataEnricher {
             if (id.isBlank()) {
                 continue;
             }
-            return Optional.of(new AlbumInfo(id, album.path("title").asString(""), "",
-                    null, album.path("cover_xl").asString(""), new ArrayList<>()));
+            return Optional.of(
+                new AlbumInfo(
+                    id,
+                    album.path("title").asString(""),
+                    "",
+                    null,
+                    album.path("cover_xl").asString(""),
+                    new ArrayList<>()
+                )
+            );
         }
         return Optional.empty();
     }
@@ -377,8 +461,14 @@ public final class MetadataEnricher {
         if (artwork.isBlank()) {
             artwork = base.artworkUrl();
         }
-        return new AlbumInfo(base.collectionId(), title, genre,
-                year(album.path("release_date").asString("")), artwork, base.tracks());
+        return new AlbumInfo(
+            base.collectionId(),
+            title,
+            genre,
+            year(album.path("release_date").asString("")),
+            artwork,
+            base.tracks()
+        );
     }
 
     static List<TrackInfo> parseDeezerTracks(String json) {
@@ -388,9 +478,15 @@ public final class MetadataEnricher {
             return tracks;
         }
         for (JsonNode item : data) {
-            tracks.add(new TrackInfo(item.path("title").asString(""),
-                    item.path("track_position").isNumber() ? item.path("track_position").asInt() : null,
-                    ""));
+            tracks.add(
+                new TrackInfo(
+                    item.path("title").asString(""),
+                    item.path("track_position").isNumber()
+                        ? item.path("track_position").asInt()
+                        : null,
+                    ""
+                )
+            );
         }
         return tracks;
     }
@@ -429,11 +525,16 @@ public final class MetadataEnricher {
         if (collectionId.isBlank()) {
             return Optional.empty();
         }
-        return Optional.of(new AlbumInfo(collectionId,
+        return Optional.of(
+            new AlbumInfo(
+                collectionId,
                 best.path("collectionName").asString(""),
                 best.path("primaryGenreName").asString(""),
                 year(best.path("releaseDate").asString("")),
-                artwork(best), new ArrayList<>()));
+                artwork(best),
+                new ArrayList<>()
+            )
+        );
     }
 
     static AlbumInfo parseTrackLookup(String json, AlbumInfo info) {
@@ -447,9 +548,15 @@ public final class MetadataEnricher {
                 if (!"track".equals(item.path("wrapperType").asString(""))) {
                     continue;
                 }
-                tracks.add(new TrackInfo(item.path("trackName").asString(""),
-                        item.path("trackNumber").isNumber() ? item.path("trackNumber").asInt() : null,
-                        artwork(item)));
+                tracks.add(
+                    new TrackInfo(
+                        item.path("trackName").asString(""),
+                        item.path("trackNumber").isNumber()
+                            ? item.path("trackNumber").asInt()
+                            : null,
+                        artwork(item)
+                    )
+                );
                 if (genre == null || genre.isBlank()) {
                     genre = item.path("primaryGenreName").asString("");
                 }
@@ -478,16 +585,24 @@ public final class MetadataEnricher {
             if (!matches(title, track) || !matchesAuthor(artist, candidateArtist)) {
                 continue;
             }
-            return Optional.of(new Result(item.path("collectionName").asString(""),
+            return Optional.of(
+                new Result(
+                    item.path("collectionName").asString(""),
                     item.path("primaryGenreName").asString(""),
                     year(item.path("releaseDate").asString("")),
                     item.path("trackNumber").isNumber() ? item.path("trackNumber").asInt() : null,
-                    artwork(item)));
+                    artwork(item)
+                )
+            );
         }
         return Optional.empty();
     }
 
-    static Optional<TrackInfo> matchTrack(List<TrackInfo> tracks, String title, Integer trackNumber) {
+    static Optional<TrackInfo> matchTrack(
+        List<TrackInfo> tracks,
+        String title,
+        Integer trackNumber
+    ) {
         if (tracks == null || tracks.isEmpty()) {
             return Optional.empty();
         }
@@ -559,9 +674,10 @@ public final class MetadataEnricher {
         if (value == null) {
             return "";
         }
-        String decomposed = java.text.Normalizer.normalize(value.toLowerCase(Locale.ROOT),
-                        java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
+        String decomposed = java.text.Normalizer.normalize(
+            value.toLowerCase(Locale.ROOT),
+            java.text.Normalizer.Form.NFD
+        ).replaceAll("\\p{M}", "");
         return decomposed.replaceAll("[^a-z0-9]+", " ").trim();
     }
 
@@ -587,7 +703,10 @@ public final class MetadataEnricher {
             current[0] = i;
             for (int j = 1; j <= b.length(); j++) {
                 int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                current[j] = Math.min(Math.min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+                current[j] = Math.min(
+                    Math.min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + cost
+                );
             }
             int[] swap = previous;
             previous = current;

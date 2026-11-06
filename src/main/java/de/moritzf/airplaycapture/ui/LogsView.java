@@ -11,7 +11,6 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import de.moritzf.airplaycapture.Log;
-
 import java.util.List;
 
 /** Live log of the receiver and export pipeline. */
@@ -42,8 +41,11 @@ public class LogsView extends VerticalLayout {
 
     private void render() {
         List<Log.Line> snapshot = Log.lines();
-        String last = snapshot.isEmpty() ? "" : snapshot.get(snapshot.size() - 1).time()
-                + "|" + snapshot.get(snapshot.size() - 1).message();
+        String last = snapshot.isEmpty()
+            ? ""
+            : snapshot.get(snapshot.size() - 1).time() +
+              "|" +
+              snapshot.get(snapshot.size() - 1).message();
         if (snapshot.size() == renderedLines && last.equals(renderedLast)) {
             return;
         }

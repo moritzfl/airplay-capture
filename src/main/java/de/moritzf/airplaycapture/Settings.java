@@ -1,16 +1,15 @@
 package de.moritzf.airplaycapture;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.SerializationFeature;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /** User-editable settings, persisted as JSON in the data directory. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -110,8 +109,8 @@ public final class Settings {
     public static final int PORT_RANGE_END = 6000;
 
     private static final ObjectMapper JSON = JsonMapper.builder()
-            .enable(SerializationFeature.INDENT_OUTPUT)
-            .build();
+        .enable(SerializationFeature.INDENT_OUTPUT)
+        .build();
 
     public static Settings load(Path file) {
         if (!Files.exists(file)) {
@@ -121,7 +120,10 @@ public final class Settings {
             Settings settings = JSON.readValue(Files.readString(file), Settings.class);
             return settings == null ? new Settings() : settings.normalized();
         } catch (Exception e) {
-            Log.warn("settings", "cannot read " + file + ": " + e.getMessage() + " - using defaults");
+            Log.warn(
+                "settings",
+                "cannot read " + file + ": " + e.getMessage() + " - using defaults"
+            );
             return new Settings();
         }
     }
@@ -180,7 +182,9 @@ public final class Settings {
         if (formats == null) {
             formats = new ArrayList<>();
         }
-        formats.removeIf(f -> f == null || !(f.equals("m4a") || f.equals("mp3") || f.equals("alac")));
+        formats.removeIf(
+            f -> f == null || !(f.equals("m4a") || f.equals("mp3") || f.equals("alac"))
+        );
         formats = new ArrayList<>(new LinkedHashSet<>(formats));
         aacBitrateKbps = clamp(aacBitrateKbps, 64, 320);
         mp3Quality = clamp(mp3Quality, 0, 9);

@@ -2,7 +2,6 @@ package de.moritzf.airplaycapture.raop;
 
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.recording.RecordingManager;
-
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -23,12 +22,13 @@ import java.util.regex.Pattern;
 /** One RTSP control connection (ANNOUNCE / SETUP / RECORD / SET_PARAMETER / ...). */
 final class RtspConnection implements Runnable {
 
-    private static final Pattern AIRPLAY_APP =
-            Pattern.compile("^AirPlay/[^\\s]+\\s+(.+?)(?:/[^\\s]+)?$");
+    private static final Pattern AIRPLAY_APP = Pattern.compile(
+        "^AirPlay/[^\\s]+\\s+(.+?)(?:/[^\\s]+)?$"
+    );
 
     private static final String PUBLIC_METHODS =
-            "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, "
-                    + "SET_PARAMETER, POST, GET";
+        "ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, " +
+        "SET_PARAMETER, POST, GET";
 
     private final RaopServer server;
     private final RecordingManager recorder;
@@ -47,7 +47,8 @@ final class RtspConnection implements Runnable {
         this.socket.setTcpNoDelay(true);
         this.clientAddress = socket.getInetAddress();
         InetAddress local = socket.getLocalAddress();
-        this.localAddress = (local == null || local.isAnyLocalAddress()) ? server.interfaceAddress() : local;
+        this.localAddress =
+            local == null || local.isAnyLocalAddress() ? server.interfaceAddress() : local;
     }
 
     InetAddress clientAddress() {
@@ -58,8 +59,10 @@ final class RtspConnection implements Runnable {
     public void run() {
         Log.info("rtsp", "connection from " + clientAddress.getHostAddress());
         recorder.onClientConnected(clientAddress.getHostAddress());
-        try (InputStream rawIn = socket.getInputStream();
-             OutputStream out = socket.getOutputStream()) {
+        try (
+            InputStream rawIn = socket.getInputStream();
+            OutputStream out = socket.getOutputStream()
+        ) {
             BufferedInputStream in = new BufferedInputStream(rawIn);
             ByteArrayOutputStream capture = new ByteArrayOutputStream(1024);
             socket.setSoTimeout(8000);
@@ -69,9 +72,15 @@ final class RtspConnection implements Runnable {
                     request = read(in, capture);
                 } catch (SocketTimeoutException e) {
                     byte[] raw = capture.toByteArray();
-                    Log.info("rtsp", "no RTSP request from " + clientAddress.getHostAddress()
-                            + " within 8s (" + raw.length + " bytes)"
-                            + (raw.length == 0 ? "" : ": " + hexPrefix(raw)));
+                    Log.info(
+                        "rtsp",
+                        "no RTSP request from " +
+                            clientAddress.getHostAddress() +
+                            " within 8s (" +
+                            raw.length +
+                            " bytes)" +
+                            (raw.length == 0 ? "" : ": " + hexPrefix(raw))
+                    );
                     break;
                 }
                 if (request == null) {
@@ -88,8 +97,14 @@ final class RtspConnection implements Runnable {
                         application = appFromUserAgent(userAgent);
                     }
                     server.reportSenderApp(application);
-                    Log.info("rtsp", "sender from " + clientAddress.getHostAddress() + ": "
-                            + userAgent + (application.isBlank() ? "" : " app=" + application));
+                    Log.info(
+                        "rtsp",
+                        "sender from " +
+                            clientAddress.getHostAddress() +
+                            ": " +
+                            userAgent +
+                            (application.isBlank() ? "" : " app=" + application)
+                    );
                     Log.info("rtsp", "sender headers: " + request.headers);
                 }
                 Response response;
@@ -139,17 +154,19 @@ final class RtspConnection implements Runnable {
             case "SETUP" -> setup(request, response);
             case "RECORD" -> {
                 if (session != null) {
-                    Thread.ofVirtual().name("timing-requests").start(() -> {
-                        for (int i = 0; i < 3; i++) {
-                            session.sendTimingRequest();
-                            try {
-                                Thread.sleep(250);
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                break;
+                    Thread.ofVirtual()
+                        .name("timing-requests")
+                        .start(() -> {
+                            for (int i = 0; i < 3; i++) {
+                                session.sendTimingRequest();
+                                try {
+                                    Thread.sleep(250);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
                             }
-                        }
-                    });
+                        });
                 }
                 Log.info("rtsp", "RECORD");
             }
@@ -178,8 +195,14 @@ final class RtspConnection implements Runnable {
         String challenge = request.headers.get("Apple-Challenge");
         if (challenge != null && !challenge.isBlank()) {
             try {
-                response.headers.put("Apple-Response", RaopCrypto.appleResponse(
-                        decodeChallenge(challenge), localAddress.getAddress(), server.macAddress()));
+                response.headers.put(
+                    "Apple-Response",
+                    RaopCrypto.appleResponse(
+                        decodeChallenge(challenge),
+                        localAddress.getAddress(),
+                        server.macAddress()
+                    )
+                );
             } catch (Exception e) {
                 Log.warn("rtsp", "cannot answer Apple-Challenge: " + e.getMessage());
             }
@@ -209,15 +232,36 @@ final class RtspConnection implements Runnable {
                 if (session != null) {
                     server.endSession(session);
                 }
-                created = server.startSession(clientAddress, localAddress, announced, controlPort, timingPort);
+                created = server.startSession(
+                    clientAddress,
+                    localAddress,
+                    announced,
+                    controlPort,
+                    timingPort
+                );
                 session = created;
             }
-            response.headers.put("Transport", String.format(Locale.ROOT,
+            response.headers.put(
+                "Transport",
+                String.format(
+                    Locale.ROOT,
                     "RTP/AVP/UDP;unicast;interleaved=0-1;mode=record;control_port=%d;timing_port=%d;server_port=%d",
-                    created.controlPort(), created.timingPort(), created.audioPort()));
+                    created.controlPort(),
+                    created.timingPort(),
+                    created.audioPort()
+                )
+            );
             response.headers.put("Session", "1");
-            Log.info("rtsp", "SETUP from " + clientAddress.getHostAddress()
-                    + " (client control=" + controlPort + ", timing=" + timingPort + ")");
+            Log.info(
+                "rtsp",
+                "SETUP from " +
+                    clientAddress.getHostAddress() +
+                    " (client control=" +
+                    controlPort +
+                    ", timing=" +
+                    timingPort +
+                    ")"
+            );
         } catch (RaopServer.BusyException e) {
             response.code = 453;
             response.reason = "Not Enough Bandwidth";
@@ -230,7 +274,9 @@ final class RtspConnection implements Runnable {
     }
 
     private void setParameter(Request request) {
-        String contentType = request.headers.getOrDefault("Content-Type", "").toLowerCase(Locale.ROOT);
+        String contentType = request.headers
+            .getOrDefault("Content-Type", "")
+            .toLowerCase(Locale.ROOT);
         byte[] body = request.body;
         if (body == null || body.length == 0) {
             return;
@@ -240,7 +286,10 @@ final class RtspConnection implements Runnable {
             case "image/jpeg", "image/png" -> recorder.onArtwork(body, contentType);
             case "image/none" -> recorder.onArtworkNone();
             case "text/parameters" -> handleParameters(new String(body, StandardCharsets.UTF_8));
-            default -> Log.info("rtsp", "SET_PARAMETER " + contentType + " (" + body.length + " bytes)");
+            default -> Log.info(
+                "rtsp",
+                "SET_PARAMETER " + contentType + " (" + body.length + " bytes)"
+            );
         }
     }
 
@@ -292,6 +341,7 @@ final class RtspConnection implements Runnable {
     }
 
     private static final class Request {
+
         final String method;
         final String uri;
         final Map<String, String> headers;
@@ -310,6 +360,7 @@ final class RtspConnection implements Runnable {
     }
 
     private static final class Response {
+
         int code;
         String reason;
         final Map<String, String> headers = new LinkedHashMap<>();
@@ -322,12 +373,18 @@ final class RtspConnection implements Runnable {
         }
     }
 
-    private static Request read(BufferedInputStream in, ByteArrayOutputStream headerBytes) throws IOException {
+    private static Request read(BufferedInputStream in, ByteArrayOutputStream headerBytes)
+        throws IOException {
         String requestLine = readLine(in, headerBytes);
         if (requestLine == null || requestLine.isEmpty()) {
             if (headerBytes.size() > 0) {
-                Log.warn("rtsp", "incomplete request (" + headerBytes.size() + " bytes): "
-                        + hexPrefix(headerBytes.toByteArray()));
+                Log.warn(
+                    "rtsp",
+                    "incomplete request (" +
+                        headerBytes.size() +
+                        " bytes): " +
+                        hexPrefix(headerBytes.toByteArray())
+                );
             }
             return null;
         }
@@ -386,7 +443,8 @@ final class RtspConnection implements Runnable {
         return text.toString().trim();
     }
 
-    private static String readLine(InputStream in, ByteArrayOutputStream capture) throws IOException {
+    private static String readLine(InputStream in, ByteArrayOutputStream capture)
+        throws IOException {
         ByteArrayOutputStream line = new ByteArrayOutputStream(128);
         int b;
         boolean any = false;
@@ -408,9 +466,15 @@ final class RtspConnection implements Runnable {
         return value;
     }
 
-    private static void write(OutputStream out, Request request, Response response) throws IOException {
+    private static void write(OutputStream out, Request request, Response response)
+        throws IOException {
         StringBuilder header = new StringBuilder();
-        header.append("RTSP/1.0 ").append(response.code).append(' ').append(response.reason).append("\r\n");
+        header
+            .append("RTSP/1.0 ")
+            .append(response.code)
+            .append(' ')
+            .append(response.reason)
+            .append("\r\n");
         String cseq = request.headers.get("CSeq");
         if (cseq != null) {
             header.append("CSeq: ").append(cseq).append("\r\n");

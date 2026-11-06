@@ -12,5 +12,4 @@ import com.vaadin.flow.theme.lumo.Lumo;
 @ColorScheme(ColorScheme.Value.DARK)
 @StyleSheet("context://app.css")
 @Theme(themeClass = Lumo.class)
-public class AppShell implements AppShellConfigurator {
-}
+public class AppShell implements AppShellConfigurator {}

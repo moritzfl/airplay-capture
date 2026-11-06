@@ -8,15 +8,14 @@ import de.moritzf.airplaycapture.library.CoverHash;
 import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.library.LibraryTrack;
 import de.moritzf.airplaycapture.media.AudiobookAssembler;
-import de.moritzf.airplaycapture.media.ChapterSplitter;
 import de.moritzf.airplaycapture.media.AudiobookLookup;
 import de.moritzf.airplaycapture.media.CafWriter;
+import de.moritzf.airplaycapture.media.ChapterSplitter;
 import de.moritzf.airplaycapture.media.MetadataEnricher;
 import de.moritzf.airplaycapture.media.Transcoder;
 import de.moritzf.airplaycapture.raop.Dmap;
 import de.moritzf.airplaycapture.raop.Sdp;
 import de.moritzf.airplaycapture.util.ClientNameResolver;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,8 +24,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -65,11 +64,13 @@ public final class RecordingManager {
         thread.setDaemon(true);
         return thread;
     });
-    private final ScheduledExecutorService ticker = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread thread = new Thread(r, "recorder-tick");
-        thread.setDaemon(true);
-        return thread;
-    });
+    private final ScheduledExecutorService ticker = Executors.newSingleThreadScheduledExecutor(
+        r -> {
+            Thread thread = new Thread(r, "recorder-tick");
+            thread.setDaemon(true);
+            return thread;
+        }
+    );
 
     private volatile Settings settings;
     private MetadataEnricher metadataEnricher;
@@ -81,19 +82,31 @@ public final class RecordingManager {
     private String pendingCoverMime;
     private volatile String clientIp = "";
 
-    public RecordingManager(AppDirs dirs, Library library, Transcoder transcoder, UiState ui, Settings settings) {
+    public RecordingManager(
+        AppDirs dirs,
+        Library library,
+        Transcoder transcoder,
+        UiState ui,
+        Settings settings
+    ) {
         this.dirs = dirs;
         this.library = library;
         this.transcoder = transcoder;
         this.ui = ui;
         this.settings = settings;
-        this.metadataEnricher = new MetadataEnricher(settings.audiobookLookupCountry, settings.metadataEnrichmentDeezer);
+        this.metadataEnricher = new MetadataEnricher(
+            settings.audiobookLookupCountry,
+            settings.metadataEnrichmentDeezer
+        );
         ticker.scheduleWithFixedDelay(this::tick, 1, 1, TimeUnit.SECONDS);
     }
 
     public void updateSettings(Settings settings) {
         this.settings = settings;
-        this.metadataEnricher = new MetadataEnricher(settings.audiobookLookupCountry, settings.metadataEnrichmentDeezer);
+        this.metadataEnricher = new MetadataEnricher(
+            settings.audiobookLookupCountry,
+            settings.metadataEnrichmentDeezer
+        );
     }
 
     public void onClientConnected(String address) {
@@ -102,21 +115,32 @@ public final class RecordingManager {
         ui.clientName = "";
         ui.senderApp = "";
         ui.changed();
-        Thread.ofVirtual().name("client-name").start(() -> {
-            String name = ClientNameResolver.resolve(address);
-            if (address.equals(clientIp)) {
-                ui.clientName = name;
-                ui.changed();
-            }
-        });
+        Thread.ofVirtual()
+            .name("client-name")
+            .start(() -> {
+                String name = ClientNameResolver.resolve(address);
+                if (address.equals(clientIp)) {
+                    ui.clientName = name;
+                    ui.changed();
+                }
+            });
     }
 
     /** Called when the RTSP connection announced the stream (codec config). */
     public void onStreamConfigured(Sdp.AlacConfig config) {
         this.lastConfig = config;
-        Log.info("recorder", "stream configured: " + config.sampleRate() + " Hz, "
-                + config.channels() + " ch, " + config.bitDepth() + " bit, frame "
-                + config.frameLength() + " samples");
+        Log.info(
+            "recorder",
+            "stream configured: " +
+                config.sampleRate() +
+                " Hz, " +
+                config.channels() +
+                " ch, " +
+                config.bitDepth() +
+                " bit, frame " +
+                config.frameLength() +
+                " samples"
+        );
     }
 
     public void onMetadata(Map<String, Object> dmap) {
@@ -167,8 +191,12 @@ public final class RecordingManager {
                 openWriter(current);
             }
             publishNow(current);
-            Log.info("recorder", "metadata: " + describe(current.artist, current.title)
-                    + (isBlank(current.album) ? "" : " / " + current.album));
+            Log.info(
+                "recorder",
+                "metadata: " +
+                    describe(current.artist, current.title) +
+                    (isBlank(current.album) ? "" : " / " + current.album)
+            );
             if (settings.audiobookEnabled) {
                 if (!isBlank(current.album)) {
                     audiobookLookup.request(current.album, current.artist, lookupOptions());
@@ -291,7 +319,11 @@ public final class RecordingManager {
      */
     public void onGapPending(boolean pending) {
         synchronized (lock) {
-            gapPendingSince = pending ? (gapPendingSince == 0 ? System.currentTimeMillis() : gapPendingSince) : 0;
+            gapPendingSince = pending
+                ? gapPendingSince == 0
+                    ? System.currentTimeMillis()
+                    : gapPendingSince
+                : 0;
         }
     }
 
@@ -339,20 +371,33 @@ public final class RecordingManager {
         synchronized (lock) {
             if (current != null && current.started) {
                 long idleMillis = settings.idleFinalizeSeconds * 1000L;
-                if (gapPendingSince == 0
-                        && System.currentTimeMillis() - current.lastAudioAt > idleMillis) {
-                    Log.info("recorder", "finalizing after " + settings.idleFinalizeSeconds + "s of silence");
+                if (
+                    gapPendingSince == 0 &&
+                    System.currentTimeMillis() - current.lastAudioAt > idleMillis
+                ) {
+                    Log.info(
+                        "recorder",
+                        "finalizing after " + settings.idleFinalizeSeconds + "s of silence"
+                    );
                     finalizeLocked("silence");
                     changed = true;
                 } else {
                     ui.nowRecordedMs = current.recordedMillis();
                 }
             }
-            if (activeBook != null && current == null && gapPendingSince == 0
-                    && System.currentTimeMillis() - activeBook.lastChapterAt
-                    > settings.audiobookIdleSeconds * 1000L) {
-                Log.info("recorder", "no new audiobook chapter for " + settings.audiobookIdleSeconds
-                        + "s, assembling the book");
+            if (
+                activeBook != null &&
+                current == null &&
+                gapPendingSince == 0 &&
+                System.currentTimeMillis() - activeBook.lastChapterAt >
+                    settings.audiobookIdleSeconds * 1000L
+            ) {
+                Log.info(
+                    "recorder",
+                    "no new audiobook chapter for " +
+                        settings.audiobookIdleSeconds +
+                        "s, assembling the book"
+                );
                 finalizeBookLocked("idle");
                 changed = true;
             }
@@ -381,7 +426,19 @@ public final class RecordingManager {
         return draft;
     }
 
-    private volatile Sdp.AlacConfig lastConfig = new Sdp.AlacConfig(352, 0, 16, 40, 10, 14, 2, 255, 0, 0, 44100);
+    private volatile Sdp.AlacConfig lastConfig = new Sdp.AlacConfig(
+        352,
+        0,
+        16,
+        40,
+        10,
+        14,
+        2,
+        255,
+        0,
+        0,
+        44100
+    );
 
     private void finalizeLocked(String reason) {
         Draft draft = current;
@@ -409,8 +466,16 @@ public final class RecordingManager {
         long durationMs = draft.recordedMillis();
         if (durationMs < settings.minTrackSeconds * 1000L) {
             deleteQuietly(draft.caf);
-            Log.info("recorder", "discarded " + durationMs + "ms recording (" + reason + ", shorter than "
-                    + settings.minTrackSeconds + "s)");
+            Log.info(
+                "recorder",
+                "discarded " +
+                    durationMs +
+                    "ms recording (" +
+                    reason +
+                    ", shorter than " +
+                    settings.minTrackSeconds +
+                    "s)"
+            );
             return;
         }
         LibraryTrack track = new LibraryTrack();
@@ -435,15 +500,24 @@ public final class RecordingManager {
         track.status = "processing";
         track.baseName = library.uniqueBaseName(sanitize(suggestName(draft)), preferredExtension());
         if (track.incomplete) {
-            Log.warn("recorder", "incomplete recording: " + formatDuration(durationMs) + " of "
-                    + formatDuration(track.expectedDurationMs) + " captured ("
-                    + reason + ")");
+            Log.warn(
+                "recorder",
+                "incomplete recording: " +
+                    formatDuration(durationMs) +
+                    " of " +
+                    formatDuration(track.expectedDurationMs) +
+                    " captured (" +
+                    reason +
+                    ")"
+            );
         }
 
         Path coverPath = null;
         if (draft.cover != null && draft.cover.length > 0) {
             try {
-                boolean png = draft.coverMime != null && draft.coverMime.toLowerCase(Locale.ROOT).contains("png");
+                boolean png =
+                    draft.coverMime != null &&
+                    draft.coverMime.toLowerCase(Locale.ROOT).contains("png");
                 coverPath = library.coverFile(track.id, png);
                 Files.createDirectories(coverPath.getParent());
                 Files.write(coverPath, draft.cover);
@@ -461,19 +535,36 @@ public final class RecordingManager {
                 track.bookId = book.id;
                 book.chapters.add(new BookChapter(track, draft.caf, coverPath));
                 book.lastChapterAt = System.currentTimeMillis();
-                Log.info("recorder", "audiobook chapter " + (book.chapters.size()) + ": "
-                        + describe(track.artist, track.title) + " / " + book.title);
+                Log.info(
+                    "recorder",
+                    "audiobook chapter " +
+                        book.chapters.size() +
+                        ": " +
+                        describe(track.artist, track.title) +
+                        " / " +
+                        book.title
+                );
             }
         } else if (activeBook != null) {
             finalizeBookLocked("next track");
         }
         library.add(track);
-        Log.info("recorder", "saved " + track.baseName + " (" + formatDuration(durationMs) + ", "
-                + reason + (draft.gaps > 0
-                        ? ", " + draft.gaps + " gaps / " + draft.gapPackets + " packets" : "")
-                + (draft.recoveredGaps > 0
-                        ? ", " + draft.recoveredGaps + " recovered (max " + draft.maxRecoveryMs + " ms)" : "")
-                + ")");
+        Log.info(
+            "recorder",
+            "saved " +
+                track.baseName +
+                " (" +
+                formatDuration(durationMs) +
+                ", " +
+                reason +
+                (draft.gaps > 0
+                    ? ", " + draft.gaps + " gaps / " + draft.gapPackets + " packets"
+                    : "") +
+                (draft.recoveredGaps > 0
+                    ? ", " + draft.recoveredGaps + " recovered (max " + draft.maxRecoveryMs + " ms)"
+                    : "") +
+                ")"
+        );
         ui.changed();
 
         Path caf = draft.caf;
@@ -488,10 +579,23 @@ public final class RecordingManager {
                 effectiveCover = enrich(track, effectiveCover);
             }
             Transcoder.TrackTags tags = new Transcoder.TrackTags(
-                    track.title, track.artist, track.album, track.genre, track.trackNumber, track.year);
-            Transcoder.Result result = settings.formats.isEmpty() || !transcoder.available()
+                track.title,
+                track.artist,
+                track.album,
+                track.genre,
+                track.trackNumber,
+                track.year
+            );
+            Transcoder.Result result =
+                settings.formats.isEmpty() || !transcoder.available()
                     ? new Transcoder.Result(new LinkedHashMap<>(), "no output format available")
-                    : transcoder.export(caf, effectiveCover, tags, track.baseName, library.libraryDir());
+                    : transcoder.export(
+                          caf,
+                          effectiveCover,
+                          tags,
+                          track.baseName,
+                          library.libraryDir()
+                      );
 
             Path libraryDir = library.libraryDir();
             Files.createDirectories(libraryDir);
@@ -550,21 +654,35 @@ public final class RecordingManager {
         boolean appSignal = matchesAudiobookApp(ui.senderApp);
         boolean genreSignal = matchesAudiobookGenre(track.genre);
         boolean kindSignal = track.mediaKind != null && track.mediaKind == 8;
-        boolean albumLookup = !isBlank(track.album) && audiobookLookup.cached(
-                        track.title, track.album, track.artist, lookupOptions())
-                .map(AudiobookLookup.Verdict::audiobook).orElse(false);
-        boolean titleLookup = audiobookLookup.cached(
-                        track.title, null, track.artist, lookupOptions())
-                .map(AudiobookLookup.Verdict::audiobook).orElse(false);
+        boolean albumLookup =
+            !isBlank(track.album) &&
+            audiobookLookup
+                .cached(track.title, track.album, track.artist, lookupOptions())
+                .map(AudiobookLookup.Verdict::audiobook)
+                .orElse(false);
+        boolean titleLookup = audiobookLookup
+            .cached(track.title, null, track.artist, lookupOptions())
+            .map(AudiobookLookup.Verdict::audiobook)
+            .orElse(false);
         // A title-only catalog match is only trusted for a long recording.
-        long titleLookupMinMs = (settings.audiobookLongTrackSeconds > 0
-                ? settings.audiobookLongTrackSeconds : 900) * 1000L;
+        long titleLookupMinMs =
+            (settings.audiobookLongTrackSeconds > 0 ? settings.audiobookLongTrackSeconds : 900) *
+            1000L;
         boolean lookupSignal = albumLookup || (titleLookup && track.durationMs >= titleLookupMinMs);
-        boolean longSignal = !isBlank(track.album) && settings.audiobookLongTrackSeconds > 0
-                && track.durationMs >= settings.audiobookLongTrackSeconds * 1000L;
+        boolean longSignal =
+            !isBlank(track.album) &&
+            settings.audiobookLongTrackSeconds > 0 &&
+            track.durationMs >= settings.audiobookLongTrackSeconds * 1000L;
         if (genreSignal || kindSignal || lookupSignal || longSignal || appSignal) {
-            String signal = genreSignal ? "genre" : kindSignal ? "media kind"
-                    : lookupSignal ? "catalog lookup" : longSignal ? "length" : "sender app";
+            String signal = genreSignal
+                ? "genre"
+                : kindSignal
+                  ? "media kind"
+                  : lookupSignal
+                    ? "catalog lookup"
+                    : longSignal
+                      ? "length"
+                      : "sender app";
             Log.info("recorder", "audiobook detected by " + signal);
             return true;
         }
@@ -572,9 +690,12 @@ public final class RecordingManager {
     }
 
     private AudiobookLookup.Options lookupOptions() {
-        return new AudiobookLookup.Options(settings.audiobookLookupEnabled,
-                settings.audiobookLookupMusicBrainz,
-                settings.audiobookLookupCountry, settings.audiobookLookupContact);
+        return new AudiobookLookup.Options(
+            settings.audiobookLookupEnabled,
+            settings.audiobookLookupMusicBrainz,
+            settings.audiobookLookupCountry,
+            settings.audiobookLookupContact
+        );
     }
 
     private static boolean matchesAudiobookApp(String app) {
@@ -582,8 +703,19 @@ public final class RecordingManager {
             return false;
         }
         String value = app.toLowerCase(Locale.ROOT);
-        for (String keyword : List.of("audible", "lylli", "bookbeat", "storytel", "nextory",
-                "kobo", "blinkist", "scribd", "everand", "books", "audiobookshelf")) {
+        for (String keyword : List.of(
+            "audible",
+            "lylli",
+            "bookbeat",
+            "storytel",
+            "nextory",
+            "kobo",
+            "blinkist",
+            "scribd",
+            "everand",
+            "books",
+            "audiobookshelf"
+        )) {
             if (value.contains(keyword)) {
                 return true;
             }
@@ -634,8 +766,16 @@ public final class RecordingManager {
         if (book == null || book.chapters.isEmpty()) {
             return;
         }
-        Log.info("recorder", "audiobook finished: " + describe(book.author, book.title)
-                + " (" + book.chapters.size() + " chapters, " + reason + ")");
+        Log.info(
+            "recorder",
+            "audiobook finished: " +
+                describe(book.author, book.title) +
+                " (" +
+                book.chapters.size() +
+                " chapters, " +
+                reason +
+                ")"
+        );
         exporter.submit(() -> assembleBook(book));
     }
 
@@ -647,8 +787,12 @@ public final class RecordingManager {
                 Log.warn("audiobook", "chapter file missing, skipping: " + chapter.track.title);
                 continue;
             }
-            String title = isBlank(chapter.track.title) ? "Chapter " + (usable.size() + 1) : chapter.track.title;
-            chapters.add(new AudiobookAssembler.Chapter(chapter.caf, title, chapter.track.durationMs));
+            String title = isBlank(chapter.track.title)
+                ? "Chapter " + (usable.size() + 1)
+                : chapter.track.title;
+            chapters.add(
+                new AudiobookAssembler.Chapter(chapter.caf, title, chapter.track.durationMs)
+            );
             usable.add(chapter);
         }
         if (chapters.isEmpty()) {
@@ -656,10 +800,16 @@ public final class RecordingManager {
             return;
         }
         long duration = chapters.stream().mapToLong(AudiobookAssembler.Chapter::durationMs).sum();
-        Path cover = usable.stream().map(c -> c.cover).filter(path -> path != null && Files.exists(path))
-                .findFirst().orElse(null);
+        Path cover = usable
+            .stream()
+            .map(c -> c.cover)
+            .filter(path -> path != null && Files.exists(path))
+            .findFirst()
+            .orElse(null);
         String baseName = library.uniqueBaseName(
-                sanitize(book.author.isBlank() ? book.title : book.author + " - " + book.title), ".m4b");
+            sanitize(book.author.isBlank() ? book.title : book.author + " - " + book.title),
+            ".m4b"
+        );
         Path output = library.libraryDir().resolve(baseName + ".m4b");
         Path splitWork = null;
         try {
@@ -668,8 +818,13 @@ public final class RecordingManager {
                 splitWork = Files.createTempDirectory(dirs.tmpDir(), "book-");
                 chapters = planChapters(usable, chapters, duration, splitWork);
             }
-            new AudiobookAssembler(settings.ffmpegPath, settings.audiobookBitrateKbps)
-                    .assemble(chapters, cover, output, book.title, book.author);
+            new AudiobookAssembler(settings.ffmpegPath, settings.audiobookBitrateKbps).assemble(
+                chapters,
+                cover,
+                output,
+                book.title,
+                book.author
+            );
         } catch (Exception e) {
             Log.error("audiobook", "cannot assemble " + book.title + ": " + e.getMessage());
             ui.lastError = "audiobook assembly failed: " + e.getMessage();
@@ -689,9 +844,12 @@ public final class RecordingManager {
         track.genre = "Audiobook";
         track.mediaKind = 8;
         track.durationMs = duration;
-        track.expectedDurationMs = usable.stream()
-                .mapToLong(chapter -> Math.max(chapter.track.durationMs, chapter.track.expectedDurationMs))
-                .sum();
+        track.expectedDurationMs = usable
+            .stream()
+            .mapToLong(chapter ->
+                Math.max(chapter.track.durationMs, chapter.track.expectedDurationMs)
+            )
+            .sum();
         track.incomplete = usable.stream().anyMatch(chapter -> chapter.track.incomplete);
         track.recordedAtEpochMs = usable.get(0).track.recordedAtEpochMs;
         track.source = clientIp;
@@ -707,7 +865,11 @@ public final class RecordingManager {
         }
         if (cover != null) {
             try {
-                boolean png = cover.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".png");
+                boolean png = cover
+                    .getFileName()
+                    .toString()
+                    .toLowerCase(Locale.ROOT)
+                    .endsWith(".png");
                 Path target = library.coverFile(track.id, png);
                 Files.createDirectories(target.getParent());
                 Files.copy(cover, target, StandardCopyOption.REPLACE_EXISTING);
@@ -718,8 +880,16 @@ public final class RecordingManager {
             }
         }
         library.add(track);
-        Log.info("export", "audiobook ready: " + baseName + " (" + chapters.size() + " chapters, "
-                + formatDuration(duration) + ")");
+        Log.info(
+            "export",
+            "audiobook ready: " +
+                baseName +
+                " (" +
+                chapters.size() +
+                " chapters, " +
+                formatDuration(duration) +
+                ")"
+        );
 
         if (settings.keepRaw) {
             for (BookChapter chapter : usable) {
@@ -727,7 +897,10 @@ public final class RecordingManager {
                 try {
                     move(chapter.caf, target);
                 } catch (IOException e) {
-                    Log.warn("audiobook", "cannot keep raw chapter " + chapter.caf + ": " + e.getMessage());
+                    Log.warn(
+                        "audiobook",
+                        "cannot keep raw chapter " + chapter.caf + ": " + e.getMessage()
+                    );
                 }
             }
         } else {
@@ -748,8 +921,12 @@ public final class RecordingManager {
      * Builds the chapter list for the M4B. Existing chapter marks from sender metadata are moved
      * into the nearest pause, and a single long recording is split at long pauses.
      */
-    private List<AudiobookAssembler.Chapter> planChapters(List<BookChapter> usable,
-            List<AudiobookAssembler.Chapter> original, long totalMs, Path workDir) {
+    private List<AudiobookAssembler.Chapter> planChapters(
+        List<BookChapter> usable,
+        List<AudiobookAssembler.Chapter> original,
+        long totalMs,
+        Path workDir
+    ) {
         if (original.isEmpty()) {
             return original;
         }
@@ -784,27 +961,51 @@ public final class RecordingManager {
             if (boundaries.isEmpty()) {
                 return original;
             }
-            List<ChapterSplitter.Segment> segments =
-                    splitter.split(source, boundaries, totalMs, workDir, "chapter");
+            List<ChapterSplitter.Segment> segments = splitter.split(
+                source,
+                boundaries,
+                totalMs,
+                workDir,
+                "chapter"
+            );
             List<AudiobookAssembler.Chapter> result = new ArrayList<>();
             for (int i = 0; i < segments.size(); i++) {
-                String title = usable.size() == 1
+                String title =
+                    usable.size() == 1
                         ? "Chapter " + (i + 1)
-                        : (i < original.size() ? original.get(i).title() : "Chapter " + (i + 1));
-                result.add(new AudiobookAssembler.Chapter(
-                        segments.get(i).file(), title, segments.get(i).durationMs()));
+                        : i < original.size()
+                          ? original.get(i).title()
+                          : "Chapter " + (i + 1);
+                result.add(
+                    new AudiobookAssembler.Chapter(
+                        segments.get(i).file(),
+                        title,
+                        segments.get(i).durationMs()
+                    )
+                );
             }
             if (usable.size() > 1 && result.size() != original.size()) {
                 Log.warn("audiobook", "chapter boundaries collapsed; keeping sender chapters");
                 return original;
             }
-            Log.info("audiobook", "chapter plan: " + original.size() + " -> " + result.size()
-                    + " chapters (" + boundaries.size() + " boundaries, "
-                    + silences.size() + " pauses found)");
+            Log.info(
+                "audiobook",
+                "chapter plan: " +
+                    original.size() +
+                    " -> " +
+                    result.size() +
+                    " chapters (" +
+                    boundaries.size() +
+                    " boundaries, " +
+                    silences.size() +
+                    " pauses found)"
+            );
             return result;
         } catch (Exception e) {
-            Log.warn("audiobook", "chapter splitting failed, keeping sender chapters: "
-                    + e.getMessage());
+            Log.warn(
+                "audiobook",
+                "chapter splitting failed, keeping sender chapters: " + e.getMessage()
+            );
             return original;
         }
     }
@@ -823,10 +1024,10 @@ public final class RecordingManager {
         }
     }
 
-    private record BookChapter(LibraryTrack track, Path caf, Path cover) {
-    }
+    private record BookChapter(LibraryTrack track, Path caf, Path cover) {}
 
     private static final class Book {
+
         final String id = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         final String key;
         final String title;
@@ -842,16 +1043,25 @@ public final class RecordingManager {
     }
 
     private boolean needsEnrichment(LibraryTrack track) {
-        return settings.metadataEnrichmentEnabled
-                && !track.audiobookChapter
-                && !(track.genre != null && track.genre.toLowerCase(Locale.ROOT).contains("podcast"))
-                && (isBlank(track.album) || isBlank(track.genre) || track.year == null
-                    || track.trackNumber == null || !track.cover);
+        return (
+            settings.metadataEnrichmentEnabled &&
+            !track.audiobookChapter &&
+            !(track.genre != null && track.genre.toLowerCase(Locale.ROOT).contains("podcast")) &&
+            (isBlank(track.album) ||
+                isBlank(track.genre) ||
+                track.year == null ||
+                track.trackNumber == null ||
+                !track.cover)
+        );
     }
 
     private Path enrich(LibraryTrack track, Path currentCover) {
         Optional<MetadataEnricher.Result> found = metadataEnricher.enrich(
-                track.title, track.artist, track.album, track.trackNumber);
+            track.title,
+            track.artist,
+            track.album,
+            track.trackNumber
+        );
         if (found.isEmpty()) {
             return currentCover;
         }
@@ -924,13 +1134,23 @@ public final class RecordingManager {
             return title;
         }
         if (artist != null) {
-            return artist + " - " + new SimpleDateFormat("yyyy-MM-dd HH-mm", Locale.ROOT).format(new Date());
+            return (
+                artist +
+                " - " +
+                new SimpleDateFormat("yyyy-MM-dd HH-mm", Locale.ROOT).format(new Date())
+            );
         }
-        return "Untitled " + new SimpleDateFormat("yyyy-MM-dd HH-mm-ss", Locale.ROOT).format(new Date());
+        return (
+            "Untitled " +
+            new SimpleDateFormat("yyyy-MM-dd HH-mm-ss", Locale.ROOT).format(new Date())
+        );
     }
 
     private static String sanitize(String name) {
-        String cleaned = INVALID_FILENAME.matcher(name).replaceAll("_").replaceAll("\\s+", " ").trim();
+        String cleaned = INVALID_FILENAME.matcher(name)
+            .replaceAll("_")
+            .replaceAll("\\s+", " ")
+            .trim();
         cleaned = cleaned.replaceAll("^\\.+", "").trim();
         if (cleaned.length() > 120) {
             cleaned = cleaned.substring(0, 120).trim();
@@ -959,12 +1179,18 @@ public final class RecordingManager {
 
     private void writeLiveCover(byte[] image, String contentType) {
         try {
-            boolean png = contentType != null && contentType.toLowerCase(Locale.ROOT).contains("png");
+            boolean png =
+                contentType != null && contentType.toLowerCase(Locale.ROOT).contains("png");
             Path target = dirs.coverDir().resolve(png ? "now.png" : "now.jpg");
             // Replace the file in one step: a page asking for it mid-write must not get half.
             Path partial = dirs.coverDir().resolve("now.partial");
             Files.write(partial, image);
-            Files.move(partial, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            Files.move(
+                partial,
+                target,
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE
+            );
             Files.deleteIfExists(dirs.coverDir().resolve(png ? "now.jpg" : "now.png"));
             ui.coverVersion = COVER_VERSIONS.incrementAndGet();
         } catch (IOException e) {
@@ -987,7 +1213,8 @@ public final class RecordingManager {
     }
 
     private static String describe(String artist, String title) {
-        String value = (isBlank(artist) ? "" : artist + " - ") + (isBlank(title) ? "unknown title" : title);
+        String value =
+            (isBlank(artist) ? "" : artist + " - ") + (isBlank(title) ? "unknown title" : title);
         return value.replaceAll("\\s+", " ").trim();
     }
 
@@ -1017,6 +1244,7 @@ public final class RecordingManager {
     }
 
     private static final class Draft {
+
         String id;
         Sdp.AlacConfig config;
         CafWriter writer;
@@ -1047,12 +1275,15 @@ public final class RecordingManager {
             if (config == null || config.sampleRate() <= 0) {
                 return 0;
             }
-            return Math.round(frames * 1000.0 / config.sampleRate());
+            return Math.round((frames * 1000.0) / config.sampleRate());
         }
 
         boolean matches(String title, String artist, String album) {
-            return compatible(this.title, title) && compatible(this.artist, artist)
-                    && compatible(this.album, album);
+            return (
+                compatible(this.title, title) &&
+                compatible(this.artist, artist) &&
+                compatible(this.album, album)
+            );
         }
 
         private static boolean compatible(String current, String incoming) {
