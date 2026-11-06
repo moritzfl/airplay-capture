@@ -24,7 +24,7 @@ jobs:
           echo "key=apt-ffmpeg-${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
 
       - name: Restore cached ffmpeg packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/apt-archives
           key: ${{ steps.apt-key.outputs.key }}
