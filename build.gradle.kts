@@ -2,6 +2,7 @@ plugins {
     java
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.vaadin)
+    alias(libs.plugins.spotless)
 }
 
 group = "de.moritzf"
@@ -27,6 +28,18 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.launcher)
+}
+
+spotless {
+    java {
+        target("src/*/java/**/*.java")
+        prettier(
+            mapOf(
+                "prettier" to libs.versions.prettier.core.get(),
+                "prettier-plugin-java" to libs.versions.prettier.java.get(),
+            ),
+        ).configFile(".prettierrc.json")
+    }
 }
 
 vaadin {

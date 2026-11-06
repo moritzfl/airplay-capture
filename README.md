@@ -323,6 +323,8 @@ All endpoints live outside Vaadin's `/app/` mapping and are useful for integrati
 ### Development
 
 ```bash
+./gradlew spotlessApply       # format Java sources with prettier-java (needs Node.js)
+./gradlew spotlessCheck       # fail on formatting differences, as CI does
 ./gradlew test                # protocol parsing, CAF writer, end-to-end AirPlay session
 ./gradlew vaadinBuildFrontend # rebuild the client bundle after UI changes
 ./gradlew bootJar             # runnable jar (builds the frontend automatically)

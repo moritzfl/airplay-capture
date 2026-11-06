@@ -21,5 +21,13 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a \
             apt-get install -y --no-install-recommends ffmpeg
 
+      - name: Set up Node.js (prettier-java formatting check)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check formatting
+        run: ./gradlew spotlessCheck
+
       - name: Run tests
         run: ./gradlew test

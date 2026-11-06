@@ -3,6 +3,9 @@ spring-boot = "4.1.2"
 vaadin = "25.3.4"
 jmdns = "3.6.5"
 junit = "6.0.0"
+spotless = "8.11.0"
+prettier-core = "3.9.10"
+prettier-java = "2.11.0"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
@@ -17,3 +20,4 @@ junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 vaadin = { id = "com.vaadin", version.ref = "vaadin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
