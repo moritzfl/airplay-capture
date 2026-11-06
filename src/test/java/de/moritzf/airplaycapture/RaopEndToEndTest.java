@@ -58,6 +58,10 @@ class RaopEndToEndTest {
         dirs.createDirectories();
         Settings settings = new Settings();
         settings.deviceName = "Test Recorder";
+        // Offline and deterministic: no tag completion or catalog checks against online services.
+        settings.metadataEnrichmentEnabled = false;
+        settings.audiobookLookupEnabled = false;
+        settings.audiobookLookupMusicBrainz = false;
         settings.libraryDir = "library";
         settings.formats = new java.util.ArrayList<>(List.of("m4a"));
         settings.minTrackSeconds = 0;
@@ -68,7 +72,7 @@ class RaopEndToEndTest {
         Transcoder transcoder = new Transcoder(settings);
         RecordingManager recorder = new RecordingManager(dirs, library, transcoder, ui, settings);
         RaopServer server = new RaopServer(settings, recorder, ui);
-        server.start();
+        server.start(false);
 
         byte[] aesKey = RaopCrypto.randomAesKey();
         byte[] aesIv = new byte[16];
@@ -164,6 +168,10 @@ class RaopEndToEndTest {
         dirs.createDirectories();
         Settings settings = new Settings();
         settings.deviceName = "Test Recorder";
+        // Offline and deterministic: no tag completion or catalog checks against online services.
+        settings.metadataEnrichmentEnabled = false;
+        settings.audiobookLookupEnabled = false;
+        settings.audiobookLookupMusicBrainz = false;
         settings.formats = new java.util.ArrayList<>(List.of("m4a"));
         settings.minTrackSeconds = 0;
         settings.idleFinalizeSeconds = 3;
@@ -178,7 +186,7 @@ class RaopEndToEndTest {
             settings
         );
         RaopServer server = new RaopServer(settings, recorder, new UiState());
-        server.start();
+        server.start(false);
 
         byte[] aesKey = RaopCrypto.randomAesKey();
         byte[] aesIv = new byte[16];
@@ -248,6 +256,10 @@ class RaopEndToEndTest {
         dirs.createDirectories();
         Settings settings = new Settings();
         settings.deviceName = "Test Recorder";
+        // Offline and deterministic: no tag completion or catalog checks against online services.
+        settings.metadataEnrichmentEnabled = false;
+        settings.audiobookLookupEnabled = false;
+        settings.audiobookLookupMusicBrainz = false;
         settings.formats = new java.util.ArrayList<>(List.of("m4a"));
         settings.minTrackSeconds = 0;
         settings.idleFinalizeSeconds = 3;
@@ -268,7 +280,7 @@ class RaopEndToEndTest {
             settings
         );
         RaopServer server = new RaopServer(settings, recorder, ui);
-        server.start();
+        server.start(false);
 
         byte[] aesKey = RaopCrypto.randomAesKey();
         byte[] aesIv = new byte[16];

@@ -58,6 +58,14 @@ public final class RaopServer {
     }
 
     public synchronized void start() throws IOException {
+        start(true);
+    }
+
+    /**
+     * @param advertise whether to announce the receiver over mDNS; without it, senders can only
+     *                  connect to the port directly (tests)
+     */
+    public synchronized void start(boolean advertise) throws IOException {
         if (running) {
             return;
         }
@@ -92,7 +100,9 @@ public final class RaopServer {
         acceptThread = new Thread(this::acceptLoop, "rtsp-accept");
         acceptThread.setDaemon(true);
         acceptThread.start();
-        advertise();
+        if (advertise) {
+            advertise();
+        }
         ui.changed();
     }
 
