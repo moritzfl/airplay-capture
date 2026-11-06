@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.moritzf.airplaycapture.raop.Dmap;
 import de.moritzf.airplaycapture.raop.Sdp;
+import de.moritzf.airplaycapture.recording.TrackMetadata;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -33,6 +34,10 @@ class ProtocolParsingTest {
         assertEquals("Album", Dmap.text(metadata, "asal"));
         assertEquals("Rock", Dmap.text(metadata, "asgn"));
         assertEquals(3, Dmap.number(metadata, "astn"));
+        assertEquals(
+            new TrackMetadata("Song", "Artist", "Album", "Rock", 3, null, null),
+            Dmap.track(metadata)
+        );
     }
 
     @Test

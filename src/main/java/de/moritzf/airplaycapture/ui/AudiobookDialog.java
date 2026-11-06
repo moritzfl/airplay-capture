@@ -426,6 +426,9 @@ public final class AudiobookDialog extends Dialog {
         previewId = result.id();
         chapterList.removeAll();
         for (AudiobookCreator.ChapterPreview chapter : result.chapters()) {
+            String audio = AppUrls.relative(
+                "api/audiobook-preview/" + result.id() + "/" + chapter.index()
+            );
             Div row = new Div();
             row.addClassName("preview-row");
             Span index = new Span(chapter.index() + 1 + ".");
@@ -451,7 +454,7 @@ public final class AudiobookDialog extends Dialog {
                     "aria-label",
                     "Play boundary sample for chapter " + (chapter.index() + 1)
                 );
-            sample.getElement().setAttribute("data-src", chapter.url());
+            sample.getElement().setAttribute("data-src", audio);
             sample.getElement().setAttribute("onclick", PREVIEW_PLAY_JS);
 
             Button full = new Button("Full");
@@ -463,7 +466,7 @@ public final class AudiobookDialog extends Dialog {
                 "aria-label",
                 "Play full chapter " + (chapter.index() + 1)
             );
-            full.getElement().setAttribute("data-src", chapter.fullUrl());
+            full.getElement().setAttribute("data-src", audio + "/full");
             full.getElement().setAttribute("onclick", PREVIEW_PLAY_JS);
             row.add(index, text, sample, full);
             chapterList.add(row);

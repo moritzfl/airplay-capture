@@ -1,5 +1,6 @@
 package de.moritzf.airplaycapture.raop;
 
+import de.moritzf.airplaycapture.recording.TrackMetadata;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -64,6 +65,19 @@ public final class Dmap {
             return value;
         }
         return new String(data, offset, length, StandardCharsets.UTF_8);
+    }
+
+    /** The track details in a parsed blob. */
+    public static TrackMetadata track(Map<String, Object> metadata) {
+        return new TrackMetadata(
+            text(metadata, "minm"),
+            text(metadata, "asar"),
+            text(metadata, "asal"),
+            text(metadata, "asgn"),
+            number(metadata, "astn"),
+            number(metadata, "asyr"),
+            number(metadata, "mikd")
+        );
     }
 
     public static String text(Map<String, Object> metadata, String tag) {

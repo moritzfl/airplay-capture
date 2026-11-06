@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import de.moritzf.airplaycapture.media.AlacConfig;
 import de.moritzf.airplaycapture.media.CafWriter;
-import de.moritzf.airplaycapture.raop.Sdp;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -24,7 +24,7 @@ class CafWriterTest {
         TestMedia.CafData alac = TestMedia.readCaf(source);
         assertTrue(alac.packets().size() > 10, "expected ALAC packets");
 
-        Sdp.AlacConfig config = new Sdp.AlacConfig(
+        AlacConfig config = new AlacConfig(
             alac.frameLength(),
             0,
             alac.bitDepth(),
@@ -74,7 +74,7 @@ class CafWriterTest {
     void silenceFillsAGapWithoutBreakingTheStream() throws Exception {
         assumeTrue(TestMedia.ffmpegAvailable(), "ffmpeg required");
         TestMedia.CafData alac = TestMedia.readCaf(TestMedia.createAlacCaf(temp, 2.0));
-        Sdp.AlacConfig config = config(alac.frameLength(), alac.channels(), alac.sampleRate());
+        AlacConfig config = config(alac.frameLength(), alac.channels(), alac.sampleRate());
         List<byte[]> packets = alac.packets();
         int half = packets.size() / 2;
         int filled = 5;
@@ -117,7 +117,7 @@ class CafWriterTest {
         assumeTrue(TestMedia.ffmpegAvailable(), "ffmpeg required");
         for (int channels : new int[] { 2, 1 }) {
             // AirPlay senders use 352-sample frames; ffmpeg's encoder cannot produce those.
-            Sdp.AlacConfig config = config(352, channels, 44100);
+            AlacConfig config = config(352, channels, 44100);
             Path out = temp.resolve("silence-" + channels + ".caf");
             try (CafWriter writer = new CafWriter(out, config)) {
                 assertTrue(writer.writeSilence(250));
@@ -129,8 +129,8 @@ class CafWriterTest {
         assertEquals(null, CafWriter.silentFrame(config(352, 6, 44100)), "no silence for 5.1");
     }
 
-    private static Sdp.AlacConfig config(int frameLength, int channels, int sampleRate) {
-        return new Sdp.AlacConfig(frameLength, 0, 16, 40, 10, 14, channels, 255, 0, 0, sampleRate);
+    private static AlacConfig config(int frameLength, int channels, int sampleRate) {
+        return new AlacConfig(frameLength, 0, 16, 40, 10, 14, channels, 255, 0, 0, sampleRate);
     }
 
     private static String decodeErrors(Path file) throws Exception {

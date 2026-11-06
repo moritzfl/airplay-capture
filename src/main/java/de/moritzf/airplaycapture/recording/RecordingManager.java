@@ -7,14 +7,13 @@ import de.moritzf.airplaycapture.UiState;
 import de.moritzf.airplaycapture.library.CoverHash;
 import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.library.LibraryTrack;
+import de.moritzf.airplaycapture.media.AlacConfig;
 import de.moritzf.airplaycapture.media.AudiobookAssembler;
 import de.moritzf.airplaycapture.media.AudiobookLookup;
 import de.moritzf.airplaycapture.media.CafWriter;
 import de.moritzf.airplaycapture.media.ChapterSplitter;
 import de.moritzf.airplaycapture.media.MetadataEnricher;
 import de.moritzf.airplaycapture.media.Transcoder;
-import de.moritzf.airplaycapture.raop.Dmap;
-import de.moritzf.airplaycapture.raop.Sdp;
 import de.moritzf.airplaycapture.util.ClientNameResolver;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -127,7 +126,7 @@ public final class RecordingManager {
     }
 
     /** Called when the RTSP connection announced the stream (codec config). */
-    public void onStreamConfigured(Sdp.AlacConfig config) {
+    public void onStreamConfigured(AlacConfig config) {
         this.lastConfig = config;
         Log.info(
             "recorder",
@@ -143,14 +142,14 @@ public final class RecordingManager {
         );
     }
 
-    public void onMetadata(Map<String, Object> dmap) {
-        String title = clean(Dmap.text(dmap, "minm"));
-        String artist = clean(Dmap.text(dmap, "asar"));
-        String album = clean(Dmap.text(dmap, "asal"));
-        String genre = clean(Dmap.text(dmap, "asgn"));
-        Integer trackNumber = Dmap.number(dmap, "astn");
-        Integer year = Dmap.number(dmap, "asyr");
-        Integer mediaKind = Dmap.number(dmap, "mikd");
+    public void onMetadata(TrackMetadata track) {
+        String title = clean(track.title());
+        String artist = clean(track.artist());
+        String album = clean(track.album());
+        String genre = clean(track.genre());
+        Integer trackNumber = track.trackNumber();
+        Integer year = track.year();
+        Integer mediaKind = track.mediaKind();
 
         synchronized (lock) {
             if (current == null) {
@@ -426,7 +425,7 @@ public final class RecordingManager {
         return draft;
     }
 
-    private volatile Sdp.AlacConfig lastConfig = new Sdp.AlacConfig(
+    private volatile AlacConfig lastConfig = new AlacConfig(
         352,
         0,
         16,
@@ -1246,7 +1245,7 @@ public final class RecordingManager {
     private static final class Draft {
 
         String id;
-        Sdp.AlacConfig config;
+        AlacConfig config;
         CafWriter writer;
         Path caf;
         String title;

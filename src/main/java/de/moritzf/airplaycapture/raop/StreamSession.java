@@ -2,6 +2,7 @@ package de.moritzf.airplaycapture.raop;
 
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.Settings;
+import de.moritzf.airplaycapture.media.AlacConfig;
 import de.moritzf.airplaycapture.recording.RecordingManager;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -51,7 +52,7 @@ final class StreamSession {
 
     private final InetAddress clientAddress;
     private final InetAddress localAddress;
-    private final Sdp.AlacConfig config;
+    private final AlacConfig config;
     private final byte[] aesKey;
     private final byte[] aesIv;
     private final boolean encrypted;

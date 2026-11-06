@@ -282,7 +282,7 @@ final class RtspConnection implements Runnable {
             return;
         }
         switch (contentType) {
-            case "application/x-dmap-tagged" -> recorder.onMetadata(Dmap.parse(body));
+            case "application/x-dmap-tagged" -> recorder.onMetadata(Dmap.track(Dmap.parse(body)));
             case "image/jpeg", "image/png" -> recorder.onArtwork(body, contentType);
             case "image/none" -> recorder.onArtworkNone();
             case "text/parameters" -> handleParameters(new String(body, StandardCharsets.UTF_8));

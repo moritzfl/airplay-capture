@@ -13,7 +13,6 @@ import de.moritzf.airplaycapture.media.AudiobookLookup;
 import de.moritzf.airplaycapture.media.ChapterCatalog;
 import de.moritzf.airplaycapture.media.ChapterSplitter;
 import de.moritzf.airplaycapture.media.FfmpegRunner;
-import de.moritzf.airplaycapture.ui.AppUrls;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -121,15 +120,11 @@ public final class AudiobookCreator {
         }
     }
 
-    /** One planned chapter, with the URLs of its boundary preview and full playback. */
-    public record ChapterPreview(
-        int index,
-        String title,
-        long startMs,
-        long durationMs,
-        String url,
-        String fullUrl
-    ) {}
+    /**
+     * One planned chapter. Its boundary sample and full playback are served under
+     * {@code api/audiobook-preview/<preview id>/<index>} and {@code .../full}.
+     */
+    public record ChapterPreview(int index, String title, long startMs, long durationMs) {}
 
     public record Preview(
         String id,
@@ -938,9 +933,7 @@ public final class AudiobookCreator {
                     i,
                     chapter.title(),
                     Math.max(0, chapter.timelineStartMs() - analysis.startMs),
-                    chapter.durationMs(),
-                    AppUrls.relative("", "api/audiobook-preview/" + analysis.id + "/" + i),
-                    AppUrls.relative("", "api/audiobook-preview/" + analysis.id + "/" + i + "/full")
+                    chapter.durationMs()
                 )
             );
         }

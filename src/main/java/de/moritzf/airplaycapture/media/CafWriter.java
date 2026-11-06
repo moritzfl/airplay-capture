@@ -1,6 +1,5 @@
 package de.moritzf.airplaycapture.media;
 
-import de.moritzf.airplaycapture.raop.Sdp;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -30,7 +29,7 @@ public final class CafWriter implements Closeable {
     private long framesWritten;
     private boolean closed;
 
-    public CafWriter(Path path, Sdp.AlacConfig config) throws IOException {
+    public CafWriter(Path path, AlacConfig config) throws IOException {
         this.path = path;
         this.file = new RandomAccessFile(path.toFile(), "rw");
         file.setLength(0);
@@ -82,7 +81,7 @@ public final class CafWriter implements Closeable {
      * channel element (mono SCE or stereo CPE) flagged as uncompressed, all-zero samples, then the
      * END element. Every ALAC decoder handles this escape form; no encoder is needed.
      */
-    public static byte[] silentFrame(Sdp.AlacConfig config) {
+    public static byte[] silentFrame(AlacConfig config) {
         int channels = config.channels();
         if (channels < 1 || channels > 2) {
             return null;
@@ -115,7 +114,7 @@ public final class CafWriter implements Closeable {
         }
     }
 
-    private long writeHeader(Sdp.AlacConfig config) throws IOException {
+    private long writeHeader(AlacConfig config) throws IOException {
         this.framesPerPacket = config.frameLength();
         this.silentFrame = silentFrame(config);
         writeAscii("caff");
