@@ -54,6 +54,8 @@ tasks.test {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
     maxHeapSize = "1g"
+    // Test classes are independent (temp folders, ephemeral ports): run them in parallel JVMs.
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
 }
 
 // Makes the generated Vaadin client bundle part of the normal runtime classpath, so plain Java
