@@ -84,8 +84,12 @@ public final class AudiobookJobs {
             return status == State.QUEUED || status == State.RUNNING;
         }
 
-        /** Copy for the UI so a later mutation cannot change what a view already rendered. */
-        public Job copy() {
+        /**
+         * Copy for the UI so a later mutation cannot change what a view already rendered. Takes the
+         * lock the worker holds while it updates a job, so a copy never shows a finished job
+         * without its result.
+         */
+        public synchronized Job copy() {
             Job copy = new Job();
             copy.id = id;
             copy.groupKey = groupKey;
