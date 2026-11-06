@@ -13,9 +13,11 @@ import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -23,6 +25,19 @@ class AudiobookCreatorTest {
 
     @TempDir
     Path temp;
+
+    /** Closed after each test, so no queue write races the temp folder cleanup. */
+    private final List<AudiobookJobs> opened = new ArrayList<>();
+
+    private AudiobookJobs open(AudiobookJobs jobs) {
+        opened.add(jobs);
+        return jobs;
+    }
+
+    @AfterEach
+    void closeJobs() {
+        opened.forEach(AudiobookJobs::close);
+    }
 
     @Test
     void buildsAnAudiobookFromExistingM4aRecordings() throws Exception {
@@ -41,7 +56,7 @@ class AudiobookCreatorTest {
 
         UiState ui = new UiState();
         AudiobookCreator creator = new AudiobookCreator(dirs, library, ui, settings);
-        AudiobookJobs jobs = new AudiobookJobs(dirs, ui);
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs, ui));
         jobs.enqueue("group", "Test Book", "Test Author", progress ->
             creator.convert(
                 new AudiobookCreator.Request(
@@ -142,7 +157,7 @@ class AudiobookCreatorTest {
         assertTrue(Files.exists(full));
         assertTrue(full.getFileName().toString().endsWith(".m4a"), full.toString());
 
-        AudiobookJobs jobs = new AudiobookJobs(dirs, new UiState());
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs, new UiState()));
         jobs.enqueue("group", "Test Book", "Test Author", progress ->
             creator.convert(preview.id(), "Test Book", "Test Author", 96, progress)
         );
@@ -230,7 +245,7 @@ class AudiobookCreatorTest {
         assertEquals("Closing", preview.chapters().get(1).title());
         assertEquals("Test catalog", preview.source());
 
-        AudiobookJobs jobs = new AudiobookJobs(dirs, new UiState());
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs, new UiState()));
         jobs.enqueue("group", "Test Book", "Test Author", progress ->
             creator.convert(preview.id(), "Test Book", "Test Author", 96, progress)
         );

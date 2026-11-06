@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.SerializationFeature;
@@ -33,7 +34,7 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>One worker runs one job at a time; queued jobs can be cancelled before they start.
  */
-public final class AudiobookJobs {
+public final class AudiobookJobs implements AutoCloseable {
 
     private static final ObjectMapper JSON = JsonMapper.builder()
         .enable(SerializationFeature.INDENT_OUTPUT)
@@ -381,6 +382,20 @@ public final class AudiobookJobs {
             prune();
             save();
             ui.changed();
+        }
+    }
+
+    /**
+     * Takes no more jobs and gives the running one a moment to write its final state; a job still
+     * encoding afterwards is marked interrupted on the next start. Spring calls this on shutdown.
+     */
+    @Override
+    public void close() {
+        worker.shutdown();
+        try {
+            worker.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

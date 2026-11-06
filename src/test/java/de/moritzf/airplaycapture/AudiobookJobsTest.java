@@ -9,9 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,6 +22,19 @@ class AudiobookJobsTest {
 
     @TempDir
     Path temp;
+
+    /** Closed after each test, so no queue write races the temp folder cleanup. */
+    private final List<AudiobookJobs> opened = new ArrayList<>();
+
+    private AudiobookJobs open(AudiobookJobs jobs) {
+        opened.add(jobs);
+        return jobs;
+    }
+
+    @AfterEach
+    void closeJobs() {
+        opened.forEach(AudiobookJobs::close);
+    }
 
     private AppDirs dirs() {
         AppDirs dirs = new AppDirs(temp.resolve("data"));
@@ -34,7 +49,7 @@ class AudiobookJobsTest {
     @Test
     void reportsProgressAndKeepsTheFinishedDownload() throws Exception {
         UiState ui = new UiState();
-        AudiobookJobs jobs = new AudiobookJobs(dirs(), ui);
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs(), ui));
         CountDownLatch release = new CountDownLatch(1);
 
         AudiobookJobs.Job job = jobs.enqueue("group", "Test Book", "Author", progress -> {
@@ -57,7 +72,7 @@ class AudiobookJobsTest {
 
     @Test
     void exposesTheRunningStepAndFraction() throws Exception {
-        AudiobookJobs jobs = new AudiobookJobs(dirs(), new UiState());
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs(), new UiState()));
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch finish = new CountDownLatch(1);
         AudiobookJobs.Job job = jobs.enqueue("group", "Slow Book", "", progress -> {
@@ -79,7 +94,7 @@ class AudiobookJobsTest {
 
     @Test
     void queuedJobsCanBeCancelledBeforeTheyRun() throws Exception {
-        AudiobookJobs jobs = new AudiobookJobs(dirs(), new UiState());
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs(), new UiState()));
         CountDownLatch running = new CountDownLatch(1);
         CountDownLatch finish = new CountDownLatch(1);
         jobs.enqueue("first", "First Book", "", progress -> {
@@ -103,7 +118,7 @@ class AudiobookJobsTest {
 
     @Test
     void runningJobsCanBeCancelled() throws Exception {
-        AudiobookJobs jobs = new AudiobookJobs(dirs(), new UiState());
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs(), new UiState()));
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch stop = new CountDownLatch(1);
         AudiobookJobs.Job job = jobs.enqueue("group", "Long Book", "", progress -> {
@@ -128,7 +143,7 @@ class AudiobookJobsTest {
 
     @Test
     void aSuccessfulBuildClearsEarlierFailedAttemptsOfTheSameBook() throws Exception {
-        AudiobookJobs jobs = new AudiobookJobs(dirs(), new UiState());
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs(), new UiState()));
         AudiobookJobs.Job failed = jobs.enqueue("book", "Book", "", progress -> {
             throw new java.io.IOException("disk full");
         });
@@ -147,7 +162,7 @@ class AudiobookJobsTest {
 
     @Test
     void failuresAreKeptWithTheirReason() throws Exception {
-        AudiobookJobs jobs = new AudiobookJobs(dirs(), new UiState());
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs(), new UiState()));
         AudiobookJobs.Job job = jobs.enqueue("group", "Broken Book", "", progress -> {
             throw new java.io.IOException("ffmpeg m4b failed: disk full");
         });
@@ -160,11 +175,13 @@ class AudiobookJobsTest {
     @Test
     void queueSurvivesARestartAndInterruptedJobsAreMarked() throws Exception {
         AppDirs dirs = dirs();
-        AudiobookJobs first = new AudiobookJobs(dirs, new UiState());
+        AudiobookJobs first = open(new AudiobookJobs(dirs, new UiState()));
         AudiobookJobs.Job done = first.enqueue("group", "Finished Book", "Author", progress ->
             result("Finished Book")
         );
         waitFor(first, done.id, AudiobookJobs.State.DONE);
+        // The worker writes the queue once more after a job finishes; a stopped process does not.
+        first.close();
 
         // Simulate a job that was running when the process died.
         AudiobookJobs.Job running = new AudiobookJobs.Job();
@@ -182,7 +199,7 @@ class AudiobookJobsTest {
         );
         java.nio.file.Files.writeString(first.jobsFile(), merged);
 
-        AudiobookJobs restarted = new AudiobookJobs(dirs, new UiState());
+        AudiobookJobs restarted = open(new AudiobookJobs(dirs, new UiState()));
         List<AudiobookJobs.Job> loaded = restarted.jobs();
         assertEquals(2, loaded.size());
         AudiobookJobs.Job finished = restarted.find(done.id).orElseThrow();
@@ -196,7 +213,7 @@ class AudiobookJobsTest {
 
     @Test
     void historyCanBeClearedButActiveJobsStay() throws Exception {
-        AudiobookJobs jobs = new AudiobookJobs(dirs(), new UiState());
+        AudiobookJobs jobs = open(new AudiobookJobs(dirs(), new UiState()));
         AudiobookJobs.Job done = jobs.enqueue("a", "Done Book", "", progress -> result("Done"));
         waitFor(jobs, done.id, AudiobookJobs.State.DONE);
         CountDownLatch finish = new CountDownLatch(1);

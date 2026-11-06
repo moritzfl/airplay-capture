@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - A finished audiobook conversion could briefly show as ready without its download.
+- Stopping the app while the audiobook queue was being saved could leave its file incomplete; the
+  app now lets the queue finish writing first.
 
 ## [1.0.2] - 2026-11-06
 
