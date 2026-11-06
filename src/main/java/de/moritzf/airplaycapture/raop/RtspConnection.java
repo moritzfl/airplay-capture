@@ -200,7 +200,7 @@ final class RtspConnection implements Runnable {
                     RaopCrypto.appleResponse(
                         decodeChallenge(challenge),
                         localAddress.getAddress(),
-                        server.macAddress()
+                        server.deviceId()
                     )
                 );
             } catch (Exception e) {

@@ -7,6 +7,7 @@ import de.moritzf.airplaycapture.UiState;
 import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.media.Transcoder;
 import de.moritzf.airplaycapture.raop.RaopServer;
+import de.moritzf.airplaycapture.raop.ReceiverId;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
 import de.moritzf.airplaycapture.recording.RecordingManager;
@@ -90,8 +91,14 @@ public class AirplayConfig {
     }
 
     @Bean
-    public RaopServer raopServer(Settings settings, RecordingManager recorder, UiState uiState) {
-        return new RaopServer(settings, recorder, uiState);
+    public RaopServer raopServer(
+        AppDirs dirs,
+        Settings settings,
+        RecordingManager recorder,
+        UiState uiState
+    ) {
+        byte[] deviceId = ReceiverId.load(dirs.dataDir().resolve("receiver-id"));
+        return new RaopServer(settings, recorder, uiState, deviceId);
     }
 
     private static void cleanTempFiles(AppDirs dirs) {

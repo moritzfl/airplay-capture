@@ -15,7 +15,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
@@ -28,6 +27,7 @@ public final class RaopServer {
 
     private final RecordingManager recorder;
     private final UiState ui;
+    private final byte[] deviceId;
     private volatile Settings settings;
 
     private volatile boolean running;
@@ -40,10 +40,17 @@ public final class RaopServer {
     private volatile InetAddress sessionClient;
     private volatile int port;
 
+    /** A receiver with a fresh, unstored device ID, for tests and one-off runs. */
     public RaopServer(Settings settings, RecordingManager recorder, UiState ui) {
+        this(settings, recorder, ui, ReceiverId.generate(new java.security.SecureRandom()));
+    }
+
+    /** @param deviceId the six-byte AirPlay device ID, see {@link ReceiverId} */
+    public RaopServer(Settings settings, RecordingManager recorder, UiState ui, byte[] deviceId) {
         this.settings = settings;
         this.recorder = recorder;
         this.ui = ui;
+        this.deviceId = deviceId.clone();
     }
 
     public void updateSettings(Settings settings) {
@@ -169,8 +176,7 @@ public final class RaopServer {
         txt.put("vs", "130.14");
         txt.put("am", "AirPort10,115");
         txt.put("sf", "0x4");
-        String mac = macHex();
-        String name = mac + "@" + settings.deviceName;
+        String name = ReceiverId.format(deviceId) + "@" + settings.deviceName;
         try {
             String hostName = networkInterface.address().getHostAddress().replace('.', '-');
             jmds = JmDNS.create(networkInterface.address(), hostName);
@@ -232,18 +238,9 @@ public final class RaopServer {
         return networkInterface == null ? null : networkInterface.address();
     }
 
-    public byte[] macAddress() {
-        return networkInterface == null
-            ? new byte[] { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 }
-            : networkInterface.mac();
-    }
-
-    private String macHex() {
-        StringBuilder builder = new StringBuilder();
-        for (byte b : macAddress()) {
-            builder.append(String.format(Locale.ROOT, "%02X", b));
-        }
-        return builder.toString();
+    /** The AirPlay device ID; senders check it in the Apple-Challenge response. */
+    public byte[] deviceId() {
+        return deviceId.clone();
     }
 
     public int port() {

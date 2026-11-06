@@ -16,11 +16,7 @@ import java.util.List;
 /** Picks the LAN interface used for mDNS advertisement and RAOP sockets. */
 public final class NetworkTools {
 
-    public record InterfaceInfo(
-        NetworkInterface networkInterface,
-        InetAddress address,
-        byte[] mac
-    ) {}
+    public record InterfaceInfo(NetworkInterface networkInterface, InetAddress address) {}
 
     private NetworkTools() {}
 
@@ -31,7 +27,7 @@ public final class NetworkTools {
             if (networkInterface == null) {
                 throw new IOException("no interface for address " + requested);
             }
-            return new InterfaceInfo(networkInterface, address, macOf(networkInterface, address));
+            return new InterfaceInfo(networkInterface, address);
         }
         // The default route usually points at the LAN interface, which is the only one AirPlay
         // clients can reach. This also copes with DSM's ovs_eth0/bond0 names.
@@ -49,11 +45,7 @@ public final class NetworkTools {
             }
             InetAddress address = ipv4Of(networkInterface);
             if (address != null) {
-                return new InterfaceInfo(
-                    networkInterface,
-                    address,
-                    macOf(networkInterface, address)
-                );
+                return new InterfaceInfo(networkInterface, address);
             }
         }
 
@@ -80,16 +72,12 @@ public final class NetworkTools {
         for (NetworkInterface networkInterface : candidates) {
             InetAddress address = ipv4Of(networkInterface);
             if (address != null) {
-                return new InterfaceInfo(
-                    networkInterface,
-                    address,
-                    macOf(networkInterface, address)
-                );
+                return new InterfaceInfo(networkInterface, address);
             }
         }
         InetAddress loopback = InetAddress.getByName("127.0.0.1");
         NetworkInterface networkInterface = NetworkInterface.getByInetAddress(loopback);
-        return new InterfaceInfo(networkInterface, loopback, macOf(networkInterface, loopback));
+        return new InterfaceInfo(networkInterface, loopback);
     }
 
     private static int score(NetworkInterface networkInterface) {
@@ -206,28 +194,5 @@ public final class NetworkTools {
             }
         }
         return null;
-    }
-
-    private static byte[] macOf(NetworkInterface networkInterface, InetAddress address) {
-        try {
-            byte[] mac = networkInterface == null ? null : networkInterface.getHardwareAddress();
-            if (mac != null && mac.length == 6) {
-                return mac;
-            }
-        } catch (SocketException ignored) {
-            // fall through
-        }
-        try {
-            String seed = InetAddress.getLocalHost().getHostName() + "/" + address.getHostAddress();
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(
-                seed.getBytes(StandardCharsets.UTF_8)
-            );
-            byte[] mac = new byte[6];
-            System.arraycopy(hash, 0, mac, 0, 6);
-            mac[0] = (byte) ((mac[0] & 0xFC) | 0x02); // locally administered, unicast
-            return mac;
-        } catch (Exception e) {
-            return new byte[] { 0x02, 0x00, 0x00, 0x00, 0x00, 0x01 };
-        }
     }
 }
