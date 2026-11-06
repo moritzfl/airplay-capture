@@ -15,11 +15,30 @@ jobs:
       - name: Set up Java 21 and Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # ffmpeg and its ~80 libraries come from the runner's Ubuntu mirror, which can take minutes.
+      # Keep the downloaded packages; apt still installs them properly, it only skips the download.
+      - name: Key for the cached ffmpeg packages
+        id: apt-key
+        run: |
+          echo "prefix=apt-ffmpeg-${ImageOS}-" >> "$GITHUB_OUTPUT"
+          echo "key=apt-ffmpeg-${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached ffmpeg packages
+        uses: actions/cache@v4
+        with:
+          path: ~/apt-archives
+          key: ${{ steps.apt-key.outputs.key }}
+          # A newer runner image starts from the previous packages and downloads only what changed.
+          restore-keys: ${{ steps.apt-key.outputs.prefix }}
+
       - name: Install ffmpeg (needed by media and end-to-end tests)
         run: |
+          mkdir -p ~/apt-archives/partial
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a \
-            apt-get install -y --no-install-recommends ffmpeg
+            apt-get install -y --no-install-recommends -o Dir::Cache::archives="$HOME/apt-archives" ffmpeg
+          sudo chmod -R a+r ~/apt-archives
+          ffmpeg -hide_banner -version | head -1
 
       - name: Set up Node.js (prettier-java formatting check)
         uses: actions/setup-node@v4
@@ -29,5 +48,6 @@ jobs:
       - name: Check formatting
         run: ./gradlew spotlessCheck
 
+      # The tests need no web client bundle; building it would add ~15 s to every run.
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew test -x vaadinBuildFrontend -x copyVaadinBundle
