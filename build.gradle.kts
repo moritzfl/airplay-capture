@@ -27,6 +27,8 @@ dependencies {
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
+    // The plain library, checked from JUnit tests: archunit-junit5's engine targets JUnit 5.
+    testImplementation(libs.archunit)
     testRuntimeOnly(libs.junit.launcher)
 }
 

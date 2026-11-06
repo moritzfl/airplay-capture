@@ -230,6 +230,8 @@ implemented, and **one sender at a time** can stream. Record only content you ar
 | Export | ffmpeg (AAC, MP3, ALAC) with tags and cover art |
 
 The receiver/recording core has no Spring or Vaadin dependency; the web layer is a thin shell.
+`ArchitectureTest` (ArchUnit) enforces this and keeps the packages free of cycles: `raop` feeds
+`recording`, which uses `media` and `library`; `ui`, `web` and `config` sit on top.
 
 ### How recording works
 
@@ -325,7 +327,7 @@ All endpoints live outside Vaadin's `/app/` mapping and are useful for integrati
 ```bash
 ./gradlew spotlessApply       # format Java sources with prettier-java (needs Node.js)
 ./gradlew spotlessCheck       # fail on formatting differences, as CI does
-./gradlew test                # protocol parsing, CAF writer, end-to-end AirPlay session
+./gradlew test                # protocol parsing, CAF writer, end-to-end AirPlay session, package rules
 ./gradlew vaadinBuildFrontend # rebuild the client bundle after UI changes
 ./gradlew bootJar             # runnable jar (builds the frontend automatically)
 ```
