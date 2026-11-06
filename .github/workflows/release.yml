@@ -16,7 +16,7 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: node scripts/changelog-section.mjs "${GITHUB_REF_NAME}"
 
   test:
@@ -27,7 +27,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Use the tag as the application version
         run: |
@@ -82,10 +82,10 @@ jobs:
     needs: docker
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check out the SPK framework
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: moritzfl/synology-docker-bridge
           ref: d91ad4f1294921a0db6c6956d593f9445092a4b7
