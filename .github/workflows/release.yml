@@ -97,7 +97,7 @@ jobs:
       - name: Set up Node.js 22 (SPK generator)
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
 
       - name: Set up QEMU and buildx for ARM packages
         uses: docker/setup-qemu-action@v3
