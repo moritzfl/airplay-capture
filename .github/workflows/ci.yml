@@ -43,7 +43,7 @@ jobs:
       - name: Set up Node.js (prettier-java formatting check)
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
 
       - name: Check formatting
         run: ./gradlew spotlessCheck
