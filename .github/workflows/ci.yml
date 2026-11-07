@@ -41,7 +41,7 @@ jobs:
           ffmpeg -hide_banner -version | head -1
 
       - name: Set up Node.js (prettier-java formatting check)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
 
