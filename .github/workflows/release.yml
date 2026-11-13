@@ -92,7 +92,7 @@ jobs:
           path: synology-docker-bridge
 
       - name: Set up Java 21 and Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Set up Node.js 22 (SPK generator)
         uses: actions/setup-node@v7
