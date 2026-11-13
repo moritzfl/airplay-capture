@@ -136,7 +136,7 @@ jobs:
           } > release-notes.md
 
       - name: Create the GitHub Release with the SPK and the jar
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: AirPlay Capture ${{ github.ref_name }}
           body_path: release-notes.md
