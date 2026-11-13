@@ -267,10 +267,7 @@ public final class AudiobookLookup {
     private Verdict musicBrainz(String album, String artist, Options options, boolean titleOnly)
         throws Exception {
         throttle();
-        String query = "releasegroup:\"" + album.replace("\"", "") + "\"";
-        if (!titleOnly && artist != null && !artist.isBlank()) {
-            query += " AND artist:\"" + artist.replace("\"", "") + "\"";
-        }
+        String query = ChapterCatalog.musicBrainzQuery(album, titleOnly ? null : artist);
         String url =
             "https://musicbrainz.org/ws/2/release-group/?query=" +
             encode(query) +

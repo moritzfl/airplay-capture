@@ -369,10 +369,7 @@ public class ChapterCatalog {
         long expectedDurationMs,
         String contactSetting
     ) throws Exception {
-        String query = "releasegroup:\"" + subject.replace("\"", "") + "\"";
-        if (artist != null && !artist.isBlank()) {
-            query += " AND artist:\"" + artist.replace("\"", "") + "\"";
-        }
+        String query = musicBrainzQuery(subject, artist);
         String contact =
             contactSetting == null || contactSetting.isBlank()
                 ? "self-hosted"
@@ -386,10 +383,9 @@ public class ChapterCatalog {
         );
         List<Group> groups = musicBrainzGroups(body, subject, artist);
         if (groups.isEmpty() && artist != null && !artist.isBlank()) {
-            String titleOnly = "releasegroup:\"" + subject.replace("\"", "") + "\"";
             body = get(
                 "https://musicbrainz.org/ws/2/release-group/?query=" +
-                    encode(titleOnly) +
+                    encode(musicBrainzQuery(subject, null)) +
                     "&fmt=json&limit=5",
                 "AirPlayCapture/1.0 (" + contact + ")",
                 false
@@ -564,6 +560,22 @@ public class ChapterCatalog {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    /**
+     * MusicBrainz search query as a keyword bag instead of field-restricted phrases. Field
+     * restrictions lost real audiobooks: an exact {@code artist:"George R.R. Martin"} phrase does
+     * not match the indexed "George R. R. Martin", and senders often put the narrator or a
+     * playlist name into the artist field. The unrestricted search ranks by relevance, so extra
+     * or wrong keywords only lower the score instead of removing the result; the strict
+     * post-filters in {@link #musicBrainzGroups} keep wrong matches out.
+     */
+    static String musicBrainzQuery(String subject, String artist) {
+        String query = "\"" + subject.replace("\"", "") + "\"";
+        if (artist != null && !artist.isBlank()) {
+            query += " \"" + artist.replace("\"", "") + "\"";
+        }
+        return query;
+    }
 
     static List<Chapter> cleanTitles(List<Chapter> chapters, String album) {
         if (album == null || album.isBlank()) {

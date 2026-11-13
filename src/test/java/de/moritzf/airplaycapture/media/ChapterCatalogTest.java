@@ -90,6 +90,23 @@ class ChapterCatalogTest {
     }
 
     @Test
+    void buildsAKeywordBagInsteadOfFieldRestrictedPhrases() {
+        // Field restrictions lost real audiobooks: exact artist phrases fail on punctuation
+        // variants ("George R.R. Martin" vs the indexed "George R. R. Martin") and on
+        // narrator/playlist names in the artist field.
+        assertEquals(
+            "\"Die drei ??? und der Phantomsee\" \"Die drei ???\"",
+            ChapterCatalog.musicBrainzQuery("Die drei ??? und der Phantomsee", "Die drei ???")
+        );
+        assertEquals("\"Der Hobbit\"", ChapterCatalog.musicBrainzQuery("Der Hobbit", null));
+        assertEquals("\"Der Hobbit\"", ChapterCatalog.musicBrainzQuery("Der Hobbit", "  "));
+        assertEquals(
+            "\"Ein Buch\" \"Autor\"",
+            ChapterCatalog.musicBrainzQuery("Ein \"Buch\"", "Autor")
+        );
+    }
+
+    @Test
     void rejectsCatalogListsWithoutUsableDurations() {
         String json = """
         {"data":[
