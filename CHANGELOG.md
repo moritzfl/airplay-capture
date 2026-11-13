@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-13
+
+### Added
+
+- Automatic audiobook assembly looks up the catalog edition whose length matches the recording.
+  When it fits, the book gets that edition's chapter names, title and author, with the chapter
+  cuts placed in pauses; otherwise the chapters from the sender are kept.
+
+### Fixed
+
+- Catalog searches missed audiobooks on MusicBrainz when the artist field held a narrator, the
+  app or a playlist name, or a differently punctuated author name such as "George R.R. Martin".
+
+### Changed
+
+- Vaadin 25.3.5.
+
 ## [1.0.3] - 2026-11-06
 
 ### Added
@@ -55,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker images for linux/amd64 and linux/arm64 on `ghcr.io`.
 - Runs natively on macOS, Linux and Windows.
 
-[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/1.0.3...HEAD
+[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/moritzfl/airplay-capture/compare/1.0.3...1.1.0
 [1.0.3]: https://github.com/moritzfl/airplay-capture/compare/1.0.2...1.0.3
 [1.0.2]: https://github.com/moritzfl/airplay-capture/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/moritzfl/airplay-capture/compare/1.0.0...1.0.1
