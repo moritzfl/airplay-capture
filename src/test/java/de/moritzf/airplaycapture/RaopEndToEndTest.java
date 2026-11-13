@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import de.moritzf.airplaycapture.library.Library;
+import de.moritzf.airplaycapture.media.ChapterCatalog;
 import de.moritzf.airplaycapture.media.Transcoder;
 import de.moritzf.airplaycapture.raop.RaopCrypto;
 import de.moritzf.airplaycapture.raop.RaopServer;
@@ -30,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -260,6 +262,7 @@ class RaopEndToEndTest {
         settings.metadataEnrichmentEnabled = false;
         settings.audiobookLookupEnabled = false;
         settings.audiobookLookupMusicBrainz = false;
+        settings.audiobookCatalogChapters = false;
         settings.formats = new java.util.ArrayList<>(List.of("m4a"));
         settings.minTrackSeconds = 0;
         settings.idleFinalizeSeconds = 3;
@@ -350,6 +353,247 @@ class RaopEndToEndTest {
             TestMedia.ffprobe(file, "-show_entries", "stream=codec_type").contains("video"),
             "cover art not embedded"
         );
+    }
+
+    @Test
+    void picksTheCatalogEditionThatMatchesTheRecordedDuration() throws Exception {
+        assumeTrue(TestMedia.ffmpegAvailable(), "ffmpeg required");
+
+        Path source = TestMedia.createAlacCaf(temp, 2.0);
+        TestMedia.CafData alac = TestMedia.readCaf(source);
+
+        AppDirs dirs = new AppDirs(temp.resolve("catalog-data"));
+        dirs.createDirectories();
+        Settings settings = new Settings();
+        settings.deviceName = "Test Recorder";
+        // Offline and deterministic: the stub catalog replaces the online lookup.
+        settings.metadataEnrichmentEnabled = false;
+        settings.audiobookLookupEnabled = false;
+        settings.audiobookLookupMusicBrainz = false;
+        settings.formats = new java.util.ArrayList<>(List.of("m4a"));
+        settings.minTrackSeconds = 0;
+        settings.idleFinalizeSeconds = 3;
+        settings.audiobookEnabled = true;
+        settings.audiobookAutoAssemble = true;
+        settings.audiobookGenres = "audiobook";
+        settings.audiobookLongTrackSeconds = 0;
+        settings.audiobookIdleSeconds = 60;
+        settings.audiobookKeepChapters = true;
+
+        // The recorded book is 3 x 2 s; only the edition with matching 3 x 2 s chapters fits.
+        ChapterCatalog catalog = new ChapterCatalog() {
+            @Override
+            public Optional<ChapterCatalog.Result> lookup(
+                String title,
+                String album,
+                String artist,
+                long expectedDurationMs,
+                ChapterCatalog.Options options
+            ) {
+                return Optional.of(
+                    new ChapterCatalog.Result(
+                        "stub-1",
+                        "Stub Catalog",
+                        "Das Katalog-Buch",
+                        "Katalog-Autor",
+                        2024,
+                        null,
+                        List.of(
+                            new ChapterCatalog.Chapter("Intro", 2_000),
+                            new ChapterCatalog.Chapter("Middle", 2_000),
+                            new ChapterCatalog.Chapter("End", 2_000)
+                        ),
+                        1.0
+                    )
+                );
+            }
+        };
+
+        Library library = new Library(dirs, settings);
+        UiState ui = new UiState();
+        RecordingManager recorder = new RecordingManager(
+            dirs,
+            library,
+            new Transcoder(settings),
+            ui,
+            settings,
+            catalog
+        );
+        RaopServer server = new RaopServer(settings, recorder, ui);
+        server.start(false);
+
+        byte[] aesKey = RaopCrypto.randomAesKey();
+        byte[] aesIv = new byte[16];
+        new SecureRandom().nextBytes(aesIv);
+
+        try (FakeSender sender = new FakeSender("127.0.0.1", server.port())) {
+            sender.options();
+            sender.announce(TestMedia.fmtp(alac), aesKey, aesIv);
+            sender.setup();
+            sender.record();
+
+            long rtp = 0;
+            for (int chapter = 1; chapter <= 3; chapter++) {
+                sender.metadata(
+                    Map.of(
+                        "minm",
+                        "Chapter " + chapter,
+                        "asar",
+                        "Narrator " + chapter,
+                        "asal",
+                        "Test Book",
+                        "asgn",
+                        "Audiobook",
+                        "astn",
+                        String.valueOf(chapter)
+                    )
+                );
+                sender.progress(rtp, rtp + 88200);
+                rtp = sender.sendAudio(alac.packets(), aesKey, aesIv, rtp);
+                Thread.sleep(300);
+            }
+            sender.teardown();
+        }
+
+        var book = waitForAudiobook(library);
+        server.stop();
+        recorder.shutdown();
+
+        assertEquals("ready", book.status);
+        // The duration-matched edition carries verified metadata; sender values are replaced.
+        assertEquals("Das Katalog-Buch", book.title);
+        assertEquals("Katalog-Autor", book.artist);
+        assertEquals(3, book.chapterCount);
+        String chapters = TestMedia.ffprobe(
+            library.file(book, "m4b"),
+            "-show_chapters",
+            "-show_entries",
+            "chapter=start_time:chapter_tags=title",
+            "-of",
+            "json"
+        );
+        assertTrue(chapters.contains("Intro"), chapters);
+        assertTrue(chapters.contains("Middle"), chapters);
+        assertTrue(chapters.contains("End"), chapters);
+    }
+
+    @Test
+    void keepsSenderChaptersWhenTheCatalogEditionDoesNotFitTheDuration() throws Exception {
+        assumeTrue(TestMedia.ffmpegAvailable(), "ffmpeg required");
+
+        Path source = TestMedia.createAlacCaf(temp, 2.0);
+        TestMedia.CafData alac = TestMedia.readCaf(source);
+
+        AppDirs dirs = new AppDirs(temp.resolve("misfit-data"));
+        dirs.createDirectories();
+        Settings settings = new Settings();
+        settings.deviceName = "Test Recorder";
+        settings.metadataEnrichmentEnabled = false;
+        settings.audiobookLookupEnabled = false;
+        settings.audiobookLookupMusicBrainz = false;
+        settings.formats = new java.util.ArrayList<>(List.of("m4a"));
+        settings.minTrackSeconds = 0;
+        settings.idleFinalizeSeconds = 3;
+        settings.audiobookEnabled = true;
+        settings.audiobookAutoAssemble = true;
+        settings.audiobookGenres = "audiobook";
+        settings.audiobookLongTrackSeconds = 0;
+        settings.audiobookIdleSeconds = 60;
+        settings.audiobookKeepChapters = true;
+
+        // An unabridged edition far longer than the 3 x 2 s recording must not be used.
+        ChapterCatalog catalog = new ChapterCatalog() {
+            @Override
+            public Optional<ChapterCatalog.Result> lookup(
+                String title,
+                String album,
+                String artist,
+                long expectedDurationMs,
+                ChapterCatalog.Options options
+            ) {
+                return Optional.of(
+                    new ChapterCatalog.Result(
+                        "stub-2",
+                        "Stub Catalog",
+                        "Das lange Katalog-Buch",
+                        "Katalog-Autor",
+                        2024,
+                        null,
+                        List.of(
+                            new ChapterCatalog.Chapter("Stunde 1", 3_600_000),
+                            new ChapterCatalog.Chapter("Stunde 2", 3_600_000)
+                        ),
+                        1.0
+                    )
+                );
+            }
+        };
+
+        Library library = new Library(dirs, settings);
+        UiState ui = new UiState();
+        RecordingManager recorder = new RecordingManager(
+            dirs,
+            library,
+            new Transcoder(settings),
+            ui,
+            settings,
+            catalog
+        );
+        RaopServer server = new RaopServer(settings, recorder, ui);
+        server.start(false);
+
+        byte[] aesKey = RaopCrypto.randomAesKey();
+        byte[] aesIv = new byte[16];
+        new SecureRandom().nextBytes(aesIv);
+
+        try (FakeSender sender = new FakeSender("127.0.0.1", server.port())) {
+            sender.options();
+            sender.announce(TestMedia.fmtp(alac), aesKey, aesIv);
+            sender.setup();
+            sender.record();
+
+            long rtp = 0;
+            for (int chapter = 1; chapter <= 3; chapter++) {
+                sender.metadata(
+                    Map.of(
+                        "minm",
+                        "Chapter " + chapter,
+                        "asar",
+                        "Narrator " + chapter,
+                        "asal",
+                        "Test Book",
+                        "asgn",
+                        "Audiobook",
+                        "astn",
+                        String.valueOf(chapter)
+                    )
+                );
+                sender.progress(rtp, rtp + 88200);
+                rtp = sender.sendAudio(alac.packets(), aesKey, aesIv, rtp);
+                Thread.sleep(300);
+            }
+            sender.teardown();
+        }
+
+        var book = waitForAudiobook(library);
+        server.stop();
+        recorder.shutdown();
+
+        assertEquals("ready", book.status);
+        // Nothing from the catalog applies: sender chapters and metadata stay.
+        assertEquals("Test Book", book.title);
+        assertEquals("Narrator 1", book.artist);
+        assertEquals(3, book.chapterCount);
+        String chapters = TestMedia.ffprobe(
+            library.file(book, "m4b"),
+            "-show_chapters",
+            "-show_entries",
+            "chapter=start_time:chapter_tags=title",
+            "-of",
+            "json"
+        );
+        assertTrue(chapters.contains("Chapter 1"), chapters);
+        assertFalse(chapters.contains("Stunde 1"), chapters);
     }
 
     private static de.moritzf.airplaycapture.library.LibraryTrack waitForAudiobook(Library library)

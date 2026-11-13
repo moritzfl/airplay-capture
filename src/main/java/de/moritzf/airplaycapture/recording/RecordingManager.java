@@ -11,6 +11,7 @@ import de.moritzf.airplaycapture.media.AlacConfig;
 import de.moritzf.airplaycapture.media.AudiobookAssembler;
 import de.moritzf.airplaycapture.media.AudiobookLookup;
 import de.moritzf.airplaycapture.media.CafWriter;
+import de.moritzf.airplaycapture.media.ChapterCatalog;
 import de.moritzf.airplaycapture.media.ChapterSplitter;
 import de.moritzf.airplaycapture.media.MetadataEnricher;
 import de.moritzf.airplaycapture.media.Transcoder;
@@ -56,6 +57,7 @@ public final class RecordingManager {
     private final Transcoder transcoder;
     private final UiState ui;
     private final AudiobookLookup audiobookLookup = new AudiobookLookup();
+    private final ChapterCatalog chapterCatalog;
 
     private final Object lock = new Object();
     private final ExecutorService exporter = Executors.newSingleThreadExecutor(r -> {
@@ -88,11 +90,23 @@ public final class RecordingManager {
         UiState ui,
         Settings settings
     ) {
+        this(dirs, library, transcoder, ui, settings, new ChapterCatalog());
+    }
+
+    public RecordingManager(
+        AppDirs dirs,
+        Library library,
+        Transcoder transcoder,
+        UiState ui,
+        Settings settings,
+        ChapterCatalog chapterCatalog
+    ) {
         this.dirs = dirs;
         this.library = library;
         this.transcoder = transcoder;
         this.ui = ui;
         this.settings = settings;
+        this.chapterCatalog = chapterCatalog;
         this.metadataEnricher = new MetadataEnricher(
             settings.audiobookLookupCountry,
             settings.metadataEnrichmentDeezer
@@ -805,24 +819,54 @@ public final class RecordingManager {
             .filter(path -> path != null && Files.exists(path))
             .findFirst()
             .orElse(null);
-        String baseName = library.uniqueBaseName(
-            sanitize(book.author.isBlank() ? book.title : book.author + " - " + book.title),
-            ".m4b"
-        );
-        Path output = library.libraryDir().resolve(baseName + ".m4b");
+        // The catalog edition that matches the recorded duration also carries verified
+        // title/author metadata; sender values are only a fallback.
+        ChapterCatalog.Result catalog = lookupCatalogChapters(book, duration);
+        String bookTitle = book.title;
+        String bookAuthor = book.author;
+        String baseName = null;
+        Path output = null;
         Path splitWork = null;
         try {
             Files.createDirectories(library.libraryDir());
-            if (settings.audiobookSplitLongTracks) {
+            boolean fromCatalog = false;
+            if (catalog != null) {
                 splitWork = Files.createTempDirectory(dirs.tmpDir(), "book-");
+                List<AudiobookAssembler.Chapter> planned = catalogChapters(
+                    usable,
+                    catalog,
+                    duration,
+                    splitWork
+                );
+                if (planned != null) {
+                    chapters = planned;
+                    fromCatalog = true;
+                    if (!catalog.album().isBlank()) {
+                        bookTitle = catalog.album();
+                    }
+                    if (!catalog.artist().isBlank()) {
+                        bookAuthor = catalog.artist();
+                    }
+                }
+            }
+            if (!fromCatalog && settings.audiobookSplitLongTracks) {
+                if (splitWork == null) {
+                    splitWork = Files.createTempDirectory(dirs.tmpDir(), "book-");
+                }
                 chapters = planChapters(usable, chapters, duration, splitWork);
             }
+            duration = chapters.stream().mapToLong(AudiobookAssembler.Chapter::durationMs).sum();
+            baseName = library.uniqueBaseName(
+                sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle),
+                ".m4b"
+            );
+            output = library.libraryDir().resolve(baseName + ".m4b");
             new AudiobookAssembler(settings.ffmpegPath, settings.audiobookBitrateKbps).assemble(
                 chapters,
                 cover,
                 output,
-                book.title,
-                book.author
+                bookTitle,
+                bookAuthor
             );
         } catch (Exception e) {
             Log.error("audiobook", "cannot assemble " + book.title + ": " + e.getMessage());
@@ -837,9 +881,9 @@ public final class RecordingManager {
         LibraryTrack track = new LibraryTrack();
         track.id = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         track.bookId = book.id;
-        track.title = book.title;
-        track.artist = book.author;
-        track.album = book.title;
+        track.title = bookTitle;
+        track.artist = bookAuthor;
+        track.album = bookTitle;
         track.genre = "Audiobook";
         track.mediaKind = 8;
         track.durationMs = duration;
@@ -914,6 +958,110 @@ public final class RecordingManager {
             Log.info("library", "removed " + usable.size() + " chapter files (keepChapters=false)");
         }
         ui.changed();
+    }
+
+    /** Looks up the catalog edition that best matches the recorded duration, if enabled. */
+    private ChapterCatalog.Result lookupCatalogChapters(Book book, long totalMs) {
+        if (!settings.audiobookCatalogChapters) {
+            return null;
+        }
+        return chapterCatalog
+            .lookup(book.title, null, book.author, totalMs, catalogOptions())
+            .orElse(null);
+    }
+
+    private ChapterCatalog.Options catalogOptions() {
+        boolean enabled = settings.audiobookCatalogChapters;
+        return new ChapterCatalog.Options(
+            enabled,
+            enabled && settings.audiobookLookupMusicBrainz,
+            settings.audiobookLookupContact
+        );
+    }
+
+    /**
+     * Plans chapters from the catalog edition selected by duration: catalog chapter names, cut
+     * at pauses, with an Audible-style intro/outro trimmed. Returns null when the catalog list
+     * does not fit this recording, so the caller keeps the sender chapters.
+     */
+    private List<AudiobookAssembler.Chapter> catalogChapters(
+        List<BookChapter> usable,
+        ChapterCatalog.Result catalog,
+        long totalMs,
+        Path workDir
+    ) {
+        try {
+            ChapterSplitter splitter = new ChapterSplitter(settings.ffmpegPath);
+            Path source;
+            if (usable.size() == 1) {
+                source = usable.get(0).caf();
+            } else {
+                List<Path> files = new ArrayList<>();
+                for (BookChapter chapter : usable) {
+                    files.add(chapter.caf());
+                }
+                source = splitter.concatenate(files, workDir.resolve("book.caf"), workDir);
+            }
+            List<ChapterSplitter.Silence> silences = splitter.detectSilences(source, totalMs);
+            List<Long> durations = catalog
+                .chapters()
+                .stream()
+                .map(ChapterCatalog.Chapter::durationMs)
+                .toList();
+            ChapterSplitter.CatalogPlan plan = splitter.catalogPlan(durations, totalMs, silences);
+            if (plan.boundaries().size() != durations.size() - 1) {
+                Log.info(
+                    "audiobook",
+                    "catalog chapters from " +
+                        catalog.source() +
+                        " do not fit this recording (" +
+                        Math.round(catalog.totalMs() / 60_000.0) +
+                        " min vs " +
+                        Math.round(totalMs / 60_000.0) +
+                        " min); keeping sender chapters"
+                );
+                return null;
+            }
+            List<ChapterSplitter.Segment> segments = splitter.split(
+                source,
+                plan.startMs(),
+                plan.endMs(),
+                plan.boundaries(),
+                workDir,
+                "chapter"
+            );
+            List<AudiobookAssembler.Chapter> result = new ArrayList<>();
+            for (int i = 0; i < segments.size(); i++) {
+                String title =
+                    i < catalog.chapters().size() && !catalog.chapters().get(i).title().isBlank()
+                        ? catalog.chapters().get(i).title()
+                        : "Chapter " + (i + 1);
+                result.add(
+                    new AudiobookAssembler.Chapter(
+                        segments.get(i).file(),
+                        title,
+                        segments.get(i).durationMs()
+                    )
+                );
+            }
+            Log.info(
+                "audiobook",
+                "catalog chapters from " +
+                    catalog.source() +
+                    " fit this recording: " +
+                    result.size() +
+                    " chapters, '" +
+                    catalog.album() +
+                    "'"
+            );
+            return result;
+        } catch (Exception e) {
+            Log.warn(
+                "audiobook",
+                "catalog chapter planning failed, keeping sender chapters: " + e.getMessage()
+            );
+            return null;
+        }
     }
 
     /**
