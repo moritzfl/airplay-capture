@@ -138,6 +138,11 @@ public final class Settings {
         return copy.normalized();
     }
 
+    /** True when every persisted value is the same; tells the settings page about unsaved edits. */
+    public boolean sameAs(Settings other) {
+        return JSON.writeValueAsString(this).equals(JSON.writeValueAsString(other));
+    }
+
     /** Updates this instance in place so every component keeps seeing the same settings bean. */
     public void copyFrom(Settings other) {
         deviceName = other.deviceName;

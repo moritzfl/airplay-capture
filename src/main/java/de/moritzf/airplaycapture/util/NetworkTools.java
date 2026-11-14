@@ -11,7 +11,9 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Picks the LAN interface used for mDNS advertisement and RAOP sockets. */
 public final class NetworkTools {
@@ -149,6 +151,30 @@ public final class NetworkTools {
             return List.of();
         }
         return interfaces;
+    }
+
+    /**
+     * IPv4 addresses the receiver could be announced on, with the name of their interface, in
+     * the order the system lists them. Loopback and link-local addresses are left out.
+     */
+    public static Map<String, String> localAddresses() {
+        Map<String, String> addresses = new LinkedHashMap<>();
+        try {
+            for (NetworkInterface networkInterface : Collections.list(
+                NetworkInterface.getNetworkInterfaces()
+            )) {
+                if (!networkInterface.isUp() || networkInterface.isLoopback()) {
+                    continue;
+                }
+                InetAddress address = ipv4Of(networkInterface);
+                if (address != null) {
+                    addresses.put(address.getHostAddress(), networkInterface.getName());
+                }
+            }
+        } catch (SocketException e) {
+            // no interface list: the caller offers "automatic" only
+        }
+        return addresses;
     }
 
     /** Short description of the interfaces, for startup diagnostics. */

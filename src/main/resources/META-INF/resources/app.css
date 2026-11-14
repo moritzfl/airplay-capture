@@ -677,6 +677,12 @@ vaadin-notification-card[theme~="contrast"]::part(overlay) {
     color: var(--lumo-body-text-color);
 }
 
+/* destructive confirmations use the brand red, not the lighter error text colour */
+vaadin-button[theme~="error"][theme~="primary"] {
+    background: #d91c33;
+    color: #ffffff;
+}
+
 .queue-clear,
 .queue-show,
 .queue-retry,
@@ -1333,25 +1339,209 @@ vaadin-dialog-overlay::part(footer) {
     padding: 22px;
 }
 
+.settings-view {
+    max-width: 1120px;
+}
+
+.settings-layout {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.settings-nav {
+    position: sticky;
+    top: 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.settings-nav-link {
+    justify-content: flex-start;
+    margin: 0;
+    color: var(--lumo-secondary-text-color);
+    font-size: 14px;
+}
+
+.settings-nav-link::part(label) {
+    width: 100%;
+    text-align: left;
+}
+
+.settings-nav-link:hover {
+    color: #f2f4f8;
+    background: var(--app-surface);
+}
+
+.settings-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.settings-section {
+    /* jumping to a section must not hide its title under the sticky header */
+    scroll-margin-top: 96px;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 17px;
+}
+
+.section-description {
+    display: block;
+    margin: 4px 0 14px;
+    max-width: 68ch;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--lumo-secondary-text-color);
+}
+
 .settings-form {
     gap: 14px 24px;
 }
 
-.settings-footer {
-    margin-top: 18px;
+.form-subheading {
+    margin: 10px 0 -4px;
+    padding-top: 16px;
+    border-top: 1px solid var(--app-line);
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--lumo-secondary-text-color);
+}
+
+.field-unit {
+    padding-right: 6px;
+    font-size: 13px;
+    color: var(--lumo-secondary-text-color);
+}
+
+.field-warning::part(helper-text) {
+    color: #f0b34a;
+}
+
+/* contextual save bar: always in reach, loud only when something changed */
+.save-bar {
+    position: sticky;
+    bottom: 12px;
+    z-index: 5;
     display: flex;
     align-items: center;
-    gap: 16px;
+    justify-content: space-between;
+    gap: 12px 16px;
     flex-wrap: wrap;
+    padding: 10px 12px 10px 18px;
+    border: 1px solid var(--app-line);
+    border-radius: 14px;
+    background: rgba(27, 31, 38, 0.96);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.save-bar[hidden] {
+    display: none;
+}
+
+.save-bar.dirty {
+    border-color: rgba(255, 176, 32, 0.55);
+}
+
+.save-bar.error {
+    border-color: rgba(255, 93, 108, 0.6);
+}
+
+.save-bar.error .save-state {
+    color: #ff8a95;
+}
+
+/* the confirmation needs no click: it fades after a moment */
+.save-bar.saved {
+    border-color: rgba(64, 201, 138, 0.55);
+    animation: app-save-done 3.2s ease forwards;
+}
+
+.save-bar.saved .save-state {
+    color: #40c98a;
+    padding: 6px 0;
+}
+
+@keyframes app-save-done {
+    0%,
+    75% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+body.player-open .save-bar {
+    bottom: 84px;
+}
+
+.save-state {
+    flex: 1 1 200px;
+    font-size: 13px;
+    color: var(--lumo-secondary-text-color);
+}
+
+.save-bar.dirty .save-state {
+    color: #ffcf7a;
+}
+
+.save-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
 }
 
 .save-button {
     border-radius: 10px;
+    margin: 0;
 }
 
-.settings-note {
-    font-size: 12px;
-    color: var(--lumo-tertiary-text-color);
+@media (max-width: 900px) {
+    .settings-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    /* the section list becomes a row of chips that scrolls sideways */
+    .settings-nav {
+        position: static;
+        flex-direction: row;
+        gap: 6px;
+        overflow-x: auto;
+        margin: 0 -16px;
+        padding: 0 16px 4px;
+        scrollbar-width: none;
+    }
+
+    .settings-nav-link {
+        flex: none;
+        min-height: 36px;
+        padding: 0 14px;
+        border: 1px solid var(--app-line);
+        border-radius: 999px;
+        background: var(--app-surface);
+    }
+
+    .panel-card {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    body.player-open .save-bar {
+        bottom: 124px;
+    }
 }
 
 /* logs */
@@ -1411,6 +1601,11 @@ vaadin-dialog-overlay::part(footer) {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+
+    /* without the fade the confirmation simply stays until the next edit */
+    .save-bar.saved {
+        animation: none;
     }
 }
 
@@ -1586,20 +1781,6 @@ vaadin-dialog-overlay::part(footer) {
         min-height: 34px;
         padding: 6px 12px;
     }
-}
-
-.form-section {
-    margin: 20px 0 0;
-    padding-top: 16px;
-    border-top: 1px solid var(--app-line);
-    font-size: 15px;
-    color: #f2f4f8;
-}
-
-.form-section.first-section {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
 }
 
 /* catalog edition picker */
