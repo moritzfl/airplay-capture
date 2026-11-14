@@ -1,5 +1,6 @@
 package de.moritzf.airplaycapture.ui;
 
+import com.vaadin.flow.component.UI;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -15,6 +16,25 @@ final class Fmt {
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
     private Fmt() {}
+
+    /**
+     * The viewer's time zone as reported by the browser. A container usually runs in UTC, so the
+     * server's zone would show times that are hours off; it is only the fallback.
+     */
+    static ZoneId zone() {
+        UI ui = UI.getCurrent();
+        if (ui != null) {
+            try {
+                String id = ui.getPage().getExtendedClientDetails().getTimeZoneId();
+                if (id != null && !id.isBlank()) {
+                    return ZoneId.of(id);
+                }
+            } catch (RuntimeException e) {
+                // details not available yet, or a zone id this JVM does not know
+            }
+        }
+        return ZoneId.systemDefault();
+    }
 
     static String duration(long millis) {
         if (millis <= 0) {
@@ -53,7 +73,7 @@ final class Fmt {
         if (epochMillis <= 0) {
             return "";
         }
-        return DATE.format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()));
+        return DATE.format(Instant.ofEpochMilli(epochMillis).atZone(zone()));
     }
 
     /** Time of day for today, otherwise date and time; for "finished at" labels. */
@@ -61,9 +81,10 @@ final class Fmt {
         if (epochMillis <= 0) {
             return "";
         }
-        var when = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault());
+        ZoneId zone = zone();
+        var when = Instant.ofEpochMilli(epochMillis).atZone(zone);
         String time = TIME.format(when);
-        return when.toLocalDate().equals(java.time.LocalDate.now(ZoneId.systemDefault()))
+        return when.toLocalDate().equals(java.time.LocalDate.now(zone))
             ? time
             : DATE.format(when) + " " + time;
     }
