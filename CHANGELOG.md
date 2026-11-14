@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The app checks GitHub once a day for a newer release and shows an **Update** notice in the
+  header, with the version and a link to the release under **Settings → Updates**. The check can
+  be turned off there.
+
+### Fixed
+
+- Dates and times follow the time zone of the browser instead of the server, which is usually UTC
+  in a container.
+- `/api/status` reports the real application version.
+
 ## [1.1.0] - 2026-11-13
 
 ### Added

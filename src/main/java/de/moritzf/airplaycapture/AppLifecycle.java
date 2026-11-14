@@ -4,6 +4,7 @@ import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.media.Transcoder;
 import de.moritzf.airplaycapture.raop.RaopServer;
 import de.moritzf.airplaycapture.recording.RecordingManager;
+import de.moritzf.airplaycapture.util.UpdateChecker;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -23,6 +24,7 @@ public class AppLifecycle {
     private final UiState ui;
     private final Library library;
     private final AppDirs dirs;
+    private final UpdateChecker updateChecker;
 
     private volatile int webPort = 8080;
 
@@ -32,7 +34,8 @@ public class AppLifecycle {
         Transcoder transcoder,
         UiState ui,
         Library library,
-        AppDirs dirs
+        AppDirs dirs,
+        UpdateChecker updateChecker
     ) {
         this.raopServer = raopServer;
         this.recorder = recorder;
@@ -40,6 +43,7 @@ public class AppLifecycle {
         this.ui = ui;
         this.library = library;
         this.dirs = dirs;
+        this.updateChecker = updateChecker;
     }
 
     @EventListener(WebServerInitializedEvent.class)
@@ -58,6 +62,7 @@ public class AppLifecycle {
         ui.ffmpegAvailable = transcoder.available();
         ui.libraryDir = library.libraryDir().toString();
         writePortFile();
+        updateChecker.start();
         ui.changed();
         if (ui.advertising) {
             Log.info(

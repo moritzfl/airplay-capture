@@ -11,12 +11,15 @@ import de.moritzf.airplaycapture.raop.ReceiverId;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
 import de.moritzf.airplaycapture.recording.RecordingManager;
+import de.moritzf.airplaycapture.util.UpdateChecker;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.stream.Stream;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -99,6 +102,21 @@ public class AirplayConfig {
     ) {
         byte[] deviceId = ReceiverId.load(dirs.dataDir().resolve("receiver-id"));
         return new RaopServer(settings, recorder, uiState, deviceId);
+    }
+
+    /** The version comes from the build; a run without build information never reports updates. */
+    @Bean
+    public UpdateChecker updateChecker(
+        ObjectProvider<BuildProperties> build,
+        Settings settings,
+        UiState uiState
+    ) {
+        BuildProperties properties = build.getIfAvailable();
+        return new UpdateChecker(
+            properties == null ? "" : properties.getVersion(),
+            settings,
+            uiState
+        );
     }
 
     private static void cleanTempFiles(AppDirs dirs) {

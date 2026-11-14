@@ -18,6 +18,7 @@ import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.shared.Registration;
 import de.moritzf.airplaycapture.UiState;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
+import de.moritzf.airplaycapture.util.UpdateChecker;
 import org.springframework.beans.factory.annotation.Value;
 
 /** Application shell with brand, live status and navigation. */
@@ -31,6 +32,9 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
     private final Span statusDetail = new Span();
     private final Span statusPill = new Span();
     private final Span queuePill = new Span();
+    private final Span updatePill = new Span();
+    private final RouterLink settingsLink;
+    private final UpdateChecker updateChecker;
 
     private static final String APP_NAME = "AirPlay Capture";
 
@@ -42,11 +46,13 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         UiState state,
         UiBroadcaster broadcaster,
         AudiobookJobs audiobookJobs,
+        UpdateChecker updateChecker,
         @Value("${airplay-capture.web.password:}") String password
     ) {
         this.state = state;
         this.broadcaster = broadcaster;
         this.audiobookJobs = audiobookJobs;
+        this.updateChecker = updateChecker;
         boolean authEnabled = password != null && !password.isBlank();
 
         addClassName("app-shell");
@@ -81,9 +87,10 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
 
         Div nav = new Div();
         nav.addClassName("app-nav");
+        settingsLink = navLink("Settings", SettingsView.class);
         nav.add(
             navLink("Library", LibraryView.class),
-            navLink("Settings", SettingsView.class),
+            settingsLink,
             navLink("Logs", LogsView.class)
         );
         logout = authEnabled ? anchorLink("Log out", AppUrls.relative("logout")) : null;
@@ -102,9 +109,19 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         queuePill.getElement().setAttribute("role", "status");
         queuePill.addClickListener(event -> openLibraryQueue());
 
+        updatePill.addClassName("update-pill");
+        updatePill.setVisible(false);
+        updatePill.getElement().setAttribute("role", "link");
+        updatePill.getElement().setAttribute("tabindex", "0");
+        updatePill
+            .getElement()
+            .addEventListener("keydown", event -> openUpdates())
+            .setFilter("event.key === 'Enter' || event.key === ' '");
+        updatePill.addClickListener(event -> openUpdates());
+
         Div right = new Div();
         right.addClassName("app-header-right");
-        right.add(queuePill, statusPill, nav);
+        right.add(updatePill, queuePill, statusPill, nav);
 
         header.add(brand, right);
 
@@ -204,8 +221,42 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         });
     }
 
+    /**
+     * A newer release is announced where it cannot be missed but does not interrupt: a pill in
+     * the header and a dot on the Settings link, both leading to the details in the settings.
+     */
+    private void refreshUpdate() {
+        UpdateChecker.Status status = updateChecker.status();
+        boolean available = status.updateAvailable() && status.latest() != null;
+        updatePill.setVisible(available);
+        settingsLink.getElement().getClassList().set("has-update", available);
+        if (available) {
+            String version = status.latest().version();
+            updatePill.setText("Update " + version);
+            String hint = "Version " + version + " is available. Open Settings for details.";
+            updatePill.getElement().setAttribute("title", hint);
+            updatePill.getElement().setAttribute("aria-label", hint);
+            settingsLink.getElement().setAttribute("title", "Version " + version + " is available");
+        } else {
+            settingsLink.getElement().removeAttribute("title");
+        }
+    }
+
+    /** Opens the settings at the Updates card. */
+    private void openUpdates() {
+        getUI().ifPresent(ui -> {
+            ui.navigate(SettingsView.class);
+            ui.getPage().executeJs(
+                "requestAnimationFrame(() => document.getElementById('" +
+                    SettingsView.UPDATES_ID +
+                    "')?.scrollIntoView({block: 'start', behavior: 'smooth'}))"
+            );
+        });
+    }
+
     private void refreshStatus() {
         refreshQueue();
+        refreshUpdate();
         // The receiver name is only worth a second line when it differs from the product name.
         String name = state.deviceName == null ? "" : state.deviceName.trim();
         deviceName.setText(name);

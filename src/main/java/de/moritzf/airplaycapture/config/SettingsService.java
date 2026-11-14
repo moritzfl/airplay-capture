@@ -8,6 +8,7 @@ import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.media.Transcoder;
 import de.moritzf.airplaycapture.raop.RaopServer;
 import de.moritzf.airplaycapture.recording.RecordingManager;
+import de.moritzf.airplaycapture.util.UpdateChecker;
 import java.io.IOException;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class SettingsService {
     private final RecordingManager recorder;
     private final RaopServer raopServer;
     private final UiState ui;
+    private final UpdateChecker updateChecker;
 
     public SettingsService(
         AppDirs dirs,
@@ -30,7 +32,8 @@ public class SettingsService {
         Transcoder transcoder,
         RecordingManager recorder,
         RaopServer raopServer,
-        UiState ui
+        UiState ui,
+        UpdateChecker updateChecker
     ) {
         this.dirs = dirs;
         this.settings = settings;
@@ -39,6 +42,7 @@ public class SettingsService {
         this.recorder = recorder;
         this.raopServer = raopServer;
         this.ui = ui;
+        this.updateChecker = updateChecker;
     }
 
     public Settings current() {
@@ -60,6 +64,7 @@ public class SettingsService {
         transcoder.updateSettings(settings);
         recorder.updateSettings(settings);
         raopServer.updateSettings(settings);
+        updateChecker.settingsChanged();
 
         ui.deviceName = settings.deviceName;
         ui.libraryDir = library.libraryDir().toString();

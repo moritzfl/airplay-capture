@@ -48,6 +48,14 @@ vaadin {
     productionMode = true
 }
 
+// The running application reads its own version from this (update check, /api/status). The
+// build time is left out so an unchanged build stays up to date.
+springBoot {
+    buildInfo {
+        excludes.set(setOf("time"))
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
     testLogging {

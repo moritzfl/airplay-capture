@@ -1422,6 +1422,99 @@ vaadin-dialog-overlay::part(footer) {
     color: var(--lumo-secondary-text-color);
 }
 
+/* updates */
+.update-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.update-state {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border: 1px solid var(--app-line);
+    border-radius: 12px;
+    background: var(--app-surface-2);
+}
+
+.update-available .update-state {
+    border-color: rgba(64, 201, 138, 0.5);
+    background: rgba(64, 201, 138, 0.08);
+}
+
+.update-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1 1 260px;
+}
+
+.update-version {
+    font-size: 15px;
+    font-weight: 650;
+}
+
+.update-text {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--lumo-secondary-text-color);
+    overflow-wrap: anywhere;
+}
+
+.update-available .update-text {
+    color: #40c98a;
+}
+
+.update-link {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #f2f4f8;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.35);
+    text-underline-offset: 3px;
+}
+
+.update-link::after {
+    content: " ↗";
+}
+
+.update-check {
+    margin: 0;
+    flex: none;
+}
+
+.update-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid rgba(64, 201, 138, 0.5);
+    background: rgba(64, 201, 138, 0.12);
+    color: #7be0b0;
+}
+
+.update-pill::before {
+    content: "↑";
+    font-weight: 700;
+}
+
+.update-pill:hover,
+.update-pill:focus-visible {
+    border-color: rgba(64, 201, 138, 0.9);
+    outline: none;
+}
+
 .field-warning::part(helper-text) {
     color: #f0b34a;
 }
@@ -1716,6 +1809,22 @@ body.player-open .save-bar {
         order: 3;
         flex: 1 0 100%;
         justify-content: center;
+    }
+
+    /* a phone header has no room for the pill: the notice is a dot on the Settings tab */
+    .update-pill {
+        display: none;
+    }
+
+    .nav-link.has-update::after {
+        content: "";
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-left: 6px;
+        border-radius: 50%;
+        background: #40c98a;
+        vertical-align: middle;
     }
 
     .app-nav {

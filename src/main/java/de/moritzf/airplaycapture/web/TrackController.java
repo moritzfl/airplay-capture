@@ -8,6 +8,7 @@ import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.library.LibraryGroups;
 import de.moritzf.airplaycapture.library.LibraryTrack;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
+import de.moritzf.airplaycapture.util.UpdateChecker;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,24 +51,33 @@ public class TrackController {
     private final UiState ui;
     private final SettingsService settingsService;
     private final AudiobookCreator audiobookCreator;
+    private final UpdateChecker updateChecker;
 
     public TrackController(
         Library library,
         UiState ui,
         SettingsService settingsService,
-        AudiobookCreator audiobookCreator
+        AudiobookCreator audiobookCreator,
+        UpdateChecker updateChecker
     ) {
         this.library = library;
         this.ui = ui;
         this.settingsService = settingsService;
         this.audiobookCreator = audiobookCreator;
+        this.updateChecker = updateChecker;
     }
 
     @GetMapping("/status")
     public Map<String, Object> status() {
         Map<String, Object> status = new LinkedHashMap<>(ui.snapshot());
         status.put("tracks", library.tracks().size());
-        status.put("version", "2.0.0");
+        UpdateChecker.Status update = updateChecker.status();
+        status.put("version", update.currentVersion());
+        status.put("updateAvailable", update.updateAvailable());
+        if (update.latest() != null) {
+            status.put("latestVersion", update.latest().version());
+            status.put("releaseUrl", update.latest().url());
+        }
         return status;
     }
 

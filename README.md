@@ -185,6 +185,14 @@ stored in `settings.json` in the data directory. Standalone options:
 **Set a password** if the web port is reachable by others, and keep it on a trusted network. On
 Synology, DSM handles sign-in and per-user privileges for you.
 
+### Updates
+
+Once a day the app asks GitHub whether a newer release exists. When there is one, the header shows
+an **Update** notice that leads to **Settings → Updates** with the version and a link to the release
+notes and downloads. Updating itself stays manual: install the new SPK, pull the new image or
+replace the jar. Turn off **Check for new versions** there if the machine should not contact
+GitHub.
+
 ### Where files go
 
 | Installation | Recordings | Settings / covers |
@@ -310,7 +318,7 @@ All endpoints live outside Vaadin's `/app/` mapping and are useful for integrati
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/status` | receiver state, active track, library size |
+| `GET` | `/api/status` | receiver state, active track, library size, `version`, `updateAvailable` |
 | `GET` | `/api/tracks` | library listing (includes `audiobookChapter`, `bookId`, `chapterCount`) |
 | `GET` | `/api/groups` | album/book groups with stable keys, formats and duplicate count |
 | `GET` | `/api/groups/{key}/zip/{format}` | stream a group ZIP (`?all=1` includes every take) |

@@ -105,6 +105,9 @@ public final class Settings {
     /** Optional contact for the MusicBrainz User-Agent (their API policy asks for one). */
     public String audiobookLookupContact = "";
 
+    /** Ask GitHub once a day whether a newer release exists. */
+    public boolean updateCheckEnabled = true;
+
     public static final int PORT_RANGE_START = 5000;
     public static final int PORT_RANGE_END = 6000;
 
@@ -174,6 +177,7 @@ public final class Settings {
         audiobookLookupCountry = other.audiobookLookupCountry;
         audiobookLookupMusicBrainz = other.audiobookLookupMusicBrainz;
         audiobookLookupContact = other.audiobookLookupContact;
+        updateCheckEnabled = other.updateCheckEnabled;
     }
 
     public Settings normalized() {

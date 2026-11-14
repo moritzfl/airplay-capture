@@ -1,8 +1,11 @@
 package de.moritzf.airplaycapture.ui;
 
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.HasEnabled;
 import com.vaadin.flow.component.HasValue;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
@@ -11,6 +14,7 @@ import com.vaadin.flow.component.checkbox.CheckboxGroupVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
@@ -24,11 +28,14 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.BeforeLeaveEvent;
 import com.vaadin.flow.router.BeforeLeaveObserver;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.shared.Registration;
 import de.moritzf.airplaycapture.Settings;
 import de.moritzf.airplaycapture.UiState;
 import de.moritzf.airplaycapture.config.SettingsService;
 import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.util.NetworkTools;
+import de.moritzf.airplaycapture.util.UpdateChecker;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -44,9 +51,15 @@ import java.util.Set;
 @Route(value = "settings", layout = MainLayout.class)
 public class SettingsView extends VerticalLayout implements BeforeLeaveObserver {
 
+    /** DOM id of the Updates card, so the header's update notice can jump to it. */
+    static final String UPDATES_ID = "settings-updates";
+
     private final SettingsService settingsService;
     private final Library library;
     private final UiState state;
+    private final UpdateChecker updateChecker;
+    private final UiBroadcaster broadcaster;
+    private Registration registration;
 
     private final TextField deviceName = new TextField("Receiver name");
     private final ComboBox<String> interfaceAddress = new ComboBox<>("Network interface");
@@ -99,6 +112,12 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
         "Keep the chapter recordings afterwards"
     );
 
+    private final Checkbox updateCheck = new Checkbox("Check for new versions");
+    private final Span updateVersion = new Span();
+    private final Span updateText = new Span();
+    private final Anchor updateLink = new Anchor();
+    private final Button checkNow = new Button("Check now", event -> checkForUpdate());
+
     private final TextField libraryPath = new TextField("Recordings folder");
     private final Span saveState = new Span();
     private final Button save = new Button("Save settings", event -> save());
@@ -109,10 +128,18 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
     private boolean loading;
     private boolean dirty;
 
-    public SettingsView(SettingsService settingsService, Library library, UiState state) {
+    public SettingsView(
+        SettingsService settingsService,
+        Library library,
+        UiState state,
+        UpdateChecker updateChecker,
+        UiBroadcaster broadcaster
+    ) {
         this.settingsService = settingsService;
         this.library = library;
         this.state = state;
+        this.updateChecker = updateChecker;
+        this.broadcaster = broadcaster;
 
         addClassName("settings-view");
         setPadding(false);
@@ -189,6 +216,13 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
             )
         );
 
+        Div updates = section(
+            "New versions are published on GitHub as a Synology package, a Docker image and a jar.",
+            updatePanel()
+        );
+        updates.setId(UPDATES_ID);
+        sections.put("Updates", updates);
+
         Div nav = new Div();
         nav.addClassName("settings-nav");
         nav.getElement().setAttribute("role", "navigation");
@@ -229,6 +263,119 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
 
         load(settingsService.current());
         allFields().forEach(field -> field.addValueChangeListener(event -> changed()));
+    }
+
+    private Component updatePanel() {
+        updateVersion.addClassName("update-version");
+        updateText.addClassName("update-text");
+        updateText.getElement().setAttribute("role", "status");
+        updateLink.setText("Release notes and download");
+        updateLink.addClassName("update-link");
+        updateLink.getElement().setAttribute("target", "_blank");
+        updateLink.getElement().setAttribute("rel", "noopener noreferrer");
+        checkNow.addThemeVariants(ButtonVariant.LUMO_SMALL);
+        checkNow.addClassName("update-check");
+        updateCheck.setHelperText(
+            "Once a day, asks api.github.com for the latest release. Nothing about your " +
+                "recordings is sent."
+        );
+
+        Div summary = new Div(updateVersion, updateText, updateLink);
+        summary.addClassName("update-summary");
+        Div state = new Div(summary, checkNow);
+        state.addClassName("update-state");
+        Div panel = new Div(state, updateCheck);
+        panel.addClassName("update-panel");
+        return panel;
+    }
+
+    /** What the last check found; refreshed when a check finishes in the background. */
+    private void showUpdateStatus() {
+        UpdateChecker.Status status = updateChecker.status();
+        boolean known = !status.currentVersion().isBlank();
+        updateVersion.setText(
+            known ? "AirPlay Capture " + status.currentVersion() : "Development build"
+        );
+        boolean available = status.updateAvailable() && status.latest() != null;
+        updateLink.setVisible(available);
+        getElement().getClassList().set("update-available", available);
+        String checked =
+            status.checkedAtEpochMs() > 0
+                ? " Checked " + Fmt.dateTime(status.checkedAtEpochMs()) + "."
+                : "";
+        if (available) {
+            UpdateChecker.Release latest = status.latest();
+            String published = publishedDate(latest.publishedAt());
+            updateText.setText(
+                "Version " +
+                    latest.version() +
+                    " is available" +
+                    (published.isBlank() ? "." : ", published " + published + ".")
+            );
+            updateLink.setHref(latest.url());
+        } else if (!known) {
+            updateText.setText(
+                "This build has no version, so it cannot be compared with releases."
+            );
+        } else if (!status.error().isBlank()) {
+            updateText.setText("Could not ask GitHub: " + status.error() + "." + checked);
+        } else if (status.checkedAtEpochMs() > 0) {
+            updateText.setText("This is the latest version." + checked);
+        } else {
+            updateText.setText(
+                updateChecker.enabled() ? "Not checked yet." : "The daily check is turned off."
+            );
+        }
+        checkNow.setVisible(known);
+    }
+
+    private static String publishedDate(String iso) {
+        try {
+            return Fmt.date(Instant.parse(iso).toEpochMilli());
+        } catch (RuntimeException e) {
+            return "";
+        }
+    }
+
+    private void checkForUpdate() {
+        UI ui = UI.getCurrent();
+        checkNow.setEnabled(false);
+        checkNow.setText("Checking…");
+        Thread.ofVirtual()
+            .name("update-check-now")
+            .start(() -> {
+                updateChecker.checkNow();
+                try {
+                    ui.access(() -> {
+                        checkNow.setEnabled(true);
+                        checkNow.setText("Check now");
+                        showUpdateStatus();
+                    });
+                } catch (RuntimeException ignored) {
+                    // the page was closed while checking
+                }
+            });
+    }
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+        registration = broadcaster.register(() -> {
+            UI ui = getUI().orElse(null);
+            if (ui != null) {
+                ui.access(this::showUpdateStatus);
+            }
+        });
+        showUpdateStatus();
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        if (registration != null) {
+            registration.remove();
+            registration = null;
+        }
+        super.onDetach(detachEvent);
     }
 
     private static Div section(String description, Component content) {
@@ -479,7 +626,8 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
             audiobookSplitLongTracks,
             audiobookAutoAssemble,
             audiobookIdleSeconds,
-            audiobookKeepChapters
+            audiobookKeepChapters,
+            updateCheck
         );
     }
 
@@ -592,12 +740,14 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
             audiobookLookupContact.setValue(
                 settings.audiobookLookupContact == null ? "" : settings.audiobookLookupContact
             );
+            updateCheck.setValue(settings.updateCheckEnabled);
             libraryPath.setValue(library.libraryDir().toString());
             clearErrors();
         } finally {
             loading = false;
         }
         showFfmpegState();
+        showUpdateStatus();
         changed();
     }
 
@@ -732,6 +882,7 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
         next.audiobookLookupCountry = text(audiobookLookupCountry).toUpperCase(Locale.ROOT);
         next.audiobookLookupMusicBrainz = audiobookLookupMusicBrainz.getValue();
         next.audiobookLookupContact = text(audiobookLookupContact);
+        next.updateCheckEnabled = updateCheck.getValue();
         return next;
     }
 
