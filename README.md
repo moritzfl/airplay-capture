@@ -5,9 +5,9 @@
 
   **Record AirPlay audio as individual files with cover art and metadata.**
 
-  Runs on macOS, Linux and Windows, in Docker — and as a **Synology package (.spk)** for your NAS.
+  Runs as a **Synology package (.spk)**, in **Docker**, or as a single **jar** on macOS, Linux and Windows.
 
-  [Synology SPK](#synology-nas-spk) · [Docker](#docker) · [macOS / Linux](#macos--linux) · [Windows](#windows) · [Using it](#using-it) · [License](#license)
+  [Synology SPK](#synology-nas-spk) · [Docker](#docker) · [macOS, Linux, Windows](#macos-linux-and-windows) · [Using it](#using-it) · [License](#license)
 
   [![CI](https://github.com/moritzfl/airplay-capture/actions/workflows/ci.yml/badge.svg)](https://github.com/moritzfl/airplay-capture/actions/workflows/ci.yml)
 </div>
@@ -72,8 +72,9 @@ RTP/UDP audio path). Use the host variant on Linux:
 docker compose -f docker-compose.host.yml up -d --build
 ```
 
-On Docker Desktop for macOS, host networking is an opt-in beta and mDNS is unreliable — run the app
-natively there instead and use Docker for browsing the library. Files are written to `./data`.
+On Docker Desktop for macOS, host networking is an opt-in beta and mDNS is unreliable — run the
+[jar](#macos-linux-and-windows) there instead and use Docker for browsing the library. Files are
+written to `./data`.
 
 **Prebuilt images** (linux/amd64 and linux/arm64) are published to `ghcr.io` on every release, so you
 don't have to build from source:
@@ -86,47 +87,60 @@ docker run -d --name airplay-capture --network host -v "$PWD/data:/data" \
 Use `--network host` on Linux to receive AirPlay; use `-p 8080:8080` instead if you only want the
 web UI.
 
-### macOS / Linux
+### macOS, Linux and Windows
 
-Requires **JDK 21** and **ffmpeg** (`brew install ffmpeg` / `apt install ffmpeg`):
+Every release comes with a ready-to-run **`airplay-capture-<version>.jar`** — nothing has to be
+built. It needs **Java 21 or newer** and **ffmpeg** on the computer.
 
-```bash
-./gradlew bootRun
-# open http://localhost:8080/app/
-```
+1. **Install Java and ffmpeg**, if they are not there yet:
 
-Or build a runnable jar:
+   | System | Command |
+   | --- | --- |
+   | macOS ([Homebrew](https://brew.sh)) | `brew install --cask temurin@21` and `brew install ffmpeg` |
+   | Debian 13+ / Ubuntu 24.04+ | `sudo apt install openjdk-21-jre ffmpeg` |
+   | Windows | `winget install EclipseAdoptium.Temurin.21.JRE` and `winget install Gyan.FFmpeg` |
 
-```bash
-./gradlew bootJar
-java -jar build/libs/airplay-capture-<version>.jar --data ~/airplay-data
-```
+   Any other Java 21+ works as well, for example the installers from
+   [adoptium.net](https://adoptium.net/). `java -version` and `ffmpeg -version` in a new terminal
+   show whether both are found.
 
-On macOS 15+, allow the terminal (or IDE) under **System Settings → Privacy & Security → Local
-Network**, otherwise the receiver never appears in the AirPlay menu.
+2. **Download the jar** from the
+   [latest release](https://github.com/moritzfl/airplay-capture/releases/latest): the file
+   `airplay-capture-<version>.jar` under *Assets*. `release-checksums.txt` next to it holds its
+   SHA-256.
 
-### Windows
+3. **Start it** in a terminal, from the folder the jar was saved to:
 
-The receiver is pure Java (no native libraries), so it runs on Windows with **JDK 21** and
-**ffmpeg** (`winget install Gyan.FFmpeg`, or a build from gyan.dev — `ffmpeg.exe` must be on `PATH`):
+   ```bash
+   java -jar airplay-capture-<version>.jar
+   ```
 
-```bat
-gradlew.bat bootRun
-:: open http://localhost:8080/app/
-```
+4. **Open <http://localhost:8080/app/>** and pick **AirPlay Capture** in the AirPlay menu of your
+   iPhone, iPad or Mac.
 
-Or the runnable jar:
+The app runs for as long as that terminal stays open; `Ctrl+C` stops it. Good to know:
 
-```bat
-gradlew.bat bootJar
-java -jar build\libs\airplay-capture-<version>.jar --data %APPDATA%\AirPlayCapture
-```
+- **Permissions.** On macOS 15+, allow the terminal under **System Settings → Privacy & Security →
+  Local Network**, otherwise the receiver never appears in the AirPlay menu. On Windows, allow Java
+  on private networks when the firewall asks.
+- **Port.** If port 8080 is taken, the app waits 20 seconds for it and then uses the next free one.
+  The terminal prints the address (`ready - open http://localhost:<port>/app/`), and `web-port.txt`
+  in the data folder holds it too. `--web-port 9000` picks a port yourself.
+- **Other devices.** Phones and computers on the same network reach the UI at
+  `http://<name-or-ip-of-this-computer>:8080/app/`. There is no sign-in unless you
+  [set a password](#settings).
+- **Files.** Recordings go to the `library` subfolder of the data folder:
+  `~/Library/Application Support/AirPlayCapture` on macOS, `~/.airplay-capture` on Linux and
+  `%APPDATA%\AirPlayCapture` on Windows. `--data <folder>` moves it, for example
+  `java -jar airplay-capture-<version>.jar --data ~/airplay-data`.
+- **Updating.** Download the newer jar and start that one instead. Recordings and settings live in
+  the data folder and stay as they are.
 
-Data defaults to **`%APPDATA%\AirPlayCapture`**; recordings land in its `library` subfolder. If
-Windows Firewall asks, allow Java to accept incoming connections on private networks, otherwise the
-receiver cannot be discovered. Docker Desktop has the same mDNS limitation as on macOS, so run
-natively to record. **Windows support is untested on a real Windows machine** — the protocol and file
-handling are platform-independent, but please report anything that misbehaves.
+Docker Desktop on macOS and Windows cannot receive AirPlay reliably (see [Docker](#docker)), so the
+jar is the way to record on those systems. **Windows is untested on a real Windows machine** — the
+receiver is plain Java without native libraries, but please report anything that misbehaves.
+
+To build the jar yourself, see [Development](#development).
 
 ## Using it
 
@@ -177,7 +191,8 @@ On Synology, open **Manage → Open on phones…** once, then open the address o
 Receiver name, network interface, file formats and bitrates, silence timeout, ffmpeg, lost-packet
 recovery, metadata completion and audiobook behaviour are editable in **Settings**, one card per
 topic. A bar appears as soon as something is changed; nothing applies until you save it there. The
-values are stored in `settings.json` in the data directory. Standalone options:
+values are stored in `settings.json` in the data directory. Options for the jar, as arguments or
+environment variables (the Docker image reads the environment variables):
 
 | Option | Environment | Default |
 | --- | --- | --- |
@@ -187,8 +202,10 @@ values are stored in `settings.json` in the data directory. Standalone options:
 | – | `AIRPLAY_CAPTURE_WEB_PASSWORD` | unset – web UI/API have no authentication |
 | – | `AIRPLAY_CAPTURE_LIBRARY_DIR` | `library` inside the data directory |
 
-**Set a password** if the web port is reachable by others, and keep it on a trusted network. On
-Synology, DSM handles sign-in and per-user privileges for you.
+**Set a password** if the web port is reachable by others, and keep it on a trusted network — for
+example `AIRPLAY_CAPTURE_WEB_PASSWORD=secret java -jar airplay-capture-<version>.jar` on macOS and
+Linux; the user name is `recorder`. On Synology, DSM handles sign-in and per-user privileges for
+you.
 
 ### Updates
 
@@ -204,8 +221,9 @@ GitHub.
 | --- | --- | --- |
 | Synology SPK | `/volume1/music/airplay-capture` (adjustable) | `airplay-capture` shared folder |
 | Docker | `./data/library` | `./data` |
-| macOS / Linux | `<data>/library` | `~/Library/Application Support/AirPlayCapture` or `~/.airplay-capture` |
-| Windows | `%APPDATA%\AirPlayCapture\library` | `%APPDATA%\AirPlayCapture` |
+| Jar on macOS | `~/Library/Application Support/AirPlayCapture/library` | `~/Library/Application Support/AirPlayCapture` |
+| Jar on Linux | `~/.airplay-capture/library` | `~/.airplay-capture` |
+| Jar on Windows | `%APPDATA%\AirPlayCapture\library` | `%APPDATA%\AirPlayCapture` |
 
 ## Troubleshooting
 
@@ -339,12 +357,18 @@ All endpoints live outside Vaadin's `/app/` mapping and are useful for integrati
 
 ### Development
 
+Building from source needs **JDK 21**; on Windows use `gradlew.bat` instead of `./gradlew`.
+
+```bash
+./gradlew bootRun             # build and run from source, http://localhost:8080/app/
+./gradlew bootJar             # runnable jar in build/libs/airplay-capture-<version>.jar
+```
+
 ```bash
 ./gradlew spotlessApply       # format Java sources with prettier-java (needs Node.js)
 ./gradlew spotlessCheck       # fail on formatting differences, as CI does
 ./gradlew test                # protocol parsing, CAF writer, end-to-end AirPlay session, package rules
 ./gradlew vaadinBuildFrontend # rebuild the client bundle after UI changes
-./gradlew bootJar             # runnable jar (builds the frontend automatically)
 ```
 
 The end-to-end test acts as an AirPlay sender — RTSP handshake, RSA-OAEP key exchange, encrypted RTP
