@@ -63,7 +63,8 @@ body {
     gap: 16px;
     padding: 16px clamp(16px, 4vw, 48px);
     border-bottom: 1px solid var(--app-line);
-    background: rgba(13, 15, 18, 0.8);
+    background: rgba(13, 15, 18, 0.9);
+    -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
     position: sticky;
     top: 0;
@@ -180,7 +181,19 @@ body {
     border: 1px solid transparent;
 }
 
+/* one focus ring for everything that is not a Vaadin component with its own */
+.nav-link:focus-visible,
+.queue-pill:focus-visible,
+.update-pill:focus-visible,
+.queue-download:focus-visible,
+.queue-download-secondary:focus-visible,
+.update-link:focus-visible {
+    outline: 2px solid rgba(255, 93, 108, 0.75);
+    outline-offset: 2px;
+}
+
 .nav-link:hover {
+    text-decoration: none;
     color: #f2f4f8;
     background: var(--app-surface);
     border-color: var(--app-line);
@@ -806,6 +819,7 @@ vaadin-button[theme~="error"][theme~="primary"] {
     padding: 10px clamp(16px, 4vw, 48px) calc(10px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--app-line);
     background: rgba(21, 24, 29, 0.94);
+    -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
 }
 
@@ -1576,6 +1590,7 @@ vaadin-dialog::part(footer) {
     border: 1px solid var(--app-line);
     border-radius: 14px;
     background: rgba(27, 31, 38, 0.96);
+    -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }

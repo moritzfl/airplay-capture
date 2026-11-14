@@ -627,7 +627,8 @@ public class LibraryView extends VerticalLayout {
 
         Div badges = new Div();
         badges.addClassName("grid-badges");
-        if (track.audiobookChapter) {
+        // Inside a book every recording is a chapter; the badge only informs on its own.
+        if (track.audiobookChapter && !grouped) {
             badges.add(badge("chapter", BadgeVariant.SUCCESS));
         }
         if (track.chapterCount != null) {
