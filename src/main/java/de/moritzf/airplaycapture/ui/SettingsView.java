@@ -983,6 +983,6 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
         dialog.setConfirmButtonTheme("error primary");
         dialog.addConfirmListener(confirm -> action.proceed());
         dialog.addCancelListener(cancel -> action.cancel());
-        dialog.open();
+        Dialogs.openDestructive(dialog);
     }
 }

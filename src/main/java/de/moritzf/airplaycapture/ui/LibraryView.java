@@ -1037,7 +1037,7 @@ public class LibraryView extends VerticalLayout {
             refresh(true);
             Notification.show("Deleted " + track.displayName());
         });
-        dialog.open();
+        Dialogs.openDestructive(dialog);
     }
 
     private void confirmDeleteM4b(LibraryGroups.Group group) {
@@ -1055,7 +1055,7 @@ public class LibraryView extends VerticalLayout {
                 refresh(true);
                 Notification.show("Deleted audiobook file");
             });
-            dialog.open();
+            Dialogs.openDestructive(dialog);
         });
     }
 
@@ -1083,7 +1083,7 @@ public class LibraryView extends VerticalLayout {
             refresh(true);
             Notification.show("Deleted " + group.title());
         });
-        dialog.open();
+        Dialogs.openDestructive(dialog);
     }
 
     private String preferredFormat(LibraryTrack track) {

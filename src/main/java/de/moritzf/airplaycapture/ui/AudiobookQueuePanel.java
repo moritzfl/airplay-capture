@@ -360,7 +360,7 @@ final class AudiobookQueuePanel extends Div {
             jobs.cancel(job.id);
             reveal.changed();
         });
-        dialog.open();
+        Dialogs.openDestructive(dialog);
     }
 
     private Button dismiss(AudiobookJobs.Job job) {
