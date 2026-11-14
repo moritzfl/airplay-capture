@@ -37,7 +37,10 @@ final class AudiobookQueuePanel extends Div {
     private final Div list = new Div();
     private final Span summary = new Span();
     private final Button clear = new Button("Clear finished");
+    private final Button toggle = new Button();
     private String signature = "";
+    /** The user's choice for this visit; {@code null} follows {@link #expandedByDefault}. */
+    private Boolean userExpanded;
 
     AudiobookQueuePanel(AudiobookJobs jobs, Reveal reveal) {
         this.jobs = jobs;
@@ -67,7 +70,14 @@ final class AudiobookQueuePanel extends Div {
             jobs.clearFinished();
             reveal.changed();
         });
-        head.add(icon, title, summary, clear);
+        toggle.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
+        toggle.addClassName("queue-toggle");
+        toggle.addClickListener(event -> {
+            userExpanded = !expanded(jobs.jobs());
+            signature = "";
+            refresh();
+        });
+        head.add(icon, title, summary, clear, toggle);
 
         list.addClassName("queue-list");
         list.getElement().setAttribute("role", "list");
@@ -84,9 +94,22 @@ final class AudiobookQueuePanel extends Div {
             return;
         }
         signature = next;
+        boolean expanded = expanded(all);
         summary.setText(summary(all));
-        clear.setVisible(all.stream().anyMatch(job -> !job.active()));
+        clear.setVisible(expanded && all.stream().anyMatch(job -> !job.active()));
+        toggle.setIcon(
+            expanded ? VaadinIcon.CHEVRON_UP.create() : VaadinIcon.CHEVRON_DOWN.create()
+        );
+        String toggleLabel = expanded ? "Hide conversions" : "Show conversions";
+        toggle.getElement().setAttribute("aria-label", toggleLabel);
+        toggle.getElement().setAttribute("title", toggleLabel);
+        toggle.getElement().setAttribute("aria-expanded", String.valueOf(expanded));
+        list.setVisible(expanded);
+        getElement().getClassList().set("collapsed", !expanded);
         list.removeAll();
+        if (!expanded) {
+            return;
+        }
         long finished = all
             .stream()
             .filter(job -> !job.active())
@@ -114,8 +137,22 @@ final class AudiobookQueuePanel extends Div {
         }
     }
 
-    private static String signature(List<AudiobookJobs.Job> all) {
+    /**
+     * Running conversions and fresh results stay open; a history that is more than a day old
+     * folds into its summary line so it does not push the library down on every visit.
+     */
+    private boolean expanded(List<AudiobookJobs.Job> all) {
+        return userExpanded != null ? userExpanded : expandedByDefault(all);
+    }
+
+    private static boolean expandedByDefault(List<AudiobookJobs.Job> all) {
+        long recent = System.currentTimeMillis() - FRESH_RESULT_MS;
+        return all.stream().anyMatch(job -> job.active() || job.finishedAtEpochMs >= recent);
+    }
+
+    private String signature(List<AudiobookJobs.Job> all) {
         StringBuilder builder = new StringBuilder();
+        builder.append(expanded(all)).append(';');
         for (AudiobookJobs.Job job : all) {
             builder
                 .append(job.id)
@@ -135,28 +172,25 @@ final class AudiobookQueuePanel extends Div {
     }
 
     private static String summary(List<AudiobookJobs.Job> all) {
-        long running = all
+        return join(
+            count(all, AudiobookJobs.State.RUNNING, "converting"),
+            count(all, AudiobookJobs.State.QUEUED, "waiting"),
+            count(all, AudiobookJobs.State.DONE, "ready"),
+            count(all, AudiobookJobs.State.FAILED, "failed"),
+            count(all, AudiobookJobs.State.CANCELLED, "cancelled")
+        );
+    }
+
+    private static String count(
+        List<AudiobookJobs.Job> all,
+        AudiobookJobs.State state,
+        String label
+    ) {
+        long count = all
             .stream()
-            .filter(job -> job.status() == AudiobookJobs.State.RUNNING)
+            .filter(job -> job.status() == state)
             .count();
-        long queued = all
-            .stream()
-            .filter(job -> job.status() == AudiobookJobs.State.QUEUED)
-            .count();
-        if (running + queued == 0) {
-            return "Nothing converting";
-        }
-        StringBuilder text = new StringBuilder();
-        if (running > 0) {
-            text.append(running).append(" converting");
-        }
-        if (queued > 0) {
-            if (text.length() > 0) {
-                text.append(" · ");
-            }
-            text.append(queued).append(" waiting");
-        }
-        return text.toString();
+        return count == 0 ? "" : count + " " + label;
     }
 
     private Div row(AudiobookJobs.Job job) {
@@ -315,6 +349,8 @@ final class AudiobookQueuePanel extends Div {
         return dismiss;
     }
 
+    /** How long a finished conversion keeps the panel open by default. */
+    private static final long FRESH_RESULT_MS = 24 * 60 * 60 * 1000L;
     /** How long a newly queued row stays highlighted. */
     private static final long FRESH_MS = 4000;
     /** Finished rows shown before the rest are summarised, so the card stays compact. */
@@ -383,6 +419,9 @@ final class AudiobookQueuePanel extends Div {
 
     /** Scrolls the panel into view, used right after a conversion was started. */
     void scrollIntoView() {
+        userExpanded = null;
+        signature = "";
+        refresh();
         getElement().executeJs("this.scrollIntoView({block:'nearest', behavior:'smooth'})");
     }
 }

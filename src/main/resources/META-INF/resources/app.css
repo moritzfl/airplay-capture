@@ -368,6 +368,26 @@ body {
     font-size: 12px;
 }
 
+.queue-toggle {
+    flex: none;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+    color: var(--lumo-secondary-text-color);
+}
+
+.queue-clear[hidden] + .queue-toggle {
+    margin-left: auto;
+}
+
+.queue-card.collapsed {
+    padding-bottom: 12px;
+}
+
+.queue-card.collapsed .queue-head {
+    padding-bottom: 0;
+}
+
 .queue-list {
     display: flex;
     flex-direction: column;
@@ -497,10 +517,22 @@ body {
     }
 
     .queue-title {
-        flex: 1 1 auto;
+        flex: 1 1 0;
+    }
+
+    .queue-toggle {
+        order: 1;
+        min-width: 40px;
+        height: 40px;
+    }
+
+    .queue-summary {
+        order: 2;
+        flex: 1 1 50%;
     }
 
     .queue-clear {
+        order: 3;
         margin-left: auto;
     }
 
