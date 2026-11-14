@@ -130,7 +130,7 @@ jobs:
             echo
             echo "- **Synology NAS** (DSM 7.2.1+, Container Manager): install the x86_64 or armv8 \`.spk\` in Package Center → Manual Install. The armv8 package has not yet been tested on a real ARM NAS."
             echo "- **Docker** (linux/amd64, linux/arm64): \`docker run ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF_NAME}\`"
-            echo "- **Standalone:** the \`.jar\` needs Java 21 and ffmpeg."
+            echo "- **macOS, Linux, Windows:** download the \`.jar\` and run \`java -jar airplay-capture-${GITHUB_REF_NAME}.jar\`. It needs Java 21 or newer and ffmpeg."
             echo
             echo "SHA-256 checksums: \`release-checksums.txt\`."
           } > release-notes.md
