@@ -1664,18 +1664,39 @@ body.player-open .save-bar {
 }
 
 /* logs */
+.log-tools {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
 .log-lines {
     border: 1px solid var(--app-line);
     border-radius: 16px;
     background: var(--app-surface);
     padding: 14px 16px;
-    max-height: 70vh;
+    /* fills the window below header and toolbar, so the newest line is always on screen */
+    height: calc(100dvh - 240px);
+    min-height: 240px;
     overflow: auto;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
     line-height: 1.7;
     display: flex;
     flex-direction: column;
+}
+
+.log-lines:focus-visible {
+    outline: 2px solid rgba(255, 93, 108, 0.6);
+    outline-offset: 2px;
+}
+
+.log-empty {
+    margin: auto;
+    font-family: var(--lumo-font-family);
+    font-size: 13px;
+    color: var(--lumo-secondary-text-color);
 }
 
 .log-line {
@@ -1687,7 +1708,7 @@ body.player-open .save-bar {
 }
 
 .log-time {
-    color: #5f6877;
+    color: #7b8496;
     flex: 0 0 auto;
 }
 
@@ -1696,11 +1717,13 @@ body.player-open .save-bar {
     color: var(--lumo-secondary-text-color);
 }
 
-.log-level.ERROR {
-    color: #ff5d6c;
+.log-level.ERROR,
+.log-line.ERROR .log-message {
+    color: #ff8a95;
 }
 
-.log-level.WARN {
+.log-level.WARN,
+.log-line.WARN .log-message {
     color: #f0b34a;
 }
 
@@ -1711,6 +1734,31 @@ body.player-open .save-bar {
 
 .log-message {
     flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 700px) {
+    /* time, level and scope on one line, the message on the full width below */
+    .log-line {
+        flex-wrap: wrap;
+        gap: 0 10px;
+        padding: 5px 0;
+        border-bottom: 1px solid var(--app-line);
+    }
+
+    .log-level,
+    .log-scope {
+        flex: 0 0 auto;
+    }
+
+    .log-message {
+        flex: 1 0 100%;
+    }
+
+    .log-lines {
+        height: calc(100dvh - 310px);
+        padding: 8px 12px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
