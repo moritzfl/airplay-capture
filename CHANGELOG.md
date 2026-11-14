@@ -12,12 +12,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The app checks GitHub once a day for a newer release and shows an **Update** notice in the
   header, with the version and a link to the release under **Settings → Updates**. The check can
   be turned off there.
+- A player bar at the bottom of the window that keeps playing while you move between Library,
+  Settings and Logs. The play button of the playing recording becomes pause.
+- The log view follows the newest line, can show warnings and errors only, and copies its lines
+  for a bug report.
+
+### Changed
+
+- Library: titles are no longer cut off, recordings inside an album or book show their track
+  number instead of repeating cover, artist and album, and recordings of today and yesterday say
+  so. On small screens the library is one column of compact cards.
+- Settings are grouped into one card per topic with a list to jump between them. A bar appears
+  when something was changed and confirms the save; problems are shown on the field. Options that
+  have no effect are disabled, and the network interface is chosen from a list.
+- The audiobook and edition dialogs use the full height of the window and the full screen on
+  phones, and say right away when a catalog edition does not fit the recording.
+- The conversion history folds to a one-line summary once its newest entry is more than a day old.
+  The running conversion is listed first, then the waiting ones in the order they will start.
+- The header shows the package icon and a short status (Ready, Recording, Receiver offline); on
+  phones the navigation is a tab row. The card above the library says when the receiver is
+  offline, and why, instead of inviting you to look for it in the AirPlay menu.
 
 ### Fixed
 
 - Dates and times follow the time zone of the browser instead of the server, which is usually UTC
   in a container.
 - `/api/status` reports the real application version.
+- Searching for a song showed every recording of its album instead of the matching ones.
+- **Show in library** left the book collapsed in the table and highlighted only its title.
+- Delete and cancel confirmations opened with the focus on the destructive button, so Enter
+  confirmed them.
+- An interface address that does not exist on the machine could be saved and left the receiver
+  offline; it is rejected now.
+- Browser tabs had no title, and every page load requested a stylesheet that does not exist.
 
 ## [1.1.0] - 2026-11-13
 

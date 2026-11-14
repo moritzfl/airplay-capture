@@ -133,15 +133,18 @@ handling are platform-independent, but please report anything that misbehaves.
 ### Record
 
 Play anything in an app that supports AirPlay (Music, Spotify, Audible, Apple Books, …) and choose
-**AirPlay Capture** as the output. The header shows the track being recorded with its cover and
-progress. Tracks shorter than 3 seconds are discarded.
+**AirPlay Capture** as the output. The card above the library shows the track being recorded with
+its cover and progress, and the header says who is playing. Tracks shorter than 3 seconds are
+discarded.
 
 ### Play and download
 
 The library groups recordings by album (or book). Expand a group to play a track or download exactly
 the format you want; `ZIP · M4A` / `ZIP · MP3` downloads the whole group, and a finished audiobook
-offers `M4B` directly. Recording the same song again never merges files: the **best take** is marked
-and used for ZIPs and audiobooks, the others stay available.
+offers `M4B` directly. A played recording opens a player bar at the bottom of the window that keeps
+playing while you move between Library, Settings and Logs. Recording the same song again never
+merges files: the **best take** is marked and used for ZIPs and audiobooks, the others stay
+available. The search narrows the library by title, artist or album.
 
 ### Turn chapters into an audiobook
 
@@ -157,7 +160,8 @@ Open a book group and choose **Create M4B…**:
 
 Conversions run in the background with live progress in the **Audiobook conversions** card, so you
 can keep recording. Finished jobs offer **Download M4B** and **Show in library**; failed jobs keep
-their reason visible.
+their reason visible. Once the newest entry is more than a day old the card folds to a one-line
+summary that opens again with a click.
 
 ### Use it on your phone
 
@@ -170,9 +174,10 @@ On Synology, open **Manage → Open on phones…** once, then open the address o
 
 ### Settings
 
-Receiver name, interface address, output formats and bitrates, silence timeout, ffmpeg path,
-lost-packet recovery, metadata completion and audiobook behaviour are editable in **Settings** and
-stored in `settings.json` in the data directory. Standalone options:
+Receiver name, network interface, file formats and bitrates, silence timeout, ffmpeg, lost-packet
+recovery, metadata completion and audiobook behaviour are editable in **Settings**, one card per
+topic. A bar appears as soon as something is changed; nothing applies until you save it there. The
+values are stored in `settings.json` in the data directory. Standalone options:
 
 | Option | Environment | Default |
 | --- | --- | --- |
@@ -207,7 +212,8 @@ GitHub.
 **The receiver does not appear in the AirPlay menu.**
 Keep the sender and the receiver on the same subnet (mDNS does not cross VLANs without a repeater).
 On macOS, grant **Local Network** permission. On a NAS, the log's `listening on <ip> via <interface>`
-line must show the LAN address, not a Docker/VPN one; set **Settings → Interface address** if needed.
+line must show the LAN address, not a Docker/VPN one; choose it under **Settings → Network interface**
+if needed.
 With a firewall enabled, allow **IGMP and UDP 5353** for discovery, plus the RTSP port (5002 by
 default) and the UDP audio ports.
 
@@ -217,8 +223,8 @@ receiver reorders packets and requests missing ones for up to 2.5 s by default; 
 are shown as `audio gaps` with the packet count, and a track stopped early is marked `incomplete`.
 
 **No M4A/MP3 was produced.**
-Install ffmpeg, or check **Settings → ffmpeg path**. Without it the lossless `.caf` capture is kept
-and the track is marked, so nothing is lost.
+Install ffmpeg, or check **Settings → Files → ffmpeg**, which says whether it was found. Without it
+the lossless `.caf` capture is kept and the track is marked, so nothing is lost.
 
 **Limits.**
 Classic **AirPlay 1 (RAOP)** only — AirPlay 2 features (multi-room, HomePod grouping) are not
@@ -283,7 +289,7 @@ hole is filled with silence to keep the timeline intact.
 ### Metadata completion
 
 AirPlay metadata is not guaranteed: Apple Music usually sends title, artist and album, but genre,
-year, track number and artwork are often missing. With **Fill missing tags from Apple catalog**
+year, track number and artwork are often missing. With **Fill missing tags from Apple's catalog**
 enabled, the exporter fills only empty fields, with a strict title/artist match, using Apple first
 and Deezer as fallback. Entries touched this way are marked `via apple` / `via deezer`. This runs on
 the export thread, so recording is never delayed; disable it if metadata should not leave the
@@ -309,8 +315,8 @@ MusicBrainz releases expose their track list. MusicBrainz asks for a contact in 
 Disable the lookup entirely if album/artist should not leave the machine.
 
 By default nothing is assembled automatically: the library offers **Create M4B…** and you review
-sources, metadata and the preview. Enable **Assemble detected audiobooks automatically** to build the
-`.m4b` as soon as a book ends; that path keeps the lossless CAF until the book is finished.
+sources, metadata and the preview. Enable **Create the audiobook automatically when a book ends** to build
+the `.m4b` as soon as a book ends; that path keeps the lossless CAF until the book is finished.
 
 ### HTTP API
 
