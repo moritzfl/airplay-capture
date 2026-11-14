@@ -69,13 +69,13 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
-    flex-wrap: wrap;
 }
 
 .brand {
     display: flex;
     align-items: center;
     gap: 14px;
+    flex: none;
 }
 
 .logo {
@@ -104,12 +104,18 @@ body {
     color: var(--lumo-secondary-text-color);
 }
 
+/* everything stays on one row: when it gets tight the status detail is cut, nothing wraps */
 .app-header-right {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
+    flex: 1 1 0;
+    min-width: 0;
     justify-content: flex-end;
+}
+
+.app-header-right > * {
+    flex: none;
 }
 
 .status-pill {
@@ -125,7 +131,13 @@ body {
     white-space: nowrap;
 }
 
+.app-header-right > .status-pill {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
 .status-dot {
+    flex: none;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -144,6 +156,7 @@ body {
 }
 
 .status-detail {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -1879,6 +1892,7 @@ body.player-open .save-bar {
 
     /* phone header: brand and status share the first row, navigation fills the second */
     .app-header {
+        flex-wrap: wrap;
         padding: 10px 16px 0;
         gap: 8px 10px;
     }
@@ -1906,8 +1920,7 @@ body.player-open .save-bar {
         text-overflow: ellipsis;
     }
 
-    .brand-device,
-    .status-detail {
+    .brand-device {
         display: none;
     }
 
@@ -1920,25 +1933,6 @@ body.player-open .save-bar {
         padding: 6px 10px;
     }
 
-    .queue-pill-label {
-        display: none;
-    }
-
-    /* a phone header has no room for the pill: the notice is a dot on the Settings tab */
-    .update-pill {
-        display: none;
-    }
-
-    .nav-link.has-update::after {
-        content: "";
-        display: inline-block;
-        width: 7px;
-        height: 7px;
-        margin-left: 6px;
-        border-radius: 50%;
-        background: #40c98a;
-        vertical-align: middle;
-    }
 
     .app-nav {
         order: 4;
@@ -2138,4 +2132,30 @@ body.player-open .save-bar {
     text-align: center;
     color: var(--lumo-secondary-text-color);
     font-size: 13px;
+}
+
+/* the header gives up detail step by step instead of wrapping or overlapping */
+@media (max-width: 1100px) {
+    .status-detail,
+    .queue-pill-label {
+        display: none;
+    }
+}
+
+@media (max-width: 860px) {
+    /* no room for the update pill: the notice is a dot on the Settings link */
+    .update-pill {
+        display: none;
+    }
+
+    .nav-link.has-update::after {
+        content: "";
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-left: 6px;
+        border-radius: 50%;
+        background: #40c98a;
+        vertical-align: middle;
+    }
 }
