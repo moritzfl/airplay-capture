@@ -23,6 +23,7 @@ import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.library.LibraryGroups;
 import de.moritzf.airplaycapture.library.LibraryTrack;
 import de.moritzf.airplaycapture.media.ChapterCatalog;
+import de.moritzf.airplaycapture.media.ChapterSplitter;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
 import java.nio.file.Files;
@@ -40,6 +41,8 @@ public final class AudiobookDialog extends Dialog {
     private static final String PREVIEW_PLAY_JS = """
     const audio = document.getElementById('app-book-preview');
     if (audio) {
+        document.getElementById('app-audio')?.pause();
+        audio.parentElement.classList.add('open');
         audio.src = this.dataset.src;
         audio.play();
     }
@@ -60,6 +63,7 @@ public final class AudiobookDialog extends Dialog {
     private final Span lookupState = new Span();
     private final Span chapterState = new Span();
     private final Button changeEdition = new Button("Choose edition…");
+    private final HorizontalLayout chapterRow = new HorizontalLayout();
     private final Span duplicateNote = new Span();
     private final VerticalLayout content = new VerticalLayout();
     private final List<LibraryTrack> sourceOrder = new ArrayList<>();
@@ -284,7 +288,7 @@ public final class AudiobookDialog extends Dialog {
         }
         changeEdition.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
         changeEdition.addClickListener(event -> openPicker());
-        HorizontalLayout chapterRow = new HorizontalLayout(chapterState, changeEdition);
+        chapterRow.add(chapterState, changeEdition);
         chapterRow.setWidthFull();
         chapterRow.setSpacing(false);
         chapterRow.setAlignItems(
@@ -329,6 +333,8 @@ public final class AudiobookDialog extends Dialog {
     /** Explains only the chosen way of cutting chapters, instead of all three at once. */
     private void describeChapterMode() {
         AudiobookCreator.ChapterMode mode = chapterMode.getValue();
+        // Which edition was found only matters while its chapters are the plan.
+        chapterRow.setVisible(mode == AudiobookCreator.ChapterMode.CATALOG);
         chapterMode.setHelperText(
             mode == null
                 ? ""
@@ -504,6 +510,12 @@ public final class AudiobookDialog extends Dialog {
                 " · Sample plays the start and end, Full plays the whole chapter."
         );
         previewAudioSlot.setVisible(true);
+        previewAudioSlot
+            .getElement()
+            .executeJs(
+                "this.classList.remove('open'); const audio = this.querySelector('audio');" +
+                    " audio.pause(); audio.removeAttribute('src');"
+            );
         chapterList.getElement().executeJs("this.scrollIntoView({block:'nearest'})");
     }
 
@@ -659,14 +671,28 @@ public final class AudiobookDialog extends Dialog {
         }
         ChapterCatalog.Result result = found.get();
         changeEdition.setText("Change edition…");
+        long recording = selectedDurationMs();
+        boolean fits =
+            recording <= 0 ||
+            result.totalMs() <= 0 ||
+            Math.abs(result.totalMs() - recording) <= recording * ChapterSplitter.CATALOG_TOLERANCE;
+        // An edition of another length cannot place its chapters: say so before the preview does.
         chapterState.setText(
-            result.chapters().size() +
-                " chapters from " +
-                result.source() +
-                " · " +
-                Fmt.duration(result.totalMs()) +
-                " · " +
-                result.album()
+            fits
+                ? result.chapters().size() +
+                      " chapters from " +
+                      result.source() +
+                      " · " +
+                      Fmt.duration(result.totalMs()) +
+                      " · " +
+                      result.album()
+                : "The closest edition (" +
+                      result.source() +
+                      ", " +
+                      Fmt.duration(result.totalMs()) +
+                      ") does not match this recording of " +
+                      Fmt.duration(recording) +
+                      ", so the pauses will be used."
         );
     }
 

@@ -1333,8 +1333,14 @@ vaadin-dialog::part(footer) {
     color: var(--lumo-secondary-text-color);
 }
 
+/* the player appears with the first sample instead of sitting there empty */
 .preview-audio {
+    display: none;
     width: 100%;
+}
+
+.preview-audio.open {
+    display: block;
 }
 
 .preview-list {
