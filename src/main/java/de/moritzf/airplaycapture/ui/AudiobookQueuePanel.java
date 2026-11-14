@@ -9,6 +9,8 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.dom.Element;
 import de.moritzf.airplaycapture.recording.AudiobookJobs;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -87,7 +89,7 @@ final class AudiobookQueuePanel extends Div {
 
     /** Rebuilds the panel only when a visible value changed. */
     void refresh() {
-        List<AudiobookJobs.Job> all = jobs.jobs();
+        List<AudiobookJobs.Job> all = inQueueOrder(jobs.jobs());
         String next = signature(all);
         setVisible(!all.isEmpty());
         if (next.equals(signature)) {
@@ -135,6 +137,30 @@ final class AudiobookQueuePanel extends Div {
             more.addClassName("queue-more");
             list.add(more);
         }
+    }
+
+    /**
+     * The order things happen in: the running conversion, then the waiting ones as they will
+     * start, then finished ones with the newest first.
+     */
+    private static List<AudiobookJobs.Job> inQueueOrder(List<AudiobookJobs.Job> jobs) {
+        List<AudiobookJobs.Job> ordered = new ArrayList<>(jobs);
+        ordered.sort(
+            Comparator.comparingInt(AudiobookQueuePanel::rank).thenComparing((a, b) ->
+                a.active()
+                    ? Long.compare(a.createdAtEpochMs, b.createdAtEpochMs)
+                    : Long.compare(b.finishedAtEpochMs, a.finishedAtEpochMs)
+            )
+        );
+        return ordered;
+    }
+
+    private static int rank(AudiobookJobs.Job job) {
+        return switch (job.status()) {
+            case RUNNING -> 0;
+            case QUEUED -> 1;
+            default -> 2;
+        };
     }
 
     /**

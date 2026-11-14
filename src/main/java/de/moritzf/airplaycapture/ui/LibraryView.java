@@ -568,25 +568,36 @@ public class LibraryView extends VerticalLayout {
         }
         String key = group.get().key();
         search.clear();
-        expandedGroups.add(key);
+        expandedGroups.add("g" + key);
         expandedCards.add(key);
         gridSignature = "";
         refresh(true);
+        // Table rows live in the grid's shadow DOM: the title cell is the way in to its row.
         getElement().executeJs(
             """
             const key = $0;
             const scope = this;
+            const flash = (element) => element.animate(
+                [
+                  {backgroundColor: 'rgba(64, 201, 138, 0.24)'},
+                  {backgroundColor: 'rgba(64, 201, 138, 0.24)', offset: 0.6},
+                ],
+                {duration: 2400, easing: 'ease'});
             requestAnimationFrame(() => {
-              const targets = [...scope.querySelectorAll('[data-group-key]')]
-                  .filter((element) => element.dataset.groupKey === key && element.offsetParent);
-              const target = targets[0];
+              const target = [...scope.querySelectorAll('[data-group-key]')]
+                  .find((element) => element.dataset.groupKey === key && element.offsetParent);
               if (!target) return;
-              const row = target.closest('.lib-card') || target;
-              row.scrollIntoView({block: 'center', behavior: 'smooth'});
-              row.classList.remove('reveal-flash');
-              void row.offsetWidth;
-              row.classList.add('reveal-flash');
-              setTimeout(() => row.classList.remove('reveal-flash'), 2400);
+              const card = target.closest('.lib-card');
+              const cell = target.closest('vaadin-grid-cell-content');
+              const row = cell && cell.assignedSlot && cell.assignedSlot.closest('tr');
+              (card || target).scrollIntoView({block: 'center', behavior: 'smooth'});
+              if (card) {
+                flash(card);
+              } else if (row) {
+                row.querySelectorAll('td').forEach(flash);
+              } else {
+                flash(target);
+              }
             });
             """,
             key

@@ -635,13 +635,13 @@ body {
 .queue-pill {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 0;
     font-size: 13px;
     font-variant-numeric: tabular-nums;
     padding: 7px 12px;
     border-radius: 999px;
     cursor: pointer;
-    white-space: nowrap;
+    white-space: pre;
     border: 1px solid rgba(255, 176, 32, 0.45);
     background: rgba(255, 176, 32, 0.12);
     color: #ffcf7a;
@@ -649,6 +649,7 @@ body {
 
 .queue-pill::before {
     content: "";
+    margin-right: 8px;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -760,20 +761,6 @@ vaadin-button[theme~="error"][theme~="primary"] {
     100% {
         background: transparent;
         box-shadow: inset 3px 0 0 transparent;
-    }
-}
-
-.reveal-flash {
-    animation: app-reveal 2.4s ease;
-}
-
-@keyframes app-reveal {
-    0%,
-    60% {
-        background: rgba(64, 201, 138, 0.22);
-    }
-    100% {
-        background: transparent;
     }
 }
 
@@ -1806,9 +1793,11 @@ body.player-open .save-bar {
     }
 
     .queue-pill {
-        order: 3;
-        flex: 1 0 100%;
-        justify-content: center;
+        padding: 6px 10px;
+    }
+
+    .queue-pill-label {
+        display: none;
     }
 
     /* a phone header has no room for the pill: the notice is a dot on the Settings tab */

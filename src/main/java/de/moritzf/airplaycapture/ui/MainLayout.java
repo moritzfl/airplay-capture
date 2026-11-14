@@ -191,13 +191,18 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         boolean isRunning = running > 0;
         queuePill.addClassName(isRunning ? "running" : "waiting");
         AudiobookJobs.Job first = active.get(0);
-        String label = isRunning
-            ? "Converting · " + Math.round(first.progress * 100) + "%"
-            : active.size() + " waiting";
-        if (active.size() > 1) {
-            label += " · " + active.size() + " in queue";
-        }
-        queuePill.setText(label);
+        // Three parts, so a phone can show just the number that changes.
+        Span label = new Span(isRunning ? "Converting · " : "");
+        label.addClassName("queue-pill-label");
+        Span value = new Span(
+            isRunning ? Math.round(first.progress * 100) + "%" : String.valueOf(active.size())
+        );
+        Span more = new Span(
+            !isRunning ? " waiting" : active.size() > 1 ? " · " + active.size() + " in queue" : ""
+        );
+        more.addClassName("queue-pill-label");
+        queuePill.removeAll();
+        queuePill.add(label, value, more);
         queuePill
             .getElement()
             .setAttribute(
