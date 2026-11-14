@@ -2,7 +2,10 @@
 
 # The jar is the same for every platform: build it once, natively, instead of again under arm64
 # emulation (which took 16 minutes per release).
-FROM --platform=$BUILDPLATFORM eclipse-temurin:25-jdk AS build
+# The JDK must be the toolchain version in build.gradle.kts (Java 21): Gradle does not download one,
+# so another major fails the build. renovate.json keeps these images on their major for that reason;
+# move build.gradle.kts, this file and packaging/Dockerfile.runtime together.
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
 WORKDIR /src
 COPY gradle gradle
 COPY gradlew gradlew
@@ -11,7 +14,7 @@ RUN ./gradlew --no-daemon --version > /dev/null
 COPY src src
 RUN ./gradlew --no-daemon bootJar -x test && cp build/libs/*.jar /src/app.jar
 
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:21-jre
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
