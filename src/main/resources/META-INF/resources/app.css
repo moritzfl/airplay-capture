@@ -254,6 +254,23 @@ body {
     font-size: 20px;
 }
 
+/* red is for recording and for trouble; waiting is neither */
+.now-card.idle .eyebrow {
+    color: var(--lumo-secondary-text-color);
+}
+
+.now-card.offline {
+    border-color: rgba(255, 93, 108, 0.45);
+}
+
+.now-card.offline .eyebrow {
+    color: #ff5d6c;
+}
+
+.now-card.offline .now-sub {
+    white-space: normal;
+}
+
 .now-cover {
     width: 128px;
     height: 128px;
@@ -1798,6 +1815,10 @@ body.player-open .save-bar {
         display: none;
     }
 
+    .now-card.offline .now-sub {
+        display: block;
+    }
+
     .now-title {
         white-space: normal;
         font-size: 18px;
@@ -1865,18 +1886,13 @@ body.player-open .save-bar {
     }
 
     .brand-device,
-    .status-pill.ok .status-detail,
-    .status-pill.live .status-detail {
+    .status-detail {
         display: none;
     }
 
     .status-pill {
         min-width: 0;
         padding: 6px 10px;
-    }
-
-    .status-pill.offline .status-detail {
-        max-width: 130px;
     }
 
     .queue-pill {

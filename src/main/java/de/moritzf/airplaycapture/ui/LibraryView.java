@@ -356,7 +356,7 @@ public class LibraryView extends VerticalLayout {
             Span date = new Span(
                 row.groupRow()
                     ? groupDateHint(row.group())
-                    : Fmt.date(row.track().recordedAtEpochMs)
+                    : Fmt.recorded(row.track().recordedAtEpochMs)
             );
             date.addClassName("cell-date");
             date.getElement().setAttribute(
@@ -1107,28 +1107,35 @@ public class LibraryView extends VerticalLayout {
         nowCard.addClassName(live ? "live" : "idle");
         boolean hasTrackInfo =
             !isBlank(state.nowTitle) || !isBlank(state.nowArtist) || state.coverVersion > 0;
-        nowEyebrow.setText(
-            live
-                ? hasTrackInfo
-                    ? "Recording now"
-                    : "Recording now · waiting for track info"
-                : "Waiting for a sender"
-        );
-        nowTitle.setText(
-            live
-                ? state.nowTitle == null || state.nowTitle.isBlank()
-                    ? "Unknown title"
-                    : state.nowTitle
-                : "Select this receiver in the AirPlay menu"
-        );
+        boolean offline = !live && !state.advertising;
+        nowCard.getElement().getClassList().set("offline", offline);
+        String receiver = isBlank(state.deviceName) ? "this receiver" : state.deviceName;
         if (live) {
+            nowEyebrow.setText(
+                hasTrackInfo ? "Recording now" : "Recording now · waiting for track info"
+            );
+            nowTitle.setText(isBlank(state.nowTitle) ? "Unknown title" : state.nowTitle);
             String artist = state.nowArtist == null ? "" : state.nowArtist;
             String album = state.nowAlbum == null ? "" : state.nowAlbum;
             nowSub.setText(
                 (artist + (album.isBlank() ? "" : (artist.isBlank() ? "" : " · ") + album)).trim()
             );
+        } else if (offline) {
+            // Without the announcement no device can find the receiver: say so instead of
+            // inviting the user to look for it in the AirPlay menu.
+            nowEyebrow.setText("Receiver offline");
+            nowTitle.setText("Not visible in the AirPlay menu");
+            nowSub.setText(
+                isBlank(state.lastError)
+                    ? "The receiver has not started. The Logs show why."
+                    : sentence(state.lastError) + " The Logs show the details."
+            );
         } else {
-            nowSub.setText("Playback from iPhone, iPad or Mac is recorded track by track.");
+            nowEyebrow.setText("Ready to record");
+            nowTitle.setText("Choose \u201c" + receiver + "\u201d in the AirPlay menu");
+            nowSub.setText(
+                "Whatever plays on your iPhone, iPad or Mac is recorded track by track."
+            );
         }
         nowTime.setText(
             live
@@ -1171,6 +1178,13 @@ public class LibraryView extends VerticalLayout {
         }
     }
 
+    /** An error text from the core as a sentence: capitalised, with a full stop. */
+    private static String sentence(String text) {
+        String value = text.trim();
+        value = value.substring(0, 1).toUpperCase(Locale.ROOT) + value.substring(1);
+        return value.endsWith(".") ? value : value + ".";
+    }
+
     private void refreshGrid() {
         refreshGrid(false);
     }
@@ -1193,6 +1207,8 @@ public class LibraryView extends VerticalLayout {
                 }
             }
 
+            // A hit on the album or its artist shows the whole group; otherwise only the
+            // recordings that match, so searching for a song narrows an album down to it.
             boolean groupMatches = query.isBlank() || matchesGroup(group, query);
             List<LibraryTrack> matchedTracks = query.isBlank()
                 ? group.tracks()
@@ -1248,13 +1264,14 @@ public class LibraryView extends VerticalLayout {
         grid.setVisible(!empty);
         cardList.getElement().getClassList().set("is-empty", empty);
         emptyState.setVisible(empty);
+        // Nothing to search in an empty library.
+        search.setVisible(!tracks.isEmpty());
         if (empty) {
             if (rawQuery.isBlank()) {
                 emptyTitle.setText("No recordings yet");
                 emptyText.setText(
-                    "Play something on your iPhone, iPad or Mac and pick \"" +
-                        (isBlank(state.deviceName) ? "the recorder" : state.deviceName) +
-                        "\" in the AirPlay menu."
+                    "Every track you play to this receiver appears here as its own file " +
+                        "as soon as it ends."
                 );
             } else {
                 emptyTitle.setText("No matches");
@@ -1381,7 +1398,7 @@ public class LibraryView extends VerticalLayout {
 
         Component title = titleCell(row);
         Span meta = new Span(
-            metaLine(track.durationMs, track.sizeBytes, Fmt.date(track.recordedAtEpochMs))
+            metaLine(track.durationMs, track.sizeBytes, Fmt.recorded(track.recordedAtEpochMs))
         );
         meta.addClassName("card-meta");
 
@@ -1453,13 +1470,7 @@ public class LibraryView extends VerticalLayout {
             (group.title() == null ? "" : group.title()) +
             " " +
             (group.artist() == null ? "" : group.artist());
-        return (
-            matchesText(haystack, query) ||
-            group
-                .tracks()
-                .stream()
-                .anyMatch(track -> matches(track, query))
-        );
+        return matchesText(haystack, query);
     }
 
     private void appendSignature(StringBuilder signature, Row row) {

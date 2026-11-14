@@ -76,6 +76,28 @@ final class Fmt {
         return DATE.format(Instant.ofEpochMilli(epochMillis).atZone(zone()));
     }
 
+    /**
+     * When something was recorded, the way a file list says it: "Today, 18:04", "Yesterday,
+     * 09:12", and the plain date for anything older.
+     */
+    static String recorded(long epochMillis) {
+        if (epochMillis <= 0) {
+            return "";
+        }
+        ZoneId zone = zone();
+        var when = Instant.ofEpochMilli(epochMillis).atZone(zone);
+        String day = dayName(when.toLocalDate(), zone);
+        return day == null ? DATE.format(when) : day + ", " + TIME.format(when);
+    }
+
+    private static String dayName(java.time.LocalDate day, ZoneId zone) {
+        java.time.LocalDate today = java.time.LocalDate.now(zone);
+        if (day.equals(today)) {
+            return "Today";
+        }
+        return day.equals(today.minusDays(1)) ? "Yesterday" : null;
+    }
+
     /** Time of day for today, otherwise date and time; for "finished at" labels. */
     static String dateTime(long epochMillis) {
         if (epochMillis <= 0) {
@@ -102,7 +124,12 @@ final class Fmt {
         String first = date(firstEpochMillis);
         String last = date(lastEpochMillis);
         if (first.equals(last)) {
-            return first;
+            ZoneId zone = zone();
+            String day = dayName(
+                Instant.ofEpochMilli(lastEpochMillis).atZone(zone).toLocalDate(),
+                zone
+            );
+            return day == null ? first : day;
         }
         if (first.substring(6).equals(last.substring(6))) {
             return first.substring(0, 5) + " – " + last;
