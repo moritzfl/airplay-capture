@@ -333,6 +333,18 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
+.now-time {
+    flex: none;
+    white-space: nowrap;
+}
+
+.now-client {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* audiobook conversion queue */
 .queue-card {
     border: 1px solid var(--app-line);

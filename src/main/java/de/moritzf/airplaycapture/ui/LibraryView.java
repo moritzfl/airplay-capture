@@ -1138,15 +1138,18 @@ public class LibraryView extends VerticalLayout {
                 : ""
         );
         if (live) {
+            // The sender's name says who is playing; its address is only a tooltip away.
             String source = isBlank(state.clientName) ? state.client : state.clientName;
-            StringBuilder label = new StringBuilder("from " + (source == null ? "" : source));
-            if (!isBlank(state.senderApp)) {
-                label.append(" · ").append(state.senderApp);
-            }
-            if (!isBlank(state.clientName) && !isBlank(state.client)) {
-                label.append(" · ").append(state.client);
-            }
-            nowClient.setText(label.toString());
+            nowClient.setText(
+                (isBlank(source) ? "" : "from " + source) +
+                    (isBlank(state.senderApp) ? "" : " · " + state.senderApp)
+            );
+            nowClient
+                .getElement()
+                .setAttribute(
+                    "title",
+                    isBlank(state.client) ? "" : "Sender address " + state.client
+                );
         } else {
             nowClient.setText("");
         }
