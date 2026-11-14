@@ -87,7 +87,6 @@ public class LibraryView extends VerticalLayout {
     private final Span trackCount = new Span();
     private final Span groupCount = new Span();
     private final Span totalSize = new Span();
-    private final AudioPlayer player = new AudioPlayer();
     private final Map<String, LibraryGroups.Take> takeInfo = new HashMap<>();
     private final Set<String> expandedGroups = new HashSet<>();
     private final Set<String> expandedCards = new HashSet<>();
@@ -174,11 +173,10 @@ public class LibraryView extends VerticalLayout {
         buildEmptyState();
 
         nowCard.setWidthFull();
-        player.setWidthFull();
         toolbar.setWidthFull();
         grid.setWidthFull();
         cardList.setWidthFull();
-        add(nowCard, player, queuePanel, toolbar, grid, cardList, emptyState);
+        add(nowCard, queuePanel, toolbar, grid, cardList, emptyState);
 
         refresh(true);
     }
@@ -309,14 +307,10 @@ public class LibraryView extends VerticalLayout {
                 .forEach(row -> expandedGroups.remove(row.key()))
         );
 
-        grid.addComponentColumn(this::coverCell)
-            .setWidth("64px")
-            .setFlexGrow(0)
-            .setResizable(true)
-            .setKey("cover");
+        grid.addComponentColumn(this::coverCell).setWidth("80px").setFlexGrow(0).setKey("cover");
         grid.addComponentHierarchyColumn(this::titleCell)
             .setHeader("Title")
-            .setFlexGrow(3)
+            .setFlexGrow(1)
             .setResizable(true)
             .setKey("title");
         grid.addComponentColumn(row -> {
@@ -330,6 +324,7 @@ public class LibraryView extends VerticalLayout {
             .setHeader("Duration")
             .setAutoWidth(true)
             .setFlexGrow(0)
+            .setTextAlign(com.vaadin.flow.component.grid.ColumnTextAlign.END)
             .setResizable(true)
             .setKey("duration");
         grid.addComponentColumn(this::formatCell)
@@ -354,6 +349,7 @@ public class LibraryView extends VerticalLayout {
             .setHeader("Size")
             .setAutoWidth(true)
             .setFlexGrow(0)
+            .setTextAlign(com.vaadin.flow.component.grid.ColumnTextAlign.END)
             .setResizable(true)
             .setKey("size");
         grid.addComponentColumn(row -> {
@@ -375,8 +371,9 @@ public class LibraryView extends VerticalLayout {
             .setResizable(true)
             .setKey("date");
         grid.addComponentColumn(this::actionsCell)
-            .setWidth("170px")
+            .setWidth("180px")
             .setFlexGrow(0)
+            .setTextAlign(com.vaadin.flow.component.grid.ColumnTextAlign.END)
             .setKey("actions");
     }
 
@@ -391,6 +388,14 @@ public class LibraryView extends VerticalLayout {
                   .orElse(null)
             : row.track();
         Div holder = new Div();
+        if (inGroup(row)) {
+            // Tracks of one album share its cover; like any album view, number them instead.
+            holder.addClassName("grid-track-number");
+            if (row.track().trackNumber != null) {
+                holder.setText(String.valueOf(row.track().trackNumber));
+            }
+            return holder;
+        }
         holder.addClassName("grid-cover");
         if (coverTrack != null && coverTrack.cover) {
             Image image = new Image(AppUrls.relative("api/tracks/" + coverTrack.id + "/cover"), "");
@@ -404,6 +409,11 @@ public class LibraryView extends VerticalLayout {
         return holder;
     }
 
+    /** True for a recording listed inside an expandable album or book. */
+    private static boolean inGroup(Row row) {
+        return !row.groupRow() && row.group() != null && row.group().expandable();
+    }
+
     private Component titleCell(Row row) {
         return row.groupRow() ? groupTitleCell(row) : trackTitleCell(row);
     }
@@ -413,13 +423,15 @@ public class LibraryView extends VerticalLayout {
         Div body = new Div();
         body.addClassName("grid-title");
         body.getElement().setAttribute("data-group-key", group.key());
-        H3 title = new H3(
-            group.title() == null || group.title().isBlank() ? "Untitled" : group.title()
-        );
+        H3 title = new H3(isBlank(group.title()) ? "Untitled" : group.title());
         title.addClassName("grid-title-text");
-        Span artist = new Span(group.artist() == null ? "" : group.artist());
-        artist.addClassName("grid-artist");
-        body.add(title, artist);
+        title.getElement().setAttribute("title", title.getText());
+        body.add(title);
+        if (!isBlank(group.artist())) {
+            Span artist = new Span(group.artist());
+            artist.addClassName("grid-artist");
+            body.add(artist);
+        }
 
         Div badges = new Div();
         badges.addClassName("grid-badges");
@@ -581,35 +593,26 @@ public class LibraryView extends VerticalLayout {
         );
     }
 
-    private Button audiobookIcon(LibraryGroups.Group group) {
-        Button button = new Button(VaadinIcon.HEADPHONES.create(), event ->
-            openAudiobookDialog(group)
-        );
-        button.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        button.addClassName("row-action");
-        boolean running = audiobookJobs.isActive(group.key());
-        button.setEnabled(!running);
-        String label = running
-            ? "Conversion in progress — see the queue above"
-            : "Create audiobook (.m4b) from these recordings";
-        button.getElement().setAttribute("title", label);
-        button.getElement().setAttribute("aria-label", label);
-        return button;
-    }
-
     private Component trackTitleCell(Row row) {
         LibraryTrack track = row.track();
         Div body = new Div();
         body.addClassName("grid-title");
-        H3 title = new H3(
-            track.title == null || track.title.isBlank() ? track.displayName() : track.title
-        );
+        H3 title = new H3(isBlank(track.title) ? track.displayName() : track.title);
         title.addClassName("grid-title-text");
-        Span artist = new Span(track.artist == null ? "" : track.artist);
-        artist.addClassName("grid-artist");
-        Span album = new Span(track.album == null ? "" : track.album);
-        album.addClassName("grid-album");
-        body.add(title, artist, album);
+        title.getElement().setAttribute("title", title.getText());
+        body.add(title);
+        // Inside an album or book the group row already names the album and its artist.
+        boolean grouped = inGroup(row);
+        if (!isBlank(track.artist) && !(grouped && track.artist.equals(row.group().artist()))) {
+            Span artist = new Span(track.artist);
+            artist.addClassName("grid-artist");
+            body.add(artist);
+        }
+        if (!isBlank(track.album) && !grouped && !track.album.equals(track.title)) {
+            Span album = new Span(track.album);
+            album.addClassName("grid-album");
+            body.add(album);
+        }
 
         Div badges = new Div();
         badges.addClassName("grid-badges");
@@ -865,7 +868,25 @@ public class LibraryView extends VerticalLayout {
         return badge;
     }
 
+    private Optional<Button> playAction(LibraryTrack track) {
+        String format = preferredFormat(track);
+        if (format == null || !"ready".equals(track.status)) {
+            return Optional.empty();
+        }
+        return Optional.of(
+            AudioPlayer.playButton(
+                fileUrl(track, format, false),
+                isBlank(track.title) ? track.displayName() : track.title,
+                isBlank(track.artist) ? track.album : track.artist
+            )
+        );
+    }
+
     private Component actionsCell(Row row) {
+        return actionsCell(row, true);
+    }
+
+    private Component actionsCell(Row row, boolean withPlay) {
         HorizontalLayout actions = new HorizontalLayout();
         actions.addClassName("grid-actions");
         actions.setSpacing(false);
@@ -915,32 +936,14 @@ public class LibraryView extends VerticalLayout {
                             "Create a chaptered audiobook from these recordings"
                         );
                     actions.add(audiobook);
-                } else if (group.tracks().size() > 1) {
-                    actions.add(audiobookIcon(group));
                 }
             }
             actions.add(groupMenu(group));
             return actions;
         }
         LibraryTrack track = row.track();
-
-        String format = preferredFormat(track);
-        if (format != null && "ready".equals(track.status)) {
-            Button play = player.playButton(
-                fileUrl(track, format, false),
-                track.displayName(),
-                String.join(" · ", track.files.keySet())
-            );
-
-            Anchor download = new Anchor();
-            download.setHref(fileUrl(track, format, true));
-            download.add(VaadinIcon.DOWNLOAD.create());
-            download.addClassName("row-action");
-            download.getElement().setAttribute("download", track.files.get(format));
-            download.getElement().setAttribute("title", downloadHint(track, format));
-            download.getElement().setAttribute("aria-label", downloadHint(track, format));
-
-            actions.add(play, download);
+        if (withPlay) {
+            playAction(track).ifPresent(actions::add);
         }
 
         Button delete = new Button(VaadinIcon.TRASH.create(), event -> confirmDelete(track));
@@ -1356,21 +1359,17 @@ public class LibraryView extends VerticalLayout {
     }
 
     private Component trackCard(Row row) {
+        LibraryTrack track = row.track();
+        boolean child = inGroup(row);
         Div card = new Div();
         card.addClassName("lib-card");
         card.addClassName("lib-card-track");
-        Div head = new Div();
-        head.addClassName("card-head");
-        head.add(coverCell(row), titleCell(row));
-        card.add(head);
 
-        LibraryTrack track = row.track();
-        Div meta = new Div();
-        meta.addClassName("card-meta");
-        meta.add(
-            new Span(metaLine(track.durationMs, track.sizeBytes, Fmt.date(track.recordedAtEpochMs)))
+        Component title = titleCell(row);
+        Span meta = new Span(
+            metaLine(track.durationMs, track.sizeBytes, Fmt.date(track.recordedAtEpochMs))
         );
-        card.add(meta);
+        meta.addClassName("card-meta");
 
         Div files = new Div();
         files.addClassName("card-files");
@@ -1378,12 +1377,28 @@ public class LibraryView extends VerticalLayout {
 
         Div actions = new Div();
         actions.addClassName("card-actions");
-        actions.add(actionsCell(row));
 
+        Div head = new Div();
+        head.addClassName("card-head");
+        if (child) {
+            // Inside a group the cover is already on the group card: lead with play instead, so
+            // a list of chapters or album tracks stays short.
+            card.addClassName("lib-card-child");
+            Div lead = new Div();
+            lead.addClassName("card-lead");
+            playAction(track).ifPresent(lead::add);
+            title.getElement().appendChild(meta.getElement());
+            actions.add(actionsCell(row, false));
+            head.add(lead, title, actions);
+            card.add(head, files);
+            return card;
+        }
+        head.add(coverCell(row), title);
+        actions.add(actionsCell(row));
         Div controls = new Div();
         controls.addClassName("card-controls");
         controls.add(files, actions);
-        card.add(controls);
+        card.add(head, meta, controls);
         return card;
     }
 

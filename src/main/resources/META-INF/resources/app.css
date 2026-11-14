@@ -78,14 +78,11 @@ body {
 }
 
 .logo {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: rgba(217, 28, 51, 0.16);
-    color: #d91c33;
-    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border-radius: 10px;
+    display: block;
 }
 
 .brand-titles {
@@ -190,7 +187,7 @@ body {
 .library-view,
 .settings-view,
 .logs-view {
-    max-width: 1240px;
+    max-width: 1360px;
     margin: 0 auto;
     padding: 24px clamp(16px, 4vw, 48px) 64px;
     display: flex;
@@ -760,36 +757,79 @@ vaadin-notification-card[theme~="contrast"]::part(overlay) {
     }
 }
 
-/* player */
+/* mini player, docked to the bottom once something plays */
 .player-bar {
-    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: none;
     align-items: center;
-    gap: 18px;
-    padding: 12px 18px;
-    border-radius: 16px;
-    border: 1px solid var(--app-line);
-    background: var(--app-surface);
+    gap: 16px;
+    padding: 10px clamp(16px, 4vw, 48px) calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--app-line);
+    background: rgba(21, 24, 29, 0.94);
+    backdrop-filter: blur(14px);
+}
+
+.player-bar.open {
+    display: flex;
+}
+
+/* keep the last rows and the toasts clear of the docked player */
+body.player-open .app-content {
+    padding-bottom: 72px;
+}
+
+body.player-open vaadin-notification-container {
+    bottom: 72px;
 }
 
 .player-text {
     display: flex;
     flex-direction: column;
-    min-width: 140px;
+    flex: 0 1 260px;
+    min-width: 0;
 }
 
 .player-title {
     font-weight: 600;
     font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .player-formats {
     font-size: 12px;
-    color: var(--lumo-tertiary-text-color);
-    text-transform: uppercase;
+    color: var(--lumo-secondary-text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .player-audio {
     flex: 1;
+    min-width: 0;
+}
+
+.player-close {
+    flex: none;
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+    color: var(--lumo-secondary-text-color);
+}
+
+.player-close:hover {
+    color: #f2f4f8;
+}
+
+.row-action.is-playing {
+    color: #ffffff;
+    border-color: rgba(255, 93, 108, 0.65);
+    background: rgba(217, 28, 51, 0.22);
 }
 
 .player-audio audio {
@@ -884,21 +924,8 @@ vaadin-notification-card[theme~="contrast"]::part(overlay) {
     gap: 0;
 }
 
-.lib-card .grid-title-text {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
 .card-head .grid-badges {
     padding-top: 2px;
-}
-
-.card-head .grid-cover {
-    width: 48px;
-    height: 48px;
 }
 
 .card-meta {
@@ -939,7 +966,37 @@ vaadin-notification-card[theme~="contrast"]::part(overlay) {
 }
 
 .cell-number {
+    font-size: 13px;
+    color: var(--lumo-secondary-text-color);
     font-variant-numeric: tabular-nums;
+}
+
+/* a recording inside a group: play button first, no repeated cover */
+.lib-card-child {
+    gap: 6px;
+    padding: 8px 10px;
+}
+
+.lib-card-child .card-head {
+    align-items: center;
+}
+
+.card-lead {
+    flex: none;
+    width: 40px;
+    min-height: 40px;
+}
+
+.lib-card-child .grid-title {
+    gap: 2px;
+}
+
+.lib-card-child .card-files {
+    padding-left: 52px;
+}
+
+.lib-card-child .card-files:has(.format-chips:empty) {
+    display: none;
 }
 
 .card-toggle {
@@ -1001,13 +1058,22 @@ vaadin-notification-card[theme~="contrast"]::part(overlay) {
 }
 
 .grid-cover {
-    width: 56px;
-    height: 56px;
-    border-radius: 10px;
+    width: 48px;
+    height: 48px;
+    flex: none;
+    border-radius: 9px;
     overflow: hidden;
     display: grid;
     place-items: center;
     background: linear-gradient(135deg, #2a303a, #1b1f26);
+}
+
+.grid-track-number {
+    width: 48px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--lumo-tertiary-text-color);
+    font-variant-numeric: tabular-nums;
 }
 
 .grid-cover-image {
@@ -1031,9 +1097,12 @@ vaadin-notification-card[theme~="contrast"]::part(overlay) {
     margin: 0;
     font-size: 15px;
     font-weight: 600;
-    white-space: nowrap;
+    line-height: 1.3;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .grid-artist,
@@ -1058,11 +1127,15 @@ vaadin-notification-card[theme~="contrast"]::part(overlay) {
 }
 
 .grid-error {
-    font-size: 11px;
+    font-size: 12px;
+    line-height: 1.4;
     color: #ff8a95;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
     max-width: 100%;
 }
 
@@ -1072,6 +1145,11 @@ vaadin-notification-card[theme~="contrast"]::part(overlay) {
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
+}
+
+.grid-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
 }
 
 .format-chip {
@@ -1354,19 +1432,37 @@ vaadin-dialog-overlay::part(footer) {
     }
 
     .player-bar {
-        flex-direction: row;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        padding-top: 8px;
     }
 
     .player-text {
-        display: none;
+        flex: 1 1 0;
+        order: 1;
     }
 
+    .player-close {
+        order: 2;
+    }
+
+    .player-audio {
+        order: 3;
+        flex: 1 0 100%;
+    }
+
+    body.player-open .app-content {
+        padding-bottom: 112px;
+    }
+
+    body.player-open vaadin-notification-container {
+        bottom: 112px;
+    }
+
+    /* phone header: brand and status share the first row, navigation fills the second */
     .app-header {
-        align-items: flex-start;
-        flex-direction: column;
+        padding: 10px 16px 0;
+        gap: 8px 10px;
     }
 
     .app-header-right {
@@ -1403,7 +1499,7 @@ vaadin-dialog-overlay::part(footer) {
     }
 }
 
-@media (max-width: 1249px) {
+@media (max-width: 999px) {
     .library-grid {
         display: none !important;
     }
@@ -1415,14 +1511,6 @@ vaadin-dialog-overlay::part(footer) {
     .format-chip {
         min-height: 34px;
         padding: 6px 12px;
-    }
-}
-
-@media (min-width: 700px) and (max-width: 1249px) {
-    .lib-cards {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        align-items: start;
     }
 }
 

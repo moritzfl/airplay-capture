@@ -104,7 +104,7 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
 
         content.addClassName("app-content");
         content.setWidthFull();
-        add(header, content);
+        add(header, content, new AudioPlayer());
         setFlexGrow(1, content);
 
         refreshStatus();
