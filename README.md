@@ -376,7 +376,9 @@ audio, DMAP metadata and artwork — and verifies the exported file with ffprobe
 
 `renovate.json` configures dependency update PRs for Gradle, the Gradle wrapper, Docker images,
 GitHub Actions and the Prettier tools. Renovate's GitHub App must be installed for this repository;
-the config alone does not run it. The SPK framework commit pinned in the release workflow is updated
+the config alone does not run it. Major updates of the `eclipse-temurin` images are switched off:
+the build image must match the Java toolchain in `build.gradle.kts`, so a new Java version is
+raised by hand in both places. The SPK framework commit pinned in the release workflow is updated
 manually when a new framework version is verified.
 
 Shared IntelliJ run configurations live in `.run/`: **AirPlay Capture (Spring Boot)**, **(Java)** and
@@ -388,8 +390,9 @@ conversion queue by hand.
 
 ### Releases (GitHub Actions)
 
-**CI** runs the full test suite on every push to `main` and on pull requests
-(`.github/workflows/ci.yml`).
+**CI** runs the full test suite on every push to `main` and on pull requests, and builds the Docker
+image and the Synology runtime image without publishing them, so a broken image fails before a
+release is tagged (`.github/workflows/ci.yml`).
 
 **Pushing a tag `X.Y.Z`** (for example `1.0.0`, without a `v` prefix) starts the release workflow
 (`.github/workflows/release.yml`):

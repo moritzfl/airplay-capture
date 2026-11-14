@@ -51,3 +51,35 @@ jobs:
       # The tests need no web client bundle; building it would add ~15 s to every run.
       - name: Run tests
         run: ./gradlew test -x vaadinBuildFrontend -x copyVaadinBundle
+
+  # The release builds and pushes the images only after a tag exists. Building them here as well
+  # catches a base image the Gradle toolchain cannot use, or a package that is gone, in the pull
+  # request instead of in a release that has already been tagged.
+  images:
+    # The release workflow calls this workflow and builds the same images right after it.
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      # Built for the runner's platform only: the jar is built once on the build platform for every
+      # architecture, so this covers the toolchain, and the release adds arm64. The layer cache of
+      # main is also what a release tag can read, which speeds up its build stage.
+      - name: Build the Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: airplay-capture:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build the Synology runtime image from the jar in that image
+        run: |
+          mkdir -p "$RUNNER_TEMP/spk"
+          id=$(docker create airplay-capture:ci)
+          docker cp "$id:/app/app.jar" "$RUNNER_TEMP/spk/app.jar"
+          docker rm "$id"
+          docker build --file packaging/Dockerfile.runtime --output type=cacheonly "$RUNNER_TEMP/spk"
