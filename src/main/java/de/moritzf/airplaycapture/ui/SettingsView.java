@@ -27,6 +27,7 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.BeforeLeaveEvent;
 import com.vaadin.flow.router.BeforeLeaveObserver;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import de.moritzf.airplaycapture.Settings;
@@ -49,6 +50,7 @@ import java.util.Set;
  * and a save bar that shows whether there are unsaved changes.
  */
 @Route(value = "settings", layout = MainLayout.class)
+@PageTitle("Settings · AirPlay Capture")
 public class SettingsView extends VerticalLayout implements BeforeLeaveObserver {
 
     /** DOM id of the Updates card, so the header's update notice can jump to it. */

@@ -12,6 +12,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import de.moritzf.airplaycapture.Log;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 
 /** Live log of the receiver and export pipeline, newest line last. */
 @Route(value = "logs", layout = MainLayout.class)
+@PageTitle("Logs · AirPlay Capture")
 public class LogsView extends VerticalLayout {
 
     /**

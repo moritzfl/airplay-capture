@@ -1993,9 +1993,14 @@ body.player-open .save-bar {
         display: flex;
     }
 
+    /* comfortable touch targets */
     .format-chip {
-        min-height: 34px;
-        padding: 6px 12px;
+        min-height: 40px;
+        padding: 6px 14px;
+    }
+
+    .card-toggle {
+        min-height: 40px;
     }
 }
 

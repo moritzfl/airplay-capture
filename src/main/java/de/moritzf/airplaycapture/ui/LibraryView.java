@@ -29,6 +29,7 @@ import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.data.provider.hierarchy.HierarchicalDataProvider.HierarchyFormat;
 import com.vaadin.flow.data.provider.hierarchy.TreeData;
 import com.vaadin.flow.data.provider.hierarchy.TreeDataProvider;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import de.moritzf.airplaycapture.Log;
@@ -50,6 +51,7 @@ import java.util.Set;
 
 /** Live recording status plus the searchable library. */
 @Route(value = "", layout = MainLayout.class)
+@PageTitle("AirPlay Capture")
 public class LibraryView extends VerticalLayout {
 
     private static final String[] FORMAT_ORDER = { "m4b", "m4a", "mp3", "alac", "caf" };

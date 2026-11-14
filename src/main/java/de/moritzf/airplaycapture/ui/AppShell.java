@@ -20,5 +20,7 @@ public class AppShell implements AppShellConfigurator {
         settings.addFavIcon("icon", "../icons/icon-64.png", "64x64");
         settings.addFavIcon("icon", "../icons/icon-192.png", "192x192");
         settings.addFavIcon("apple-touch-icon", "../icons/icon-192.png", "192x192");
+        // Browser chrome and the phone status bar take the colour of the page.
+        settings.addMetaTag("theme-color", "#0d0f12");
     }
 }

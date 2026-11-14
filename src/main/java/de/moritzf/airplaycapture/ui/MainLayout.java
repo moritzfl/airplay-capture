@@ -319,7 +319,12 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         super.onAttach(attachEvent);
         if (registration == null) {
             registration = broadcaster.register(this::onStateChanged);
-            getUI().ifPresent(ui -> ui.getElement().getThemeList().add("dark"));
+            getUI().ifPresent(ui -> {
+                ui.getElement().getThemeList().add("dark");
+                // The interface is English whatever the browser prefers; the page says so, so
+                // screen readers and hyphenation do not treat it as the browser's language.
+                ui.getPage().executeJs("document.documentElement.lang = 'en'");
+            });
             refreshStatus();
         }
     }
