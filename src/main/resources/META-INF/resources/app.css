@@ -1199,10 +1199,19 @@ body.player-open vaadin-notification-container {
     text-decoration: underline;
 }
 
+.book-content {
+    gap: 10px;
+}
+
 .dialog-heading {
-    margin: 18px 0 2px;
+    margin: 14px 0 0;
     font-size: 14px;
     font-weight: 650;
+}
+
+.book-content > :first-child .dialog-heading,
+.book-content > .dialog-heading:first-child {
+    margin-top: 0;
 }
 
 .dialog-note {
@@ -1216,14 +1225,33 @@ body.player-open vaadin-notification-container {
     color: var(--lumo-secondary-text-color);
 }
 
-vaadin-dialog-overlay::part(backdrop) {
+vaadin-dialog::part(backdrop),
+vaadin-confirm-dialog::part(backdrop) {
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(2px);
 }
 
-vaadin-dialog-overlay::part(footer) {
+vaadin-dialog::part(overlay),
+vaadin-confirm-dialog::part(overlay) {
+    border: 1px solid var(--app-line);
+}
+
+vaadin-dialog::part(footer) {
     border-top: 1px solid var(--app-line);
     background: var(--app-surface);
+}
+
+/* on a phone the audiobook dialogs are a full-screen page, not a small window to scroll in */
+@media (max-width: 700px) {
+    vaadin-dialog.book-dialog::part(overlay),
+    vaadin-dialog.catalog-picker::part(overlay) {
+        width: 100vw !important;
+        max-width: none;
+        height: 100dvh;
+        max-height: none;
+        border: none;
+        border-radius: 0;
+    }
 }
 
 .preview-row {
@@ -1270,14 +1298,13 @@ vaadin-dialog-overlay::part(footer) {
     flex: none;
 }
 
-.preview-full {
-    font-size: 10px;
-    letter-spacing: 0.03em;
-}
-
-.preview-sample {
-    font-size: 10px;
-    letter-spacing: 0.03em;
+.row-action.preview-full,
+.row-action.preview-sample {
+    flex: none;
+    min-width: 0;
+    height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
 }
 
 .preview-audio audio {
@@ -1910,9 +1937,10 @@ body.player-open .save-bar {
     outline-offset: 2px;
 }
 
+/* the brand colour is red: a red selection would read as an error next to the length warning */
 .catalog-match.selected {
-    border-color: var(--lumo-primary-color);
-    background: var(--lumo-primary-color-10pct);
+    border-color: rgba(242, 244, 248, 0.75);
+    background: var(--lumo-contrast-10pct);
 }
 
 .catalog-cover {
@@ -1976,8 +2004,8 @@ body.player-open .save-bar {
 }
 
 .catalog-badge.recommended {
-    background: var(--lumo-primary-color-10pct);
-    color: var(--lumo-primary-text-color);
+    background: rgba(242, 244, 248, 0.16);
+    color: #f2f4f8;
 }
 
 .catalog-badge.ok {
@@ -1985,7 +2013,7 @@ body.player-open .save-bar {
 }
 
 .catalog-badge.warning {
-    color: var(--lumo-error-color);
+    color: #ffb020;
 }
 
 .catalog-badge.muted {
@@ -1993,7 +2021,7 @@ body.player-open .save-bar {
 }
 
 .catalog-check {
-    color: var(--lumo-primary-color);
+    color: #f2f4f8;
     opacity: 0;
     flex: none;
     margin-top: 2px;

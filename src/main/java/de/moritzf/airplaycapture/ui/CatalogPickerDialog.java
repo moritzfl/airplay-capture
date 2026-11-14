@@ -54,11 +54,10 @@ public final class CatalogPickerDialog extends Dialog {
 
         searchTitle.setValue(nvl(title));
         searchAuthor.setValue(nvl(author));
-        searchTitle.setWidthFull();
-        searchAuthor.setWidthFull();
+        searchTitle.setMinWidth("160px");
+        searchAuthor.setMinWidth("160px");
 
         Button search = new Button("Search", VaadinIcon.SEARCH.create(), event -> search());
-        search.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         searchTitle.addKeyPressListener(Key.ENTER, event -> search());
         searchAuthor.addKeyPressListener(Key.ENTER, event -> search());
 
@@ -68,10 +67,6 @@ public final class CatalogPickerDialog extends Dialog {
         fields.setAlignItems(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.END);
         fields.setFlexGrow(1, searchTitle, searchAuthor);
 
-        Span recording = new Span(
-            recordingMs > 0 ? "Recording: " + Fmt.duration(recordingMs) : "Recording length unknown"
-        );
-        recording.addClassName("dialog-note");
         state.addClassName("dialog-note");
         state.getElement().setAttribute("aria-live", "polite");
         progress.setIndeterminate(true);
@@ -82,12 +77,10 @@ public final class CatalogPickerDialog extends Dialog {
         results.addClassName("catalog-results");
         results.setWidthFull();
 
-        VerticalLayout content = new VerticalLayout(fields, recording, state, progress, results);
+        VerticalLayout content = new VerticalLayout(fields, state, progress, results);
         content.setPadding(false);
         content.setSpacing(true);
         content.setWidthFull();
-        content.getStyle().set("max-height", "min(62vh, 620px)");
-        content.getStyle().set("overflow-y", "auto");
         add(content);
 
         Button cancel = new Button("Cancel", event -> close());
@@ -178,9 +171,10 @@ public final class CatalogPickerDialog extends Dialog {
         }
         state.setText(
             matches.size() +
-                " editions · recording " +
-                Fmt.duration(recordingMs) +
-                " · sorted by length fit; pick the edition whose chapters you want."
+                (matches.size() == 1 ? " edition" : " editions") +
+                (recordingMs > 0
+                    ? " · your recording is " + Fmt.duration(recordingMs) + ", closest length first"
+                    : "")
         );
     }
 

@@ -4,6 +4,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.CheckboxGroup;
+import com.vaadin.flow.component.checkbox.CheckboxGroupVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Div;
@@ -58,7 +59,7 @@ public final class AudiobookDialog extends Dialog {
     private final ComboBox<Integer> bitrate = new ComboBox<>("Audiobook bitrate");
     private final Span lookupState = new Span();
     private final Span chapterState = new Span();
-    private final Button changeEdition = new Button("Change");
+    private final Button changeEdition = new Button("Choose edition…");
     private final Span duplicateNote = new Span();
     private final VerticalLayout content = new VerticalLayout();
     private final List<LibraryTrack> sourceOrder = new ArrayList<>();
@@ -92,11 +93,11 @@ public final class AudiobookDialog extends Dialog {
         setHeaderTitle(group.hasM4b() ? "Rebuild audiobook" : "Create audiobook");
         setWidth("min(680px, 94vw)");
 
+        // Header and footer stay in place; the dialog scrolls its own content part.
         content.setPadding(false);
-        content.setSpacing(true);
+        content.setSpacing(false);
         content.setWidthFull();
-        content.getStyle().set("max-height", "min(60vh, 640px)");
-        content.getStyle().set("overflow-y", "auto");
+        content.addClassName("book-content");
         add(content);
 
         Settings settings = settingsService.current();
@@ -143,6 +144,7 @@ public final class AudiobookDialog extends Dialog {
             }
         }
         sources.setWidthFull();
+        sources.addThemeVariants(CheckboxGroupVariant.LUMO_VERTICAL);
         sources.setItems(playable);
         sourceOrder.clear();
         sourceOrder.addAll(playable);
@@ -268,13 +270,11 @@ public final class AudiobookDialog extends Dialog {
                   ? AudiobookCreator.ChapterMode.PAUSES
                   : AudiobookCreator.ChapterMode.RECORDINGS
         );
-        chapterMode.addValueChangeListener(event -> invalidatePreview());
-        chapterMode.setHelperText(
-            "Catalog uses chapter names and durations from Deezer/MusicBrainz " +
-                "and aligns the cuts to pauses. Pauses splits at silence of at least 2.5 s with " +
-                "at least 5 minutes per chapter. One chapter per recording keeps every selected " +
-                "recording whole. Catalog falls back to pauses when no matching edition is found."
-        );
+        chapterMode.addValueChangeListener(event -> {
+            describeChapterMode();
+            invalidatePreview();
+        });
+        describeChapterMode();
         chapterState.addClassName("dialog-note");
         chapterState.getElement().setAttribute("aria-live", "polite");
         if (settings.audiobookCatalogChapters) {
@@ -326,10 +326,27 @@ public final class AudiobookDialog extends Dialog {
         }
     }
 
+    /** Explains only the chosen way of cutting chapters, instead of all three at once. */
+    private void describeChapterMode() {
+        AudiobookCreator.ChapterMode mode = chapterMode.getValue();
+        chapterMode.setHelperText(
+            mode == null
+                ? ""
+                : switch (mode) {
+                      case CATALOG -> "Chapter names and lengths of a catalog edition, with each " +
+                          "cut moved into a nearby pause. Without a matching edition the pauses are used.";
+                      case PAUSES -> "A new chapter at every pause of at least 2.5 s, with at " +
+                          "least 5 minutes per chapter.";
+                      case RECORDINGS -> "Every selected recording becomes one chapter, named " +
+                          "after the recording.";
+                  }
+        );
+    }
+
     private void buildPreview() {
         H3 heading = new H3("Preview");
         heading.addClassName("dialog-heading");
-        previewButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
+        previewButton.addThemeVariants(ButtonVariant.LUMO_SMALL);
         previewButton.addClickListener(event -> preview());
         previewProgress.setIndeterminate(true);
         previewProgress.setWidth("140px");
@@ -340,8 +357,6 @@ public final class AudiobookDialog extends Dialog {
         previewState.setText("Analyze the chapter plan before creating the .m4b.");
         chapterList.addClassName("preview-list");
         chapterList.setWidthFull();
-        chapterList.getStyle().set("max-height", "240px");
-        chapterList.getStyle().set("overflow-y", "auto");
 
         Element audio = new Element("audio");
         audio.setAttribute("controls", "");
@@ -528,7 +543,12 @@ public final class AudiobookDialog extends Dialog {
         label.append(
             track.title == null || track.title.isBlank() ? track.displayName() : track.title
         );
-        if (track.artist != null && !track.artist.isBlank() && !track.artist.equals(track.title)) {
+        // The author is in the field below; only a chapter by someone else names its artist.
+        if (
+            !isBlank(track.artist) &&
+            !track.artist.equals(track.title) &&
+            !track.artist.equals(group.artist())
+        ) {
             label.append(" · ").append(track.artist);
         }
         label.append(" · ").append(Fmt.duration(track.durationMs));
@@ -572,7 +592,8 @@ public final class AudiobookDialog extends Dialog {
             author.setValue(match.author());
         }
         selectedCatalog = match.chapters();
-        lookupState.setText("Selected " + match.source() + " edition.");
+        changeEdition.setText("Change edition…");
+        lookupState.setText("Title and author from " + match.source() + ".");
         if (match.hasChapters()) {
             chapterMode.setValue(AudiobookCreator.ChapterMode.CATALOG);
             String fit = match.fits(selectedDurationMs())
@@ -633,12 +654,11 @@ public final class AudiobookDialog extends Dialog {
 
     private void showCatalog(Optional<ChapterCatalog.Result> found) {
         if (found.isEmpty()) {
-            chapterState.setText(
-                "No catalog chapter list found. Pauses can still split the recording."
-            );
+            chapterState.setText("No edition in the catalogs matches this recording yet.");
             return;
         }
         ChapterCatalog.Result result = found.get();
+        changeEdition.setText("Change edition…");
         chapterState.setText(
             result.chapters().size() +
                 " chapters from " +
