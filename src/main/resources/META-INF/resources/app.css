@@ -137,8 +137,22 @@ body {
     animation: app-pulse 1.6s infinite;
 }
 
-.status-pill.live .status-text {
+.status-text {
     color: #f2f4f8;
+    font-weight: 600;
+}
+
+.status-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-pill.offline .status-dot {
+    background: #ff5d6c;
+}
+
+.status-pill.offline .status-detail {
+    max-width: 320px;
 }
 
 .status-pill.ok .status-dot {
@@ -1466,8 +1480,71 @@ vaadin-dialog-overlay::part(footer) {
     }
 
     .app-header-right {
-        width: 100%;
-        justify-content: space-between;
+        display: contents;
+    }
+
+    .brand {
+        flex: 1 1 0;
+        min-width: 0;
+        gap: 10px;
+    }
+
+    .logo {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+    }
+
+    .brand-title {
+        font-size: 16px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .brand-device,
+    .status-pill.ok .status-detail,
+    .status-pill.live .status-detail {
+        display: none;
+    }
+
+    .status-pill {
+        min-width: 0;
+        padding: 6px 10px;
+    }
+
+    .status-pill.offline .status-detail {
+        max-width: 130px;
+    }
+
+    .queue-pill {
+        order: 3;
+        flex: 1 0 100%;
+        justify-content: center;
+    }
+
+    .app-nav {
+        order: 4;
+        flex: 1 0 100%;
+        gap: 0;
+        margin: 0 -16px;
+        padding: 0 8px;
+        border-top: 1px solid var(--app-line);
+    }
+
+    .app-nav .nav-link {
+        flex: 1;
+        text-align: center;
+        padding: 11px 8px;
+        border: none;
+        border-radius: 0;
+        border-bottom: 2px solid transparent;
+        background: none;
+    }
+
+    .app-nav .nav-link.active {
+        background: none;
+        border-bottom-color: var(--lumo-primary-color);
     }
 
     .lib-tools {
@@ -1494,9 +1571,6 @@ vaadin-dialog-overlay::part(footer) {
         font-size: 17px;
     }
 
-    .nav-link {
-        padding: 10px 14px;
-    }
 }
 
 @media (max-width: 999px) {

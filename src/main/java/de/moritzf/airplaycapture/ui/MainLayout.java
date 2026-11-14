@@ -7,6 +7,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -27,8 +28,11 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
     private final Div content = new Div();
     private final Span deviceName = new Span();
     private final Span statusText = new Span();
+    private final Span statusDetail = new Span();
     private final Span statusPill = new Span();
     private final Span queuePill = new Span();
+
+    private static final String APP_NAME = "AirPlay Capture";
 
     private final AudiobookJobs audiobookJobs;
     private final Anchor logout;
@@ -57,7 +61,7 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
 
         Div brand = new Div();
         brand.addClassName("brand");
-        Span logo = new Span("◉");
+        Image logo = new Image(AppUrls.relative("", "icons/icon-64.png"), "");
         logo.addClassName("logo");
         Div titles = new Div();
         titles.addClassName("brand-titles");
@@ -70,8 +74,10 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         Span dot = new Span();
         dot.addClassName("status-dot");
         statusText.addClassName("status-text");
+        statusDetail.addClassName("status-detail");
         statusPill.addClassName("status-pill");
-        statusPill.add(dot, statusText);
+        statusPill.getElement().setAttribute("role", "status");
+        statusPill.add(dot, statusText, statusDetail);
 
         Div nav = new Div();
         nav.addClassName("app-nav");
@@ -200,41 +206,45 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
 
     private void refreshStatus() {
         refreshQueue();
-        deviceName.setText(state.deviceName == null ? "" : state.deviceName);
+        // The receiver name is only worth a second line when it differs from the product name.
+        String name = state.deviceName == null ? "" : state.deviceName.trim();
+        deviceName.setText(name);
+        deviceName.setVisible(!name.isBlank() && !name.equalsIgnoreCase(APP_NAME));
         statusPill.removeClassNames("live", "ok", "offline");
+        String detail;
         if (state.receiving) {
             statusPill.addClassName("live");
-            String source =
-                state.clientName == null || state.clientName.isBlank()
-                    ? state.client
-                    : state.clientName;
-            statusText.setText(
-                source == null || source.isBlank()
-                    ? "Recording"
-                    : "Recording from " +
-                          source +
-                          (state.senderApp == null || state.senderApp.isBlank()
-                              ? ""
-                              : " · " + state.senderApp)
-            );
-            statusPill
-                .getElement()
-                .setAttribute(
-                    "title",
-                    state.client == null || state.client.isBlank() ? "" : "IP " + state.client
-                );
+            statusText.setText("Recording");
+            String source = isBlank(state.clientName) ? state.client : state.clientName;
+            detail = isBlank(source)
+                ? ""
+                : "from " + source + (isBlank(state.senderApp) ? "" : " · " + state.senderApp);
         } else if (state.advertising) {
             statusPill.addClassName("ok");
-            statusText.setText(
-                "Ready on port " +
-                    state.port +
-                    (state.interfaceAddress.isBlank() ? "" : " via " + state.interfaceAddress)
-            );
+            statusText.setText("Ready");
+            detail =
+                (isBlank(state.interfaceAddress) ? "" : state.interfaceAddress + " · ") +
+                "port " +
+                state.port;
         } else {
             statusPill.addClassName("offline");
-            String error = state.lastError == null ? "" : state.lastError;
-            statusText.setText(error.isBlank() ? "Receiver offline" : "Receiver offline: " + error);
+            statusText.setText("Receiver offline");
+            detail = state.lastError == null ? "" : state.lastError;
         }
+        statusDetail.setText(detail);
+        statusDetail.setVisible(!detail.isBlank());
+        String hint = state.receiving
+            ? isBlank(state.client)
+                ? ""
+                : "Sender address " + state.client
+            : state.advertising
+              ? "Visible in the AirPlay menu as \u201c" + name + "\u201d"
+              : "The receiver is not visible in the AirPlay menu. See Logs for details.";
+        statusPill.getElement().setAttribute("title", hint);
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     @Override
