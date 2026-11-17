@@ -397,8 +397,12 @@ class AudiobookCreatorTest {
         assertEquals(old.bookId, first.bookId);
     }
 
-    private LibraryTrack track(String id, String title, double seconds, Path libraryDir)
-        throws Exception {
+    private LibraryTrack track(
+        String id,
+        String title,
+        double seconds,
+        Path libraryDir
+    ) throws Exception {
         Path file = temp.resolve(id + ".m4a");
         Process process = new ProcessBuilder(
             "ffmpeg",

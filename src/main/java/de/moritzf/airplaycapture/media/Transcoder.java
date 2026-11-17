@@ -61,7 +61,8 @@ public final class Transcoder {
     }
 
     static boolean probe(String executable, long timeoutMs)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         Process process = new ProcessBuilder(executable, "-version")
             .redirectOutput(ProcessBuilder.Redirect.DISCARD)
             .redirectError(ProcessBuilder.Redirect.DISCARD)

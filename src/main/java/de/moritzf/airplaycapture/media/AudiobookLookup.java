@@ -228,8 +228,12 @@ public final class AudiobookLookup {
         return Optional.of(entry.verdict());
     }
 
-    private Verdict query(String subject, String artist, Options options, boolean titleOnly)
-        throws Exception {
+    private Verdict query(
+        String subject,
+        String artist,
+        Options options,
+        boolean titleOnly
+    ) throws Exception {
         if (options.apple()) {
             Verdict verdict = apple(subject, artist, options, titleOnly);
             if (verdict.audiobook()) {
@@ -245,8 +249,12 @@ public final class AudiobookLookup {
         return new Verdict(false, null, null);
     }
 
-    private Verdict apple(String album, String artist, Options options, boolean titleOnly)
-        throws Exception {
+    private Verdict apple(
+        String album,
+        String artist,
+        Options options,
+        boolean titleOnly
+    ) throws Exception {
         throttle();
         String term =
             titleOnly || artist == null || artist.isBlank() ? album : album + " " + artist;
@@ -264,8 +272,12 @@ public final class AudiobookLookup {
         return parse(body, album, artist, titleOnly);
     }
 
-    private Verdict musicBrainz(String album, String artist, Options options, boolean titleOnly)
-        throws Exception {
+    private Verdict musicBrainz(
+        String album,
+        String artist,
+        Options options,
+        boolean titleOnly
+    ) throws Exception {
         throttle();
         String query = ChapterCatalog.musicBrainzQuery(album, titleOnly ? null : artist);
         String url =

@@ -637,8 +637,9 @@ class RaopEndToEndTest {
         assertFalse(chapters.contains("Stunde 1"), chapters);
     }
 
-    private static de.moritzf.airplaycapture.library.LibraryTrack waitForAudiobook(Library library)
-        throws InterruptedException {
+    private static de.moritzf.airplaycapture.library.LibraryTrack waitForAudiobook(
+        Library library
+    ) throws InterruptedException {
         long deadline = System.currentTimeMillis() + 90_000;
         while (System.currentTimeMillis() < deadline) {
             for (var track : library.tracks()) {

@@ -239,8 +239,11 @@ public class ChapterCatalog {
 
     // ---------------------------------------------------------------- Deezer
 
-    private List<Result> deezer(String subject, String artist, long expectedDurationMs)
-        throws Exception {
+    private List<Result> deezer(
+        String subject,
+        String artist,
+        long expectedDurationMs
+    ) throws Exception {
         String term = artist == null || artist.isBlank() ? subject : subject + " " + artist;
         String body = get(
             "https://api.deezer.com/search/album?limit=10&q=" + encode(term),

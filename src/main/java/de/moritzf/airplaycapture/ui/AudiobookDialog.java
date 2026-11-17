@@ -154,12 +154,7 @@ public final class AudiobookDialog extends Dialog {
         sourceOrder.addAll(playable);
         sources.setItemLabelGenerator(this::sourceLabel);
         Set<LibraryTrack> best = new LinkedHashSet<>(group.bestTakes());
-        sources.select(
-            playable
-                .stream()
-                .filter(best::contains)
-                .toArray(LibraryTrack[]::new)
-        );
+        sources.select(playable.stream().filter(best::contains).toArray(LibraryTrack[]::new));
         sources.addValueChangeListener(event -> {
             updateDuplicateNote();
             invalidatePreview();

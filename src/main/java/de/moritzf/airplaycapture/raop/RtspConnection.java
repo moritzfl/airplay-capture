@@ -372,8 +372,10 @@ final class RtspConnection implements Runnable {
         }
     }
 
-    private static Request read(BufferedInputStream in, ByteArrayOutputStream headerBytes)
-        throws IOException {
+    private static Request read(
+        BufferedInputStream in,
+        ByteArrayOutputStream headerBytes
+    ) throws IOException {
         String requestLine = readLine(in, headerBytes);
         if (requestLine == null || requestLine.isEmpty()) {
             if (headerBytes.size() > 0) {
@@ -442,8 +444,10 @@ final class RtspConnection implements Runnable {
         return text.toString().trim();
     }
 
-    private static String readLine(InputStream in, ByteArrayOutputStream capture)
-        throws IOException {
+    private static String readLine(
+        InputStream in,
+        ByteArrayOutputStream capture
+    ) throws IOException {
         ByteArrayOutputStream line = new ByteArrayOutputStream(128);
         int b;
         boolean any = false;
@@ -465,8 +469,11 @@ final class RtspConnection implements Runnable {
         return value;
     }
 
-    private static void write(OutputStream out, Request request, Response response)
-        throws IOException {
+    private static void write(
+        OutputStream out,
+        Request request,
+        Response response
+    ) throws IOException {
         StringBuilder header = new StringBuilder();
         header
             .append("RTSP/1.0 ")

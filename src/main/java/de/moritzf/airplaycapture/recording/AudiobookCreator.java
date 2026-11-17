@@ -265,7 +265,8 @@ public final class AudiobookCreator {
      * queue worker thread; the caller owns scheduling and error handling.
      */
     public Result convert(Request request, AudiobookJobs.Progress progress)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         Analysis analysis = null;
         try {
             analysis = analyzeInternal(request, progress);
@@ -405,7 +406,8 @@ public final class AudiobookCreator {
     // ---------------------------------------------------------------- analysis
 
     private Analysis analyzeInternal(Request request, AudiobookJobs.Progress progress)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         report(progress, "Reading recordings", 0.04);
         List<LibraryTrack> requested = request
             .sources()
@@ -578,7 +580,8 @@ public final class AudiobookCreator {
     }
 
     private static Path concatenate(ChapterSplitter splitter, List<Source> sources, Path work)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         return splitter.concatenate(
             sources.stream().map(Source::path).toList(),
             work.resolve("book.caf"),
@@ -855,7 +858,8 @@ public final class AudiobookCreator {
     // ---------------------------------------------------------------- preview clips
 
     private void writeClip(PlannedChapter chapter, Path clip)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         double start = chapter.startMs() / 1000.0;
         double duration = chapter.durationMs() / 1000.0;
         if (duration <= 0) {
@@ -978,7 +982,8 @@ public final class AudiobookCreator {
     }
 
     private List<Source> normalize(List<Source> sources, Path work)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         List<Source> normalized = new ArrayList<>();
         for (int i = 0; i < sources.size(); i++) {
             Source source = sources.get(i);

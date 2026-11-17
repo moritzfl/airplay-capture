@@ -140,8 +140,13 @@ public final class RaopCrypto {
      *
      * @return number of decrypted (16-byte aligned) bytes
      */
-    public static int decryptPayload(byte[] key, byte[] iv, byte[] buffer, int offset, int length)
-        throws Exception {
+    public static int decryptPayload(
+        byte[] key,
+        byte[] iv,
+        byte[] buffer,
+        int offset,
+        int length
+    ) throws Exception {
         int aligned = length & ~0xF;
         if (aligned == 0) {
             return 0;

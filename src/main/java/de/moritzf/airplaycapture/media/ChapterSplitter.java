@@ -65,7 +65,8 @@ public final class ChapterSplitter {
     }
 
     public List<Silence> detectSilences(Path audio, long totalMs)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         List<String> command = List.of(
             ffmpeg,
             "-hide_banner",
@@ -361,7 +362,8 @@ public final class ChapterSplitter {
 
     /** Concatenates CAF files losslessly into one temporary CAF. */
     public Path concatenate(List<Path> files, Path output, Path workDir)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         Path list = workDir.resolve("concat.txt");
         List<String> lines = new ArrayList<>();
         for (Path file : files) {
@@ -459,7 +461,8 @@ public final class ChapterSplitter {
     }
 
     private static FfmpegRunner.Result run(List<String> command)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException
+    {
         FfmpegRunner.Result result = FfmpegRunner.run(command);
         if (result.exitCode() != 0) {
             Log.warn(
