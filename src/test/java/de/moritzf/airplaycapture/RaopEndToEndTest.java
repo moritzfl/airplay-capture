@@ -48,6 +48,47 @@ class RaopEndToEndTest {
     Path temp;
 
     @Test
+    void restartClosesExistingControlConnections() throws Exception {
+        AppDirs dirs = new AppDirs(temp);
+        dirs.createDirectories();
+        Settings settings = new Settings();
+        UiState ui = new UiState();
+        RecordingManager recorder = new RecordingManager(
+            dirs,
+            new Library(dirs, settings),
+            new Transcoder(settings),
+            ui,
+            settings
+        );
+        RaopServer server = new RaopServer(settings, recorder, ui);
+        try {
+            server.start(false);
+            try (Socket socket = new Socket("127.0.0.1", server.port())) {
+                socket.setSoTimeout(3000);
+                socket
+                    .getOutputStream()
+                    .write(
+                        "OPTIONS * RTSP/1.0\r\nCSeq: 1\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
+                    );
+                assertEquals('R', socket.getInputStream().read());
+                server.stop();
+                server.start(false);
+                String remaining = new String(
+                    socket.getInputStream().readAllBytes(),
+                    StandardCharsets.US_ASCII
+                );
+                assertTrue(remaining.contains("TSP/1.0 200 OK"));
+                try (FakeSender sender = new FakeSender("127.0.0.1", server.port())) {
+                    sender.options();
+                }
+            }
+        } finally {
+            server.stop();
+            recorder.shutdown();
+        }
+    }
+
+    @Test
     void recordsTwoTracksWithMetadataAndCover() throws Exception {
         assumeTrue(TestMedia.ffmpegAvailable(), "ffmpeg required");
 

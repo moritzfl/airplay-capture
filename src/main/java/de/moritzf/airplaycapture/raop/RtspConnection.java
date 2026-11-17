@@ -39,6 +39,7 @@ final class RtspConnection implements Runnable {
     private Sdp announced;
     private StreamSession session;
     private boolean loggedSender;
+    private String senderApp = "";
 
     RtspConnection(RaopServer server, RecordingManager recorder, Socket socket) throws IOException {
         this.server = server;
@@ -46,9 +47,7 @@ final class RtspConnection implements Runnable {
         this.socket = socket;
         this.socket.setTcpNoDelay(true);
         this.clientAddress = socket.getInetAddress();
-        InetAddress local = socket.getLocalAddress();
-        this.localAddress =
-            local == null || local.isAnyLocalAddress() ? server.interfaceAddress() : local;
+        this.localAddress = socket.getLocalAddress();
     }
 
     InetAddress clientAddress() {
@@ -58,7 +57,6 @@ final class RtspConnection implements Runnable {
     @Override
     public void run() {
         Log.info("rtsp", "connection from " + clientAddress.getHostAddress());
-        recorder.onClientConnected(clientAddress.getHostAddress());
         try (
             InputStream rawIn = socket.getInputStream();
             OutputStream out = socket.getOutputStream()
@@ -96,7 +94,7 @@ final class RtspConnection implements Runnable {
                     if (application == null || application.isBlank()) {
                         application = appFromUserAgent(userAgent);
                     }
-                    server.reportSenderApp(application);
+                    senderApp = application;
                     Log.info(
                         "rtsp",
                         "sender from " +
@@ -132,11 +130,10 @@ final class RtspConnection implements Runnable {
             mine = session;
             session = null;
         }
-        server.endSession(mine);
         try {
-            socket.close();
-        } catch (IOException ignored) {
-            // closed
+            server.endSession(mine);
+        } finally {
+            server.connectionClosed(socket);
         }
     }
 
@@ -147,18 +144,18 @@ final class RtspConnection implements Runnable {
             case "OPTIONS" -> response.headers.put("Public", PUBLIC_METHODS);
             case "ANNOUNCE" -> {
                 announced = Sdp.parse(request.bodyAsString());
-                recorder.onStreamConfigured(announced.alac());
                 Log.info("rtsp", "ANNOUNCE: " + announced);
                 response.headers.put("Audio-Jack-Status", "connected; type=analog");
             }
             case "SETUP" -> setup(request, response);
             case "RECORD" -> {
-                if (session != null) {
+                StreamSession recording = session;
+                if (recording != null) {
                     Thread.ofVirtual()
                         .name("timing-requests")
                         .start(() -> {
                             for (int i = 0; i < 3; i++) {
-                                session.sendTimingRequest();
+                                recording.sendTimingRequest();
                                 try {
                                     Thread.sleep(250);
                                 } catch (InterruptedException e) {
@@ -173,7 +170,7 @@ final class RtspConnection implements Runnable {
             case "PAUSE" -> Log.info("rtsp", "PAUSE");
             case "FLUSH" -> {
                 Log.info("rtsp", "FLUSH");
-                recorder.onFlush();
+                server.withSession(session, recorder::onFlush);
             }
             case "TEARDOWN" -> {
                 Log.info("rtsp", "TEARDOWN");
@@ -184,7 +181,7 @@ final class RtspConnection implements Runnable {
                 }
                 server.endSession(mine);
             }
-            case "SET_PARAMETER" -> setParameter(request);
+            case "SET_PARAMETER" -> server.withSession(session, () -> setParameter(request));
             case "GET_PARAMETER" -> {
                 String volume = "volume: 0.000000\r\n";
                 response.body = volume.getBytes(StandardCharsets.US_ASCII);
@@ -233,11 +230,13 @@ final class RtspConnection implements Runnable {
                     server.endSession(session);
                 }
                 created = server.startSession(
+                    socket,
                     clientAddress,
                     localAddress,
                     announced,
                     controlPort,
-                    timingPort
+                    timingPort,
+                    senderApp
                 );
                 session = created;
             }

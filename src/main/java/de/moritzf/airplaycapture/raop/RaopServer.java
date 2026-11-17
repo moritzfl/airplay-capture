@@ -16,6 +16,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 
@@ -32,6 +34,7 @@ public final class RaopServer {
 
     private volatile boolean running;
     private ServerSocket serverSocket;
+    private final Set<Socket> connections = ConcurrentHashMap.newKeySet();
     private Thread acceptThread;
     private JmDNS jmds;
     private InterfaceInfo networkInterface;
@@ -70,10 +73,16 @@ public final class RaopServer {
             return;
         }
         networkInterface = NetworkTools.pickInterface(settings.interfaceAddress);
-        serverSocket = new ServerSocket();
-        serverSocket.setReuseAddress(true);
-        int chosen = bind(settings.port);
-        serverSocket.setSoTimeout(1000);
+        ServerSocket listener = new ServerSocket();
+        int chosen;
+        try {
+            listener.setReuseAddress(true);
+            chosen = bind(listener, settings.port);
+        } catch (IOException | RuntimeException e) {
+            closeSocket(listener);
+            throw e;
+        }
+        serverSocket = listener;
         port = chosen;
         running = true;
 
@@ -97,7 +106,7 @@ public final class RaopServer {
                 ")"
         );
 
-        acceptThread = new Thread(this::acceptLoop, "rtsp-accept");
+        acceptThread = new Thread(() -> acceptLoop(listener), "rtsp-accept");
         acceptThread.setDaemon(true);
         acceptThread.start();
         if (advertise) {
@@ -106,9 +115,9 @@ public final class RaopServer {
         ui.changed();
     }
 
-    private int bind(int requested) throws IOException {
+    private static int bind(ServerSocket listener, int requested) throws IOException {
         if (requested > 0) {
-            serverSocket.bind(new InetSocketAddress(requested), 50);
+            listener.bind(new InetSocketAddress(requested), 50);
             return requested;
         }
         IOException last = null;
@@ -118,7 +127,7 @@ public final class RaopServer {
             candidate++
         ) {
             try {
-                serverSocket.bind(new InetSocketAddress(candidate), 50);
+                listener.bind(new InetSocketAddress(candidate), 50);
                 return candidate;
             } catch (IOException e) {
                 last = e;
@@ -127,10 +136,16 @@ public final class RaopServer {
         throw last == null ? new IOException("no free port") : last;
     }
 
-    private void acceptLoop() {
-        while (running) {
+    private void acceptLoop(ServerSocket listener) {
+        while (!listener.isClosed()) {
+            Socket socket = null;
             try {
-                Socket socket = serverSocket.accept();
+                socket = listener.accept();
+                connections.add(socket);
+                if (listener.isClosed()) {
+                    connectionClosed(socket);
+                    break;
+                }
                 RtspConnection connection = new RtspConnection(this, recorder, socket);
                 Thread thread = new Thread(
                     connection,
@@ -138,16 +153,33 @@ public final class RaopServer {
                 );
                 thread.setDaemon(true);
                 thread.start();
-            } catch (java.net.SocketTimeoutException ignored) {
-                // periodic wakeup
             } catch (SocketException e) {
-                if (running) {
+                connectionClosed(socket);
+                if (!listener.isClosed()) {
                     Log.warn("raop", "accept failed: " + e.getMessage());
                 }
-                break;
+                if (socket == null) {
+                    break;
+                }
             } catch (Exception e) {
+                connectionClosed(socket);
                 Log.warn("raop", "accept failed: " + e.getMessage());
             }
+        }
+    }
+
+    void connectionClosed(Socket socket) {
+        if (socket != null) {
+            closeSocket(socket);
+            connections.remove(socket);
+        }
+    }
+
+    private static void closeSocket(java.io.Closeable socket) {
+        try {
+            socket.close();
+        } catch (IOException ignored) {
+            // Closing.
         }
     }
 
@@ -257,9 +289,10 @@ public final class RaopServer {
         return port;
     }
 
-    void reportSenderApp(String app) {
-        ui.senderApp = app == null ? "" : app;
-        ui.changed();
+    synchronized void withSession(StreamSession owner, Runnable action) {
+        if (owner != null && owner == session) {
+            action.run();
+        }
     }
 
     /** Another device is already streaming to this receiver. */
@@ -274,14 +307,19 @@ public final class RaopServer {
         return running;
     }
 
-    public StreamSession startSession(
+    StreamSession startSession(
+        Socket socket,
         InetAddress client,
         InetAddress localAddress,
         Sdp sdp,
         int controlPort,
-        int timingPort
+        int timingPort,
+        String senderApp
     ) throws IOException {
         synchronized (this) {
+            if (!running || socket.isClosed() || !connections.contains(socket)) {
+                throw new SocketException("receiver stopped");
+            }
             if (session != null && !client.equals(sessionClient)) {
                 throw new BusyException("receiver busy with " + sessionClient);
             }
@@ -297,11 +335,12 @@ public final class RaopServer {
                 recorder,
                 settings
             );
-            created.start();
             session = created;
             sessionClient = client;
+            recorder.onStreamConfigured(sdp.alac());
             recorder.onClientConnected(client.getHostAddress());
-            ui.client = client.getHostAddress();
+            ui.senderApp = senderApp;
+            created.start();
             ui.changed();
             return created;
         }
@@ -321,15 +360,12 @@ public final class RaopServer {
 
     public synchronized void stop() {
         running = false;
-        endSession(session);
         if (serverSocket != null) {
-            try {
-                serverSocket.close();
-            } catch (IOException ignored) {
-                // closing
-            }
+            closeSocket(serverSocket);
             serverSocket = null;
         }
+        connections.forEach(this::connectionClosed);
+        endSession(session);
         if (acceptThread != null) {
             try {
                 acceptThread.join(1500);
