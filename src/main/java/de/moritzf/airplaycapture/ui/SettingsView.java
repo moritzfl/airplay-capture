@@ -491,7 +491,7 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
         mp3Bitrate.setItems(List.of(96, 128, 160, 192, 224, 256, 320));
         mp3Bitrate.setItemLabelGenerator(SettingsView::mp3BitrateLabel);
 
-        ffmpegPath.setPlaceholder("ffmpeg");
+        ffmpegPath.setReadOnly(true);
         libraryPath.setReadOnly(true);
         libraryPath.setHelperText(
             "Set by the installation: AIRPLAY_CAPTURE_LIBRARY_DIR, or Manage in the Synology package."
@@ -575,7 +575,6 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
 
         for (TextField field : List.of(
             deviceName,
-            ffmpegPath,
             audiobookLookupCountry,
             audiobookGenres,
             audiobookLookupContact
@@ -609,7 +608,6 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
             mp3Mode,
             mp3Quality,
             mp3Bitrate,
-            ffmpegPath,
             keepRaw,
             minTrackSeconds,
             idleSeconds,
@@ -761,8 +759,8 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
     private void showFfmpegState() {
         ffmpegPath.setHelperText(
             state.ffmpegAvailable
-                ? "Found. Command name or full path of the ffmpeg program."
-                : "Not found: recordings stay as lossless .caf until this points to ffmpeg."
+                ? "Found. To change the executable, edit settings.json on the host and restart."
+                : "Not found. Install ffmpeg or set ffmpegPath in settings.json, then restart."
         );
         ffmpegPath.getElement().getClassList().set("field-warning", !state.ffmpegAvailable);
     }
@@ -867,7 +865,6 @@ public class SettingsView extends VerticalLayout implements BeforeLeaveObserver 
         next.keepRaw = keepRaw.getValue();
         next.metadataEnrichmentEnabled = metadataEnrichment.getValue();
         next.metadataEnrichmentDeezer = metadataEnrichmentDeezer.getValue();
-        next.ffmpegPath = text(ffmpegPath).isBlank() ? "ffmpeg" : text(ffmpegPath);
         next.audiobookEnabled = audiobookEnabled.getValue();
         next.audiobookAutoAssemble = audiobookAutoAssemble.getValue();
         next.audiobookGenres = text(audiobookGenres);

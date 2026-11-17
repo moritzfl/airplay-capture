@@ -45,17 +45,19 @@ public class SettingsService {
         this.updateChecker = updateChecker;
     }
 
-    public Settings current() {
-        return settings;
+    public synchronized Settings current() {
+        return settings.copy();
     }
 
     public synchronized Settings apply(Settings incoming) throws IOException {
         Settings next = incoming.copy();
+        // These paths belong to the installation, not a remote API or UI client.
+        next.ffmpegPath = settings.ffmpegPath;
+        next.libraryDir = settings.libraryDir;
         boolean receiverChanged =
             !settings.deviceName.equals(next.deviceName) ||
             settings.port != next.port ||
             !settings.interfaceAddress.equals(next.interfaceAddress);
-        boolean libraryChanged = !settings.libraryDir.equals(next.libraryDir);
 
         next.save(dirs.configFile());
         settings.copyFrom(next);
@@ -82,9 +84,6 @@ public class SettingsService {
                 throw e;
             }
         }
-        if (libraryChanged) {
-            Log.info("library", "library folder is now " + library.libraryDir());
-        }
-        return settings;
+        return settings.copy();
     }
 }
