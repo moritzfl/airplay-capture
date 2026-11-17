@@ -1,8 +1,10 @@
 package de.moritzf.airplaycapture;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import de.moritzf.airplaycapture.util.AtomicFiles;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -115,24 +117,22 @@ public final class Settings {
         .enable(SerializationFeature.INDENT_OUTPUT)
         .build();
 
-    public static Settings load(Path file) {
-        if (!Files.exists(file)) {
-            return new Settings();
-        }
+    public static Settings load(Path file) throws IOException {
         try {
             Settings settings = JSON.readValue(Files.readString(file), Settings.class);
-            return settings == null ? new Settings() : settings.normalized();
-        } catch (Exception e) {
-            Log.warn(
-                "settings",
-                "cannot read " + file + ": " + e.getMessage() + " - using defaults"
-            );
+            if (settings == null) {
+                throw new IOException("expected a JSON object");
+            }
+            return settings.normalized();
+        } catch (NoSuchFileException e) {
             return new Settings();
+        } catch (Exception e) {
+            throw new IOException("cannot read settings from " + file, e);
         }
     }
 
     public void save(Path file) throws IOException {
-        Files.writeString(file, JSON.writeValueAsString(this));
+        AtomicFiles.writeString(file, JSON.writeValueAsString(this));
     }
 
     public Settings copy() {
@@ -191,6 +191,7 @@ public final class Settings {
         if (formats == null) {
             formats = new ArrayList<>();
         }
+        formats = new ArrayList<>(formats);
         formats.removeIf(
             f -> f == null || !(f.equals("m4a") || f.equals("mp3") || f.equals("alac"))
         );

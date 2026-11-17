@@ -3,9 +3,11 @@ package de.moritzf.airplaycapture.library;
 import de.moritzf.airplaycapture.AppDirs;
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.Settings;
+import de.moritzf.airplaycapture.util.AtomicFiles;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,7 +27,7 @@ public final class Library {
 
     private final AppDirs dirs;
     private final List<LibraryTrack> tracks = new ArrayList<>();
-    private Settings settings;
+    private volatile Settings settings;
 
     public Library(AppDirs dirs, Settings settings) {
         this.dirs = dirs;
@@ -97,11 +99,7 @@ public final class Library {
     public synchronized void save() {
         try {
             Files.createDirectories(dirs.dataDir());
-            Files.writeString(
-                dirs.libraryFile(),
-                JSON.writeValueAsString(tracks),
-                StandardCharsets.UTF_8
-            );
+            AtomicFiles.writeString(dirs.libraryFile(), JSON.writeValueAsString(tracks));
         } catch (IOException e) {
             Log.error("library", "cannot save library: " + e.getMessage());
         }
@@ -160,42 +158,29 @@ public final class Library {
 
     private void load() {
         applyNewLibraryDir();
-        if (!Files.exists(dirs.libraryFile())) {
-            return;
-        }
         try {
             String json = Files.readString(dirs.libraryFile(), StandardCharsets.UTF_8);
             List<LibraryTrack> loaded = JSON.readValue(
                 json,
                 new TypeReference<List<LibraryTrack>>() {}
             );
-            if (loaded != null) {
-                boolean hashesChanged = false;
-                for (LibraryTrack track : loaded) {
-                    if (track.id == null) {
-                        continue;
-                    }
-                    // Drop entries whose files vanished (manual cleanup).
-                    track.files
-                        .entrySet()
-                        .removeIf(e -> !Files.exists(libraryDir().resolve(e.getValue())));
-                    if (!track.files.isEmpty()) {
-                        if (track.coverHash == null || track.coverHash.isBlank()) {
-                            String hash = existingCoverHash(track.id);
-                            if (!hash.isBlank()) {
-                                track.coverHash = hash;
-                                hashesChanged = true;
-                            }
-                        }
-                        tracks.add(track);
-                    }
+            if (loaded == null) {
+                throw new IOException("expected a JSON array");
+            }
+            for (LibraryTrack track : loaded) {
+                if (track == null || track.id == null || track.files == null) {
+                    throw new IOException("invalid track entry");
                 }
-                if (hashesChanged) {
-                    save();
+                // Retain indexed files even if the library mount is temporarily unavailable.
+                if (track.coverHash == null || track.coverHash.isBlank()) {
+                    track.coverHash = existingCoverHash(track.id);
                 }
             }
+            tracks.addAll(loaded);
+        } catch (NoSuchFileException ignored) {
+            // New library.
         } catch (Exception e) {
-            Log.warn("library", "cannot read library: " + e.getMessage());
+            throw new IllegalStateException("cannot read library from " + dirs.libraryFile(), e);
         }
     }
 }
