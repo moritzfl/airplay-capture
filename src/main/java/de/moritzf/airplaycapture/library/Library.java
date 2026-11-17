@@ -175,6 +175,10 @@ public final class Library {
                 if (track.coverHash == null || track.coverHash.isBlank()) {
                     track.coverHash = existingCoverHash(track.id);
                 }
+                if ("processing".equals(track.status)) {
+                    track.status = "error";
+                    track.error = "Export interrupted; check the tmp folder for the raw CAF.";
+                }
             }
             tracks.addAll(loaded);
         } catch (NoSuchFileException ignored) {

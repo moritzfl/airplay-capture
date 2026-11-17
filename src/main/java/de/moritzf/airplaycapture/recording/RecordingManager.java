@@ -587,6 +587,8 @@ public final class RecordingManager {
 
     private void export(LibraryTrack track, Path caf, Path cover) {
         try {
+            Path libraryDir = library.libraryDir();
+            Files.createDirectories(libraryDir);
             Path effectiveCover = cover;
             if (needsEnrichment(track)) {
                 effectiveCover = enrich(track, effectiveCover);
@@ -602,26 +604,16 @@ public final class RecordingManager {
             Transcoder.Result result =
                 settings.formats.isEmpty() || !transcoder.available()
                     ? new Transcoder.Result(new LinkedHashMap<>(), "no output format available")
-                    : transcoder.export(
-                          caf,
-                          effectiveCover,
-                          tags,
-                          track.baseName,
-                          library.libraryDir()
-                      );
+                    : transcoder.export(caf, effectiveCover, tags, track.baseName, libraryDir);
 
-            Path libraryDir = library.libraryDir();
-            Files.createDirectories(libraryDir);
             Map<String, String> files = new LinkedHashMap<>(result.files());
-            boolean keepForAutoBook = track.audiobookChapter && settings.audiobookAutoAssemble;
+            boolean keepForAutoBook = track.bookId != null;
             if (keepForAutoBook) {
                 // Keep the CAF in the temp folder until the automatic book assembly.
             } else if (settings.keepRaw || files.isEmpty()) {
                 Path target = libraryDir.resolve(track.baseName + ".caf");
                 move(caf, target);
                 files.put("caf", target.getFileName().toString());
-            } else {
-                deleteQuietly(caf);
             }
             long size = 0;
             for (String name : files.values()) {
@@ -637,20 +629,20 @@ public final class RecordingManager {
                 track.error = result.error();
                 library.save();
             }
+            if (!keepForAutoBook && !files.isEmpty() && !files.containsKey("caf")) {
+                deleteQuietly(caf);
+            }
             if (!files.isEmpty()) {
                 Log.info("export", "ready: " + track.baseName + " (" + files.keySet() + ")");
             }
         } catch (Exception e) {
-            Log.error("export", "failed for " + track.baseName, e);
+            Log.error("export", "failed for " + track.baseName + "; raw recording: " + caf, e);
             synchronized (library) {
                 track.status = "error";
-                track.error = e.getMessage();
+                track.error = e.getMessage() + " (raw recording: " + caf.getFileName() + ")";
                 library.save();
             }
         } finally {
-            if (!settings.keepRaw && !(track.audiobookChapter && settings.audiobookAutoAssemble)) {
-                deleteQuietly(caf);
-            }
             ui.changed();
         }
     }

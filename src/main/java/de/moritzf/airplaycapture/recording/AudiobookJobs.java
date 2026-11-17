@@ -3,8 +3,8 @@ package de.moritzf.airplaycapture.recording;
 import de.moritzf.airplaycapture.AppDirs;
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.UiState;
+import de.moritzf.airplaycapture.util.AtomicFiles;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -418,7 +418,7 @@ public final class AudiobookJobs implements AutoCloseable {
     private synchronized void save() {
         try {
             Files.createDirectories(dirs.dataDir());
-            Files.writeString(jobsFile(), JSON.writeValueAsString(jobs()), StandardCharsets.UTF_8);
+            AtomicFiles.writeString(jobsFile(), JSON.writeValueAsString(jobs()));
         } catch (IOException e) {
             Log.warn("audiobook", "cannot save queue: " + e.getMessage());
         }
@@ -431,7 +431,7 @@ public final class AudiobookJobs implements AutoCloseable {
         }
         try {
             List<Job> loaded = JSON.readValue(
-                Files.readString(file, StandardCharsets.UTF_8),
+                Files.readString(file),
                 new TypeReference<List<Job>>() {}
             );
             if (loaded == null) {

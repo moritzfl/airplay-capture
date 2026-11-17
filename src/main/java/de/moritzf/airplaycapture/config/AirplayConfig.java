@@ -119,22 +119,23 @@ public class AirplayConfig {
         );
     }
 
-    private static void cleanTempFiles(AppDirs dirs) {
+    static void cleanTempFiles(AppDirs dirs) {
         Path tmp = dirs.tmpDir();
         if (!Files.isDirectory(tmp)) {
             return;
         }
-        try (Stream<Path> files = Files.walk(tmp)) {
-            files
-                .sorted(Comparator.reverseOrder())
-                .filter(path -> !path.equals(tmp))
-                .forEach(path -> {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (IOException ignored) {
-                        // best effort
+        try (Stream<Path> children = Files.list(tmp)) {
+            for (Path child : children.toList()) {
+                String name = child.getFileName().toString();
+                // A top-level CAF may be the only copy of an interrupted recording.
+                if (name.startsWith("book-") && Files.isDirectory(child)) {
+                    try (Stream<Path> files = Files.walk(child)) {
+                        for (Path file : files.sorted(Comparator.reverseOrder()).toList()) {
+                            Files.deleteIfExists(file);
+                        }
                     }
-                });
+                }
+            }
         } catch (IOException e) {
             Log.warn("app", "cannot clean temp folder: " + e.getMessage());
         }
