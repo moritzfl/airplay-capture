@@ -6,14 +6,22 @@ on:
   pull_request:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-      - name: Set up Java 21 and Gradle
-        uses: gradle/actions/setup-gradle@v6
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
       # ffmpeg and its ~80 libraries come from the runner's Ubuntu mirror, which can take minutes.
       # Keep the downloaded packages; apt still installs them properly, it only skips the download.
@@ -24,7 +32,7 @@ jobs:
           echo "key=apt-ffmpeg-${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
 
       - name: Restore cached ffmpeg packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/apt-archives
           key: ${{ steps.apt-key.outputs.key }}
@@ -41,7 +49,7 @@ jobs:
           ffmpeg -hide_banner -version | head -1
 
       - name: Set up Node.js (prettier-java formatting check)
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 26
 
@@ -60,15 +68,17 @@ jobs:
     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       # Built for the runner's platform only: the jar is built once on the build platform for every
       # architecture, so this covers the toolchain, and the release adds arm64. The layer cache of
       # main is also what a release tag can read, which speeds up its build stage.
       - name: Build the Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           load: true

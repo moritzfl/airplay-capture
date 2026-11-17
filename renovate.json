@@ -10,7 +10,7 @@
   ],
   "packageRules": [
     {
-      "description": "The Java major is set by the toolchain in build.gradle.kts. A newer JDK image cannot build the jar, and CI does not build the images, so such a PR passes and then breaks the release. Raise it by hand, together with the toolchain.",
+      "description": "The Docker JDK must match the Gradle toolchain. Raise the Java major together in both Dockerfiles and the Gradle toolchain.",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["eclipse-temurin"],
       "matchUpdateTypes": ["major"],
