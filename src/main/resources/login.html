@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d0f12">
+  <title>Sign in · AirPlay Capture</title>
+  <link rel="icon" href="icons/icon-64.png">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <main>
+    <header>
+      <img src="icons/icon-64.png" width="48" height="48" alt="">
+      <span>AirPlay Capture</span>
+    </header>
+    <h1>Sign in</h1>
+    <p>Open your recording library.</p>
+    {{notice}}
+    <form method="post" action="login">
+      <input type="hidden" name="{{csrfName}}" value="{{csrfToken}}">
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+    </form>
+  </main>
+</body>
+</html>

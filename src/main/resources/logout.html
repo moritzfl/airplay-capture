@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d0f12">
+  <title>Log out · AirPlay Capture</title>
+  <link rel="icon" href="icons/icon-64.png">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <main>
+    <header>
+      <img src="icons/icon-64.png" width="48" height="48" alt="">
+      <span>AirPlay Capture</span>
+    </header>
+    <h1>Log out?</h1>
+    <p>Recording continues in the background.</p>
+    <form method="post" action="logout">
+      <input type="hidden" name="{{csrfName}}" value="{{csrfToken}}">
+      <a class="cancel" href="app/">Back to library</a>
+      <button type="submit">Log out</button>
+    </form>
+  </main>
+</body>
+</html>

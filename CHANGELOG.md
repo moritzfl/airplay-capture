@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The ffmpeg executable and library location can only be configured on the host.
+- Sign-in and sign-out now match the app, with clear feedback after a failed sign-in.
 
 ### Removed
 

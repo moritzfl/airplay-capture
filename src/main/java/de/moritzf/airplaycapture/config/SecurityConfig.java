@@ -4,7 +4,6 @@ import com.vaadin.flow.server.HandlerHelper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -57,13 +56,19 @@ public class SecurityConfig {
         } else {
             http.authorizeHttpRequests(auth ->
                 auth
-                    .requestMatchers("/login", "/VAADIN/**", "/favicon.ico", "/error")
+                    .requestMatchers(
+                        "/login.css",
+                        "/icons/icon-64.png",
+                        "/VAADIN/**",
+                        "/favicon.ico",
+                        "/error"
+                    )
                     .permitAll()
                     .anyRequest()
                     .authenticated()
             )
-                .formLogin(Customizer.withDefaults())
-                .logout(Customizer.withDefaults());
+                .formLogin(form -> form.loginPage("/login").defaultSuccessUrl("/app/").permitAll())
+                .logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll());
         }
         return http.build();
     }
