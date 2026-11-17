@@ -1,14 +1,9 @@
 package de.moritzf.airplaycapture.web;
 
-import de.moritzf.airplaycapture.Log;
-import de.moritzf.airplaycapture.Settings;
-import de.moritzf.airplaycapture.UiState;
-import de.moritzf.airplaycapture.config.SettingsService;
 import de.moritzf.airplaycapture.library.Library;
 import de.moritzf.airplaycapture.library.LibraryGroups;
 import de.moritzf.airplaycapture.library.LibraryTrack;
 import de.moritzf.airplaycapture.recording.AudiobookCreator;
-import de.moritzf.airplaycapture.util.UpdateChecker;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,10 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -30,107 +23,23 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** JSON API used by integrations and by the browser's media elements. */
+/** Serves playback, artwork, previews and downloads to the web UI. */
 @RestController
 @RequestMapping("/api")
 public class TrackController {
 
     private final Library library;
-    private final UiState ui;
-    private final SettingsService settingsService;
     private final AudiobookCreator audiobookCreator;
-    private final UpdateChecker updateChecker;
 
-    public TrackController(
-        Library library,
-        UiState ui,
-        SettingsService settingsService,
-        AudiobookCreator audiobookCreator,
-        UpdateChecker updateChecker
-    ) {
+    public TrackController(Library library, AudiobookCreator audiobookCreator) {
         this.library = library;
-        this.ui = ui;
-        this.settingsService = settingsService;
         this.audiobookCreator = audiobookCreator;
-        this.updateChecker = updateChecker;
-    }
-
-    @GetMapping("/status")
-    public Map<String, Object> status() {
-        Map<String, Object> status = new LinkedHashMap<>(ui.snapshot());
-        status.put("tracks", library.tracks().size());
-        UpdateChecker.Status update = updateChecker.status();
-        status.put("version", update.currentVersion());
-        status.put("updateAvailable", update.updateAvailable());
-        if (update.latest() != null) {
-            status.put("latestVersion", update.latest().version());
-            status.put("releaseUrl", update.latest().url());
-        }
-        return status;
-    }
-
-    @GetMapping("/tracks")
-    public Map<String, Object> tracks() {
-        List<Map<String, Object>> items = new ArrayList<>();
-        long totalBytes = 0;
-        for (LibraryTrack track : library.tracks()) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", track.id);
-            item.put("title", track.title);
-            item.put("artist", track.artist);
-            item.put("album", track.album);
-            item.put("genre", track.genre);
-            item.put("durationMs", track.durationMs);
-            item.put("recordedAt", track.recordedAtEpochMs);
-            item.put("baseName", track.baseName);
-            item.put("files", track.files);
-            item.put("sizeBytes", track.sizeBytes);
-            item.put("cover", track.cover);
-            item.put("status", track.status);
-            item.put("error", track.error);
-            item.put("source", track.source);
-            item.put("gaps", track.gaps);
-            item.put("expectedDurationMs", track.expectedDurationMs);
-            item.put("incomplete", track.incomplete);
-            item.put("gapPackets", track.gapPackets);
-            item.put("filledPackets", track.filledPackets);
-            item.put("recoveredGaps", track.recoveredGaps);
-            item.put("maxRecoveryMs", track.maxRecoveryMs);
-            item.put("mediaKind", track.mediaKind);
-            item.put("audiobookChapter", track.audiobookChapter);
-            item.put("bookId", track.bookId);
-            item.put("chapterCount", track.chapterCount);
-            item.put("metadataSource", track.metadataSource);
-            items.add(item);
-            totalBytes += track.sizeBytes;
-        }
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("tracks", items);
-        response.put("count", items.size());
-        response.put("totalBytes", totalBytes);
-        return response;
-    }
-
-    @DeleteMapping("/tracks/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        Optional<LibraryTrack> track = library.find(id);
-        if (track.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        library.delete(track.get());
-        Log.info("library", "deleted " + track.get().displayName());
-        ui.changed();
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/tracks/{id}/cover")
@@ -254,36 +163,6 @@ public class TrackController {
             .body(new FileSystemResource(path));
     }
 
-    @GetMapping("/groups")
-    public Map<String, Object> groups() {
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (LibraryGroups.Group group : LibraryGroups.groups(library.tracks())) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("key", group.key());
-            item.put("title", group.title());
-            item.put("artist", group.artist());
-            item.put("audiobook", group.isAudiobook());
-            item.put("assembled", group.hasM4b());
-            item.put("duplicates", group.duplicateCount());
-            item.put(
-                "trackIds",
-                group
-                    .tracks()
-                    .stream()
-                    .map(track -> track.id)
-                    .toList()
-            );
-            item.put("formats", group.formats(true));
-            item.put("durationMs", group.durationMs());
-            item.put("sizeBytes", group.sizeBytes());
-            items.add(item);
-        }
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("groups", items);
-        response.put("count", items.size());
-        return response;
-    }
-
     @GetMapping("/groups/{key}/zip/{format}")
     public void groupZip(
         @PathVariable String key,
@@ -361,58 +240,5 @@ public class TrackController {
             clean = "recordings";
         }
         return clean + " - " + format.toUpperCase(Locale.ROOT);
-    }
-
-    @GetMapping("/settings")
-    public Map<String, Object> settings() {
-        return settingsView(settingsService.current());
-    }
-
-    @GetMapping("/csrf")
-    public ResponseEntity<Map<String, String>> csrf(CsrfToken token) {
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CACHE_CONTROL, "no-store")
-            .body(Map.of("headerName", token.getHeaderName(), "token", token.getToken()));
-    }
-
-    @PutMapping("/settings")
-    public ResponseEntity<?> settings(@RequestBody Settings incoming) {
-        try {
-            Settings applied = settingsService.apply(incoming);
-            return ResponseEntity.ok(settingsView(applied));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(
-                Map.of("error", String.valueOf(e.getMessage()))
-            );
-        }
-    }
-
-    private Map<String, Object> settingsView(Settings settings) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        map.put("settings", settings);
-        map.put("libraryDir", library.libraryDir().toString());
-        map.put("ffmpegAvailable", ui.ffmpegAvailable);
-        map.put("formatsAvailable", List.of("m4a", "mp3", "alac"));
-        return map;
-    }
-
-    @GetMapping("/log")
-    public Map<String, Object> log() {
-        List<Map<String, String>> lines = new ArrayList<>();
-        for (Log.Line line : Log.lines()) {
-            lines.add(
-                Map.of(
-                    "time",
-                    line.time(),
-                    "level",
-                    line.level(),
-                    "scope",
-                    line.scope(),
-                    "message",
-                    line.message()
-                )
-            );
-        }
-        return Map.of("lines", lines);
     }
 }

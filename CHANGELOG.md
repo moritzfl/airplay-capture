@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- API writes require a session and a CSRF token from `/api/csrf`. The ffmpeg executable and
-  library location can only be configured on the host, not through the web API.
+- The ffmpeg executable and library location can only be configured on the host.
+
+### Removed
+
+- Removed the integration HTTP API for status, track and group listings, logs, settings, and track
+  deletion. Browser playback, covers, previews, and downloads keep their existing URLs.
 
 ### Fixed
 

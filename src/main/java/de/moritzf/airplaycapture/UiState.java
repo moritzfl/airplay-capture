@@ -1,8 +1,6 @@
 package de.moritzf.airplaycapture;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /** Live state shown in the web UI; mutated by the receiver and recording pipeline. */
@@ -44,31 +42,5 @@ public final class UiState {
 
     public void removeListener(Runnable listener) {
         listeners.remove(listener);
-    }
-
-    public Map<String, Object> snapshot() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        map.put("deviceName", deviceName);
-        map.put("port", port);
-        map.put("interfaceAddress", interfaceAddress);
-        map.put("advertising", advertising);
-        map.put("advertisedAs", advertisedAs);
-        map.put("client", client);
-        map.put("clientName", clientName);
-        map.put("senderApp", senderApp);
-        map.put("receiving", receiving);
-        Map<String, Object> now = new LinkedHashMap<>();
-        now.put("title", nowTitle);
-        now.put("artist", nowArtist);
-        now.put("album", nowAlbum);
-        now.put("startedAt", nowStartedAtMs);
-        now.put("recordedMs", nowRecordedMs);
-        now.put("durationMs", nowDurationMs);
-        map.put("now", now);
-        map.put("coverVersion", coverVersion);
-        map.put("libraryDir", libraryDir);
-        map.put("ffmpegAvailable", ffmpegAvailable);
-        map.put("lastError", lastError);
-        return map;
     }
 }

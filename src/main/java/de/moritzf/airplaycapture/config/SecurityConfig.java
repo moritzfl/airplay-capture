@@ -15,7 +15,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * Optional HTTP form login. Without {@code AIRPLAY_CAPTURE_WEB_PASSWORD} the interface is open
- * (LAN use); with it, every page and API call requires a session.
+ * (LAN use); with it, application pages and media require a session.
  *
  * <p>Vaadin's internal requests use Flow's own CSRF protection; other writes use Spring Security.
  */

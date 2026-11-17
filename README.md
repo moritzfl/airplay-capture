@@ -199,7 +199,7 @@ environment variables (the Docker image reads the environment variables):
 | `--data <dir>` | `AIRPLAY_CAPTURE_DATA` | macOS: `~/Library/Application Support/AirPlayCapture`, Windows: `%APPDATA%\AirPlayCapture`, Linux: `~/.airplay-capture` |
 | `--web-port <port>` | `AIRPLAY_CAPTURE_WEB_PORT` | `8080` |
 | – | `AIRPLAY_CAPTURE_WEB_USER` | `recorder` (only used with a password) |
-| – | `AIRPLAY_CAPTURE_WEB_PASSWORD` | unset – web UI/API have no authentication |
+| – | `AIRPLAY_CAPTURE_WEB_PASSWORD` | unset – web UI has no authentication |
 | – | `AIRPLAY_CAPTURE_LIBRARY_DIR` | `library` inside the data directory |
 
 **Set a password** if the web port is reachable by others, and keep it on a trusted network — for
@@ -208,7 +208,7 @@ Linux; the user name is `recorder`. On Synology, DSM handles sign-in and per-use
 you.
 
 The ffmpeg executable and library location are installation settings, not writable through the
-web UI or API. To change them, stop the app, edit `ffmpegPath` or `libraryDir` in `settings.json`,
+web UI. To change them, stop the app, edit `ffmpegPath` or `libraryDir` in `settings.json`,
 and restart. `AIRPLAY_CAPTURE_LIBRARY_DIR` takes precedence when set; for Synology use the package
 manager to change the recording folder.
 
@@ -341,25 +341,10 @@ By default nothing is assembled automatically: the library offers **Create M4B�
 sources, metadata and the preview. Enable **Create the audiobook automatically when a book ends** to build
 the `.m4b` as soon as a book ends; that path keeps the lossless CAF until the book is finished.
 
-### HTTP API
+### Using recordings with other apps
 
-All endpoints live outside Vaadin's `/app/` mapping and are useful for integrations:
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/status` | receiver state, active track, library size, `version`, `updateAvailable` |
-| `GET` | `/api/tracks` | library listing (includes `audiobookChapter`, `bookId`, `chapterCount`) |
-| `GET` | `/api/groups` | album/book groups with stable keys, formats and duplicate count |
-| `GET` | `/api/groups/{key}/zip/{format}` | stream a group ZIP (`?all=1` includes every take) |
-| `GET` | `/api/audiobook-preview/{id}/{index}` | boundary preview clip for one planned chapter |
-| `GET` | `/api/audiobook-preview/{id}/{index}/full` | full chapter audio |
-| `DELETE` | `/api/tracks/{id}` | delete recording and files |
-| `GET` | `/api/tracks/{id}/file/{format}` | stream audio; `?download=1` for an attachment |
-| `GET` | `/api/tracks/{id}/cover` | cover image |
-| `GET` | `/api/now/cover` | cover of the track currently recording |
-| `GET`/`PUT` | `/api/settings` | read/update settings (JSON) |
-| `GET` | `/api/csrf` | get the CSRF header name and token for API writes |
-| `GET` | `/api/log` | recent log lines |
+Point your media app at the recording folder or download files from the Library. AirPlay Capture
+does not offer an integration API; its `/api/` routes serve media to the web UI.
 
 ### Development
 
@@ -448,11 +433,9 @@ test round.
 
 ### Security notes
 
-With `AIRPLAY_CAPTURE_WEB_PASSWORD` set, the UI and API use Spring Security form login. API clients
-that write settings or delete tracks must first fetch `GET /api/csrf` after login (or directly when
-login is disabled), retain the session cookie, and send the returned `token` under the returned
-`headerName` on write requests. Keep the port on a trusted network and do not expose it to the
-internet. The AirPlay receiver itself has no authentication, as expected by AirPlay 1 senders.
+With `AIRPLAY_CAPTURE_WEB_PASSWORD` set, the web UI and its media routes require Spring Security
+form login. Keep the port on a trusted network and do not expose it to the internet. The AirPlay
+receiver itself has no authentication, as expected by AirPlay 1 senders.
 
 ## License
 

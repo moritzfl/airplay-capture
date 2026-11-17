@@ -2,8 +2,10 @@ package de.moritzf.airplaycapture.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import de.moritzf.airplaycapture.AppDirs;
 import de.moritzf.airplaycapture.Settings;
@@ -31,9 +33,35 @@ class TrackControllerTest {
         track.id = "test";
         track.files.put("m4b", "Book.m4b");
         library.add(track);
-        mvc = MockMvcBuilders.standaloneSetup(
-            new TrackController(library, null, null, null, null)
-        ).build();
+        mvc = MockMvcBuilders.standaloneSetup(new TrackController(library, null)).build();
+    }
+
+    @Test
+    void integrationRoutesAreNotMapped() throws Exception {
+        for (String route : new String[] {
+            "status",
+            "tracks",
+            "groups",
+            "log",
+            "settings",
+            "csrf",
+        }) {
+            assertEquals(
+                404,
+                mvc
+                    .perform(get("/api/" + route))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus(),
+                route
+            );
+        }
+        assertEquals(404, mvc.perform(put("/api/settings")).andReturn().getResponse().getStatus());
+        assertEquals(
+            404,
+            mvc.perform(delete("/api/tracks/test")).andReturn().getResponse().getStatus()
+        );
+        assertEquals(200, mvc.perform(get(URL)).andReturn().getResponse().getStatus());
     }
 
     @Test
