@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The ffmpeg executable and library location can only be configured on the host.
 - Sign-in and sign-out now match the app, with clear feedback after a failed sign-in.
+- The offline receiver card links directly to Logs. On phones, recording actions and Settings
+  sections are easier to reach.
 
 ### Removed
 

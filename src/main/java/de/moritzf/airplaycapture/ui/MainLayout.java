@@ -8,6 +8,7 @@ import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Nav;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -85,8 +86,9 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         statusPill.getElement().setAttribute("role", "status");
         statusPill.add(dot, statusText, statusDetail);
 
-        Div nav = new Div();
+        Nav nav = new Nav();
         nav.addClassName("app-nav");
+        nav.getElement().setAttribute("aria-label", "Main navigation");
         settingsLink = navLink("Settings", SettingsView.class);
         nav.add(
             navLink("Library", LibraryView.class),
@@ -148,8 +150,10 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         link.setHighlightAction((target, highlight) -> {
             if (highlight) {
                 target.addClassName("active");
+                target.getElement().setAttribute("aria-current", "page");
             } else {
                 target.removeClassName("active");
+                target.getElement().removeAttribute("aria-current");
             }
         });
         return link;
@@ -285,7 +289,7 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         } else {
             statusPill.addClassName("offline");
             statusText.setText("Receiver offline");
-            detail = state.lastError == null ? "" : state.lastError;
+            detail = "";
         }
         statusDetail.setText(detail);
         statusDetail.setVisible(!detail.isBlank());

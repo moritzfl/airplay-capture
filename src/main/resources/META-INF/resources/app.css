@@ -297,6 +297,27 @@ body {
     white-space: normal;
 }
 
+.now-card.offline .now-cover {
+    display: none;
+}
+
+.receiver-logs {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--app-line);
+    border-radius: 10px;
+    color: var(--lumo-body-text-color);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.receiver-logs:hover {
+    background: var(--app-surface-2);
+}
+
 .now-cover {
     width: 128px;
     height: 128px;
@@ -1684,20 +1705,17 @@ body.player-open .save-bar {
         gap: 12px;
     }
 
-    /* the section list becomes a row of chips that scrolls sideways */
+    /* Keep every section visible; there is no sideways scroller to discover. */
     .settings-nav {
         position: static;
         flex-direction: row;
+        flex-wrap: wrap;
         gap: 6px;
-        overflow-x: auto;
-        margin: 0 -16px;
-        padding: 0 16px 4px;
-        scrollbar-width: none;
     }
 
     .settings-nav-link {
         flex: none;
-        min-height: 36px;
+        min-height: 40px;
         padding: 0 14px;
         border: 1px solid var(--app-line);
         border-radius: 999px;
@@ -1810,6 +1828,17 @@ body.player-open .save-bar {
         height: calc(100dvh - 310px);
         padding: 8px 12px;
     }
+
+    .log-tools {
+        width: 100%;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .log-tools vaadin-button,
+    .log-tools vaadin-checkbox {
+        min-height: 44px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1860,6 +1889,13 @@ body.player-open .save-bar {
 
     .now-card.idle .now-title {
         font-size: 17px;
+    }
+
+    .now-card.offline {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 12px 14px;
     }
 
     .player-bar {
@@ -1920,6 +1956,10 @@ body.player-open .save-bar {
         text-overflow: ellipsis;
     }
 
+    .brand-titles {
+        min-width: 0;
+    }
+
     .brand-device {
         display: none;
     }
@@ -1962,8 +2002,9 @@ body.player-open .save-bar {
         width: 100%;
     }
 
-    .lib-tools input {
-        flex: 1;
+    .lib-tools .recording-search {
+        flex: 1 1 0;
+        min-width: 0;
     }
 
     .library-grid {
@@ -1984,6 +2025,30 @@ body.player-open .save-bar {
 
 }
 
+@media (max-width: 360px) {
+    .app-header {
+        gap: 8px;
+    }
+
+    .brand {
+        gap: 7px;
+    }
+
+    .brand-title {
+        font-size: 14px;
+    }
+
+    .status-pill {
+        padding-inline: 7px;
+        gap: 5px;
+        font-size: 12px;
+    }
+
+    .settings-nav-link {
+        padding-inline: 10px;
+    }
+}
+
 @media (max-width: 999px) {
     .library-grid {
         display: none !important;
@@ -2000,7 +2065,21 @@ body.player-open .save-bar {
     }
 
     .card-toggle {
-        min-height: 40px;
+        min-height: 44px;
+        margin: 0;
+    }
+
+    .lib-card-group .card-controls {
+        gap: 0 6px;
+    }
+
+    .lib-card-group .format-chip {
+        padding-inline: 8px;
+    }
+
+    .lib-card-group .book-action,
+    .lib-card-group .row-action {
+        margin-block: 0;
     }
 }
 

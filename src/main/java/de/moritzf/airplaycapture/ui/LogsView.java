@@ -51,15 +51,16 @@ public class LogsView extends VerticalLayout {
     /** Keeps the newest line in view, unless the reader scrolled up to look at something. */
     private static final String FOLLOW_JS = """
     const box = this;
-    if (box.dataset.follow !== 'false') {
-      box.scrollTop = box.scrollHeight;
-    }
+    const follow = box.dataset.follow !== 'false';
     if (!box.dataset.ready) {
       box.dataset.ready = 'true';
       box.addEventListener('scroll', () => {
         box.dataset.follow = String(box.scrollHeight - box.scrollTop - box.clientHeight < 40);
       });
     }
+    if (follow) requestAnimationFrame(() => {
+      box.scrollTop = box.scrollHeight;
+    });
     """;
 
     private final UiBroadcaster broadcaster;
@@ -82,7 +83,10 @@ public class LogsView extends VerticalLayout {
         heading.addClassName("view-heading");
         count.addClassName("count");
 
-        problemsOnly.addValueChangeListener(event -> render());
+        problemsOnly.addValueChangeListener(event -> {
+            lines.getElement().executeJs("this.dataset.follow = 'true'");
+            render();
+        });
         copy.addThemeVariants(ButtonVariant.LUMO_SMALL);
         copy.getElement().setAttribute("title", "Copy the lines shown, for a bug report");
         copy.addClickListener(event -> copyLines());

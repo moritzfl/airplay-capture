@@ -31,6 +31,7 @@ import com.vaadin.flow.data.provider.hierarchy.TreeData;
 import com.vaadin.flow.data.provider.hierarchy.TreeDataProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.shared.Registration;
 import de.moritzf.airplaycapture.Log;
 import de.moritzf.airplaycapture.UiState;
@@ -78,6 +79,7 @@ public class LibraryView extends VerticalLayout {
     private final Span nowEyebrow = new Span();
     private final H2 nowTitle = new H2();
     private final Span nowSub = new Span();
+    private final RouterLink receiverLogs = new RouterLink("Open logs", LogsView.class);
     private final Div progressBar = new Div();
     private final Span nowTime = new Span();
     private final Span nowClient = new Span();
@@ -236,7 +238,8 @@ public class LibraryView extends VerticalLayout {
         meta.add(nowTime, nowClient);
 
         body.add(nowEyebrow, nowTitle, nowSub, progress, meta);
-        nowCard.add(nowCover, body);
+        receiverLogs.addClassName("receiver-logs");
+        nowCard.add(nowCover, body, receiverLogs);
     }
 
     private Div toolbar;
@@ -255,7 +258,8 @@ public class LibraryView extends VerticalLayout {
         Div tools = new Div();
         tools.addClassName("lib-tools");
         search.setPlaceholder("Search title, artist, album…");
-        search.getElement().setAttribute("aria-label", "Search recordings");
+        search.setAriaLabel("Search recordings");
+        search.addClassName("recording-search");
         search.setClearButtonVisible(true);
         search.setValueChangeMode(com.vaadin.flow.data.value.ValueChangeMode.LAZY);
         search.setValueChangeTimeout(250);
@@ -278,7 +282,10 @@ public class LibraryView extends VerticalLayout {
         emptyState.getElement().setAttribute("aria-live", "polite");
         emptyTitle.addClassName("lib-empty-title");
         emptyText.addClassName("lib-empty-text");
-        emptyClear = new Button("Clear search", event -> search.clear());
+        emptyClear = new Button("Clear search", event -> {
+            search.clear();
+            search.focus();
+        });
         emptyClear.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
         emptyState.add(emptyTitle, emptyText, emptyClear);
         emptyState.setVisible(false);
@@ -1128,11 +1135,7 @@ public class LibraryView extends VerticalLayout {
             // inviting the user to look for it in the AirPlay menu.
             nowEyebrow.setText("Receiver offline");
             nowTitle.setText("Not visible in the AirPlay menu");
-            nowSub.setText(
-                isBlank(state.lastError)
-                    ? "The receiver has not started. The Logs show why."
-                    : sentence(state.lastError) + " The Logs show the details."
-            );
+            nowSub.setText("Your library is still available.");
         } else {
             nowEyebrow.setText("Ready to record");
             nowTitle.setText("Choose \u201c" + receiver + "\u201d in the AirPlay menu");
@@ -1140,6 +1143,7 @@ public class LibraryView extends VerticalLayout {
                 "Whatever plays on your iPhone, iPad or Mac is recorded track by track."
             );
         }
+        receiverLogs.setVisible(offline);
         nowTime.setText(
             live
                 ? Fmt.duration(state.nowRecordedMs) +
@@ -1179,13 +1183,6 @@ public class LibraryView extends VerticalLayout {
         } else if (!hasCover) {
             shownCoverVersion = -1;
         }
-    }
-
-    /** An error text from the core as a sentence: capitalised, with a full stop. */
-    private static String sentence(String text) {
-        String value = text.trim();
-        value = value.substring(0, 1).toUpperCase(Locale.ROOT) + value.substring(1);
-        return value.endsWith(".") ? value : value + ".";
     }
 
     private void refreshGrid() {

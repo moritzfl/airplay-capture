@@ -51,7 +51,7 @@ public class SettingsService {
 
     public synchronized Settings apply(Settings incoming) throws IOException {
         Settings next = incoming.copy();
-        // These paths belong to the installation, not a remote API or UI client.
+        // These paths belong to the installation, not the web UI.
         next.ffmpegPath = settings.ffmpegPath;
         next.libraryDir = settings.libraryDir;
         boolean receiverChanged =
