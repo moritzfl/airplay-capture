@@ -26,7 +26,9 @@ public final class Transcoder {
     public record Result(Map<String, String> files, String error) {}
 
     private volatile Settings settings;
-    private volatile Boolean available;
+    private volatile Probe probe;
+
+    private record Probe(String executable, boolean available) {}
 
     public Transcoder(Settings settings) {
         this.settings = settings;
@@ -34,32 +36,44 @@ public final class Transcoder {
 
     public void updateSettings(Settings settings) {
         this.settings = settings;
-        this.available = null;
     }
 
     public boolean available() {
-        Boolean cached = available;
-        if (cached != null) {
-            return cached;
+        String executable = settings.ffmpegPath;
+        Probe cached = probe;
+        if (cached != null && cached.executable().equals(executable)) {
+            return cached.available();
         }
         boolean result;
         try {
-            Process process = new ProcessBuilder(settings.ffmpegPath, "-version")
-                .redirectErrorStream(true)
-                .start();
-            process.getInputStream().readAllBytes();
-            result = process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0;
-        } catch (Exception e) {
+            result = probe(executable, 5000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (IOException e) {
             result = false;
         }
         if (!result) {
-            Log.error(
-                "ffmpeg",
-                "not available ('" + settings.ffmpegPath + "'); recordings stay as .caf"
-            );
+            Log.error("ffmpeg", "not available ('" + executable + "'); recordings stay as .caf");
         }
-        available = result;
+        probe = new Probe(executable, result);
         return result;
+    }
+
+    static boolean probe(String executable, long timeoutMs)
+        throws IOException, InterruptedException {
+        Process process = new ProcessBuilder(executable, "-version")
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start();
+        try {
+            process.getOutputStream().close();
+            return process.waitFor(timeoutMs, TimeUnit.MILLISECONDS) && process.exitValue() == 0;
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+            }
+        }
     }
 
     /**

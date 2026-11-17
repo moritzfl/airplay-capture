@@ -20,6 +20,13 @@ class FfmpegRunnerTest {
     Path temp;
 
     @Test
+    @org.junit.jupiter.api.Timeout(5)
+    void versionProbeDoesNotWaitForOutputToClose() throws Exception {
+        assertFalse(Transcoder.probe(script("exec sleep 30\n").toString(), 100));
+        assertTrue(Transcoder.probe(script("echo version\n").toString(), 1000));
+    }
+
+    @Test
     void aSlowRunThatKeepsProgressingIsNotStopped() throws Exception {
         // Runs for ~1 s against a 500 ms stall limit: only missing progress may end a run.
         Path ffmpeg = script(

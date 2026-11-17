@@ -71,11 +71,17 @@ public final class FfmpegRunner {
         full.addAll(List.of("-nostats", "-progress", "pipe:2"));
         full.addAll(command.subList(1, command.size()));
         Process process = new ProcessBuilder(full).redirectErrorStream(true).start();
-        process.getOutputStream().close();
+        try {
+            process.getOutputStream().close();
+        } catch (IOException e) {
+            process.destroyForcibly();
+            throw e;
+        }
 
         StringBuilder output = new StringBuilder();
         AtomicLong encodedMs = new AtomicLong();
-        AtomicLong lastProgressAt = new AtomicLong(System.currentTimeMillis());
+        AtomicLong lastProgressAt = new AtomicLong(System.nanoTime());
+        long stallTimeoutNanos = TimeUnit.MILLISECONDS.toNanos(stallTimeoutMs);
         long overrunMs = expectedMs + Math.max(60_000, expectedMs / 10);
         // Set by whichever thread notices the problem first; checked even when ffmpeg already
         // exited, because a finished file with the wrong length is still broken.
@@ -97,7 +103,7 @@ public final class FfmpegRunner {
                             "; stopped to avoid a broken file"
                     )
                 );
-            } else if (System.currentTimeMillis() - lastProgressAt.get() > stallTimeoutMs) {
+            } else if (System.nanoTime() - lastProgressAt.get() > stallTimeoutNanos) {
                 abort.compareAndSet(
                     null,
                     new IOException("ffmpeg made no progress for " + describe(stallTimeoutMs))
@@ -133,7 +139,7 @@ public final class FfmpegRunner {
                             // the furthest audio position instead of jumping back.
                             if (ms > encodedMs.get()) {
                                 encodedMs.set(ms);
-                                lastProgressAt.set(System.currentTimeMillis());
+                                lastProgressAt.set(System.nanoTime());
                                 if (progress != null) {
                                     progress.at(ms);
                                 }
@@ -144,7 +150,7 @@ public final class FfmpegRunner {
                         }
                     } else if ("progress".equals(key) && "end".equals(value)) {
                         // the trailer and a +faststart rewrite follow without further reports
-                        lastProgressAt.set(System.currentTimeMillis());
+                        lastProgressAt.set(System.nanoTime());
                         if (progress != null) {
                             progress.at(Math.max(encodedMs.get(), expectedMs));
                         }
@@ -160,12 +166,13 @@ public final class FfmpegRunner {
             while (!process.waitFor(250, TimeUnit.MILLISECONDS)) {
                 check.run();
             }
-        } catch (InterruptedException e) {
-            process.destroyForcibly();
-            throw e;
+            reader.join(2000);
+            check.run();
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+            }
         }
-        reader.join(2000);
-        check.run();
         Exception failure = abort.get();
         if (failure instanceof CancellationException cancellation) {
             throw cancellation;
