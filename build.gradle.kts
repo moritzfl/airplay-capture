@@ -29,6 +29,7 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     // The plain library, checked from JUnit tests: archunit-junit5's engine targets JUnit 5.
     testImplementation(libs.archunit)
+    testImplementation(libs.spring.test)
     testRuntimeOnly(libs.junit.launcher)
 }
 

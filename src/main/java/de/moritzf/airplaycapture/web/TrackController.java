@@ -11,8 +11,6 @@ import de.moritzf.airplaycapture.recording.AudiobookCreator;
 import de.moritzf.airplaycapture.util.UpdateChecker;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,7 +35,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -150,7 +147,7 @@ public class TrackController {
         MediaType type = file.equals(png) ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG;
         return ResponseEntity.ok()
             .contentType(type)
-            .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+            .header(HttpHeaders.CACHE_CONTROL, "private, no-cache")
             .body(new FileSystemResource(file));
     }
 
@@ -170,22 +167,18 @@ public class TrackController {
     }
 
     @GetMapping("/tracks/{id}/file/{format}")
-    public void file(
+    public ResponseEntity<Resource> file(
         @PathVariable String id,
         @PathVariable String format,
-        @RequestParam(value = "download", required = false) String download,
-        @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
-        HttpServletResponse response
-    ) throws IOException {
+        @RequestParam(value = "download", required = false) String download
+    ) {
         Optional<LibraryTrack> track = library.find(id);
         if (track.isEmpty()) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
+            return ResponseEntity.notFound().build();
         }
         Path path = library.file(track.get(), format);
-        if (path == null || !Files.exists(path)) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
+        if (path == null || !Files.isRegularFile(path)) {
+            return ResponseEntity.notFound().build();
         }
         String contentType = switch (format) {
             case "mp3" -> "audio/mpeg";
@@ -196,56 +189,41 @@ public class TrackController {
         // Browsers (especially Safari) derive the saved extension from the MIME type of an inline
         // response, which turned .m4b audiobooks into .m4a/.mp4 downloads. An explicit attachment
         // filename keeps the real container extension and the library's readable base name.
-        stream(
-            path,
-            contentType,
-            path.getFileName().toString(),
-            download != null,
-            rangeHeader,
-            response
-        );
+        return media(path, contentType, path.getFileName().toString(), download != null);
     }
 
     @GetMapping("/audiobook-preview/{previewId}/{index}")
-    public void audiobookPreview(
+    public ResponseEntity<Resource> audiobookPreview(
         @PathVariable String previewId,
-        @PathVariable int index,
-        @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
-        HttpServletResponse response
+        @PathVariable int index
     ) throws IOException {
         Path clip;
         try {
             clip = audiobookCreator.previewClip(previewId, index);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            return;
+            return ResponseEntity.internalServerError().build();
         }
-        if (clip == null || !Files.exists(clip)) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
+        if (clip == null || !Files.isRegularFile(clip)) {
+            return ResponseEntity.notFound().build();
         }
-        stream(clip, "audio/mp4", "chapter-preview.m4a", false, rangeHeader, response);
+        return media(clip, "audio/mp4", "chapter-preview.m4a", false);
     }
 
     @GetMapping("/audiobook-preview/{previewId}/{index}/full")
-    public void audiobookFullChapter(
+    public ResponseEntity<Resource> audiobookFullChapter(
         @PathVariable String previewId,
-        @PathVariable int index,
-        @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
-        HttpServletResponse response
+        @PathVariable int index
     ) throws IOException {
         Path file;
         try {
             file = audiobookCreator.fullChapter(previewId, index);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            return;
+            return ResponseEntity.internalServerError().build();
         }
-        if (file == null || !Files.exists(file)) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
+        if (file == null || !Files.isRegularFile(file)) {
+            return ResponseEntity.notFound().build();
         }
         String name = file.getFileName().toString().toLowerCase(Locale.ROOT);
         String contentType = name.endsWith(".mp3")
@@ -253,71 +231,26 @@ public class TrackController {
             : name.endsWith(".caf")
               ? "audio/x-caf"
               : "audio/mp4";
-        stream(file, contentType, "chapter.m4a", false, rangeHeader, response);
+        return media(file, contentType, file.getFileName().toString(), false);
     }
 
-    private static void stream(
+    private static ResponseEntity<Resource> media(
         Path path,
         String contentType,
         String fileName,
-        boolean attachment,
-        String rangeHeader,
-        HttpServletResponse response
-    ) throws IOException {
-        long length = Files.size(path);
-        response.setContentType(contentType);
-        response.setHeader(HttpHeaders.ACCEPT_RANGES, "bytes");
-        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
+        boolean attachment
+    ) {
         ContentDisposition disposition = (
             attachment ? ContentDisposition.attachment() : ContentDisposition.inline()
         )
             .filename(fileName, StandardCharsets.UTF_8)
             .build();
-        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
-
-        long start = 0;
-        long end = length - 1;
-        boolean partial = false;
-        if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
-            String[] spec = rangeHeader.substring(6).split("-", 2);
-            try {
-                start = spec[0].isBlank() ? 0 : Long.parseLong(spec[0].trim());
-                end =
-                    spec.length > 1 && !spec[1].isBlank()
-                        ? Long.parseLong(spec[1].trim())
-                        : length - 1;
-                if (start < 0 || start >= length) {
-                    start = 0;
-                }
-                end = Math.min(end, length - 1);
-                partial = end >= start;
-            } catch (NumberFormatException e) {
-                partial = false;
-            }
-        }
-        long count = partial ? end - start + 1 : length;
-        if (partial) {
-            response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
-            response.setHeader(
-                HttpHeaders.CONTENT_RANGE,
-                "bytes " + start + "-" + end + "/" + length
-            );
-        }
-        response.setContentLengthLong(count);
-        try (InputStream in = Files.newInputStream(path)) {
-            in.skipNBytes(start);
-            byte[] buffer = new byte[64 * 1024];
-            long remaining = count;
-            OutputStream out = response.getOutputStream();
-            while (remaining > 0) {
-                int read = in.read(buffer, 0, (int) Math.min(buffer.length, remaining));
-                if (read < 0) {
-                    break;
-                }
-                out.write(buffer, 0, read);
-                remaining -= read;
-            }
-        }
+        // Spring MVC handles range negotiation for seekable resources.
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(contentType))
+            .header(HttpHeaders.CACHE_CONTROL, "private, no-cache")
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+            .body(new FileSystemResource(path));
     }
 
     @GetMapping("/groups")
@@ -399,10 +332,13 @@ public class TrackController {
         ) {
             for (int i = 0; i < files.size(); i++) {
                 String name = names.get(i);
+                int dot = name.lastIndexOf('.');
+                String stem = dot > 0 ? name.substring(0, dot) : name;
+                String suffix = dot > 0 ? name.substring(dot) : "";
                 String entry = name;
                 int counter = 2;
                 while (!used.add(entry)) {
-                    entry = name.replaceFirst("(\\.[^.]+)$", " (" + counter + ")$1");
+                    entry = stem + " (" + counter + ")" + suffix;
                     counter++;
                 }
                 zip.putNextEntry(new ZipEntry(entry));
