@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- API writes require a session and a CSRF token from `/api/csrf`. The ffmpeg executable and
+  library location can only be configured on the host, not through the web API.
+
+### Fixed
+
+- Media endpoints handle suffix ranges and reject unsatisfiable ranges, improving seeking.
+- Failed or interrupted exports no longer cause the raw CAF to be deleted during startup.
+  Settings and library writes no longer truncate the previous state before replacing it.
+- Restarting the receiver closes old control connections, and an unresponsive ffmpeg version
+  check no longer blocks indefinitely.
+
 ## [1.2.0] - 2026-11-14
 
 ### Added
