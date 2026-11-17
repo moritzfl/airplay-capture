@@ -1857,6 +1857,10 @@ body.player-open .save-bar {
 }
 
 @media (max-width: 700px) {
+    .settings-section {
+        scroll-margin-top: 116px;
+    }
+
     .now-card {
         flex-direction: row;
         align-items: center;

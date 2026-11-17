@@ -57,7 +57,7 @@ public class MainLayout extends VerticalLayout implements RouterLayout, AfterNav
         boolean authEnabled = password != null && !password.isBlank();
 
         addClassName("app-shell");
-        setSizeFull();
+        setWidthFull();
         setAlignItems(Alignment.STRETCH);
         setPadding(false);
         setSpacing(false);
