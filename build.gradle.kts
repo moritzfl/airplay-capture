@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "de.moritzf"
-version = "1.2.1-SNAPSHOT"
+version = "2.0.0"
 
 repositories {
     mavenCentral()

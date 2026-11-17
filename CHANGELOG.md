@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-17
+
 ### Changed
 
 - The ffmpeg executable and library location can only be configured on the host.
@@ -26,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Settings and library writes no longer truncate the previous state before replacing it.
 - Restarting the receiver closes old control connections, and an unresponsive ffmpeg version
   check no longer blocks indefinitely.
+- Export filenames avoid collisions with existing recordings across formats.
 
 ## [1.2.0] - 2026-11-14
 
@@ -133,7 +136,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker images for linux/amd64 and linux/arm64 on `ghcr.io`.
 - Runs natively on macOS, Linux and Windows.
 
-[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/1.2.0...HEAD
+[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.0...HEAD
+[2.0.0]: https://github.com/moritzfl/airplay-capture/compare/1.2.0...2.0.0
 [1.2.0]: https://github.com/moritzfl/airplay-capture/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/moritzfl/airplay-capture/compare/1.0.3...1.1.0
 [1.0.3]: https://github.com/moritzfl/airplay-capture/compare/1.0.2...1.0.3
