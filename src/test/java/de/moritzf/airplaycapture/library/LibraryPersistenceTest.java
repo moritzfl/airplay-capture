@@ -17,6 +17,14 @@ class LibraryPersistenceTest {
     Path data;
 
     @Test
+    void namesSkipUnindexedFilesInAnyOutputFormat() throws IOException {
+        Library library = new Library(new AppDirs(data), new Settings());
+        Files.createFile(library.libraryDir().resolve("Recording.alac.m4a"));
+        Files.createFile(library.libraryDir().resolve("Recording (2).mp3"));
+        assertEquals("Recording (3)", library.uniqueBaseName("Recording"));
+    }
+
+    @Test
     void retainsIndexWhenMediaIsMissing() {
         AppDirs dirs = new AppDirs(data);
         Settings settings = new Settings();

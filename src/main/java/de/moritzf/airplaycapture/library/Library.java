@@ -21,6 +21,14 @@ import tools.jackson.databind.json.JsonMapper;
 /** Persistent list of exported tracks plus their files and cover images. */
 public final class Library {
 
+    private static final List<String> MEDIA_SUFFIXES = List.of(
+        ".m4a",
+        ".alac.m4a",
+        ".mp3",
+        ".caf",
+        ".m4b"
+    );
+
     private static final ObjectMapper JSON = JsonMapper.builder()
         .enable(SerializationFeature.INDENT_OUTPUT)
         .build();
@@ -124,20 +132,22 @@ public final class Library {
     }
 
     /** Avoids clobbering an existing recording with the same artist/title. */
-    public synchronized String uniqueBaseName(String desired, String extension) {
+    public synchronized String uniqueBaseName(String desired) {
         String base = desired;
         int counter = 2;
-        while (conflicts(base, extension)) {
+        while (conflicts(base)) {
             base = desired + " (" + counter + ")";
             counter++;
         }
         return base;
     }
 
-    private boolean conflicts(String base, String extension) {
+    private boolean conflicts(String base) {
         Path dir = libraryDir();
-        if (Files.exists(dir.resolve(base + extension))) {
-            return true;
+        for (String suffix : MEDIA_SUFFIXES) {
+            if (Files.exists(dir.resolve(base + suffix))) {
+                return true;
+            }
         }
         for (LibraryTrack track : tracks) {
             if (base.equals(track.baseName)) {

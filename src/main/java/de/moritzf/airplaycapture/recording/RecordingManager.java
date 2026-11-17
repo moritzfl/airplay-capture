@@ -511,7 +511,7 @@ public final class RecordingManager {
         track.maxRecoveryMs = draft.maxRecoveryMs;
         track.mediaKind = draft.mediaKind;
         track.status = "processing";
-        track.baseName = library.uniqueBaseName(sanitize(suggestName(draft)), preferredExtension());
+        track.baseName = library.uniqueBaseName(sanitize(suggestName(draft)));
         if (track.incomplete) {
             Log.warn(
                 "recorder",
@@ -849,8 +849,7 @@ public final class RecordingManager {
             }
             duration = chapters.stream().mapToLong(AudiobookAssembler.Chapter::durationMs).sum();
             baseName = library.uniqueBaseName(
-                sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle),
-                ".m4b"
+                sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle)
             );
             output = library.libraryDir().resolve(baseName + ".m4b");
             new AudiobookAssembler(settings.ffmpegPath, settings.audiobookBitrateKbps).assemble(
@@ -1241,26 +1240,7 @@ public final class RecordingManager {
     }
 
     private static void move(Path from, Path to) throws IOException {
-        Files.move(from, to, StandardCopyOption.REPLACE_EXISTING);
-    }
-
-    private String preferredExtension() {
-        for (String format : settings.formats) {
-            switch (format) {
-                case "m4a" -> {
-                    return ".m4a";
-                }
-                case "mp3" -> {
-                    return ".mp3";
-                }
-                case "alac" -> {
-                    return ".m4a";
-                }
-                default -> {
-                }
-            }
-        }
-        return ".caf";
+        Files.move(from, to);
     }
 
     private String suggestName(Draft draft) {

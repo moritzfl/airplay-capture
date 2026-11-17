@@ -734,8 +734,7 @@ public final class AudiobookCreator {
         long duration = chapters.stream().mapToLong(AudiobookAssembler.Chapter::durationMs).sum();
         Path cover = cover(analysis.tracks);
         String baseName = library.uniqueBaseName(
-            sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle),
-            ".m4b"
+            sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle)
         );
         Path output = library.libraryDir().resolve(baseName + ".m4b");
         Files.createDirectories(library.libraryDir());
