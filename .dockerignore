@@ -1,8 +1,12 @@
 .git
 .gradle
 .idea
+**/.git
 build
 data
+packaging/dist
+review-engineering.md
+synology-docker-bridge
 src/main/bundles
 src/main/frontend/generated
 node_modules

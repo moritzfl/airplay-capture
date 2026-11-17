@@ -22,7 +22,7 @@ fi
 PACKAGE_VERSION="${VERSION%-SNAPSHOT}"
 
 # Next to app.json, so its relative paths keep working.
-CONFIG="$ROOT/packaging/.app.build.json"
+CONFIG="$(mktemp "$ROOT/packaging/.app.build.XXXXXXXX")"
 trap 'rm -f "$CONFIG"' EXIT
 PACKAGE_VERSION="$PACKAGE_VERSION" node -e '
 const fs = require("fs");
