@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The Docker images and the Synology package start the JVM with `-XX:-UseBASE64Intrinsics`, which
+  closes the Java4Shell path (CVE-2026-114938) until the base image ships the fixed JDK.
+
 ## [2.0.0] - 2026-11-17
 
 ### Changed

@@ -135,6 +135,11 @@ The app runs for as long as that terminal stays open; `Ctrl+C` stops it. Good to
   `java -jar airplay-capture-<version>.jar --data ~/airplay-data`.
 - **Updating.** Download the newer jar and start that one instead. Recordings and settings live in
   the data folder and stay as they are.
+- **Java security.** On x86-64, start the app with
+  `java -XX:-UseBASE64Intrinsics -jar airplay-capture-<version>.jar` until your Java 21 build
+  contains the Java4Shell fix (CVE-2026-114938). The flag turns off only the hardware-accelerated
+  Base64 decoder that the flaw uses; the receiver decodes Base64 from the network, which is the
+  affected code path.
 
 Docker Desktop on macOS and Windows cannot receive AirPlay reliably (see [Docker](#docker)), so the
 jar is the way to record on those systems. **Windows is untested on a real Windows machine** — the

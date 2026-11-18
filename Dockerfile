@@ -32,4 +32,6 @@ USER recorder
 VOLUME ["/data"]
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+# -XX:-UseBASE64Intrinsics keeps Java4Shell (CVE-2026-114938) unreachable until the Temurin
+# image carries the fixed JDK; the RAOP receiver decodes Base64 from the network.
+ENTRYPOINT ["java", "-XX:-UseBASE64Intrinsics", "-jar", "/app/app.jar"]
