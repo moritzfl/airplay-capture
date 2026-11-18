@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-18
+
 ### Added
 
 - On Synology, the button left of Minimize in the window title bar opens the app on its own in a
@@ -146,7 +148,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker images for linux/amd64 and linux/arm64 on `ghcr.io`.
 - Runs natively on macOS, Linux and Windows.
 
-[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.0...HEAD
+[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.1...HEAD
+[2.0.1]: https://github.com/moritzfl/airplay-capture/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/moritzfl/airplay-capture/compare/1.2.0...2.0.0
 [1.2.0]: https://github.com/moritzfl/airplay-capture/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/moritzfl/airplay-capture/compare/1.0.3...1.1.0
