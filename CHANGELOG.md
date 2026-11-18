@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- On Synology, the button left of Minimize in the window title bar opens the app on its own in a
+  browser tab: full page, signed in the same way, and bookmarked addresses survive a reload.
+
 ### Fixed
 
 - The Docker images and the Synology package start the JVM with `-XX:-UseBASE64Intrinsics`, which
