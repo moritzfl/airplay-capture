@@ -40,6 +40,7 @@ public final class AudiobookCreator {
     private static final Pattern INVALID_FILENAME = Pattern.compile("[\\\\/:*?\"<>|\\p{Cntrl}]");
     private static final String[] SOURCE_FORMATS = { "alac", "m4a", "mp3", "caf" };
     private static final long PREVIEW_TTL_MS = 60 * 60 * 1000;
+    private static final long MAX_CACHED_PREVIEW_BYTES = 4L << 30;
 
     public enum ChapterMode {
         /** Chapter names and markers from a catalog, aligned to the recording. */
@@ -181,6 +182,12 @@ public final class AudiobookCreator {
                 "Preview limit reached. Close an existing preview first."
             );
             Analysis analysis = analyzeInternal(request, null);
+            try {
+                checkCacheBudget(analysis.work);
+            } catch (IOException e) {
+                deleteTree(analysis.work);
+                throw e;
+            }
             analyses.put(analysis.id, analysis);
             Log.info(
                 "audiobook",
@@ -198,6 +205,38 @@ public final class AudiobookCreator {
         );
     }
 
+    /** Only the preview worker adds files. Original recordings are outside these directories. */
+    private void checkCacheBudget(Path additional) throws IOException {
+        List<Path> work = new ArrayList<>();
+        analyses.values().forEach(analysis -> work.add(analysis.work));
+        if (additional != null) work.add(additional);
+        long bytes = 0;
+        for (Path dir : work) {
+            try (var files = Files.walk(dir)) {
+                var paths = files.iterator();
+                while (paths.hasNext()) {
+                    Path file = paths.next();
+                    if (Files.isRegularFile(file)) bytes += Files.size(file);
+                    if (bytes > MAX_CACHED_PREVIEW_BYTES) throw new IOException(
+                        "Preview cache is full. Close existing previews to free space."
+                    );
+                }
+            } catch (java.nio.file.NoSuchFileException ignored) {
+                // A closed preview no longer counts against the cache.
+            }
+        }
+    }
+
+    private Path cachedOutput(Path path) throws IOException {
+        try {
+            checkCacheBudget(null);
+            return Files.exists(path) ? path : null;
+        } catch (IOException e) {
+            Files.deleteIfExists(path);
+            throw e;
+        }
+    }
+
     /**
      * Generates (and caches) the short boundary clip for one planned chapter: the first 10 s and
      * the last 8 s of the chapter, or the whole chapter when it is shorter than 20 s.
@@ -205,6 +244,7 @@ public final class AudiobookCreator {
     public Path previewClip(String previewId, int index) throws IOException, InterruptedException {
         acquirePreviewWorker();
         try {
+            cleanupExpired();
             Analysis analysis = analyses.get(previewId);
             if (analysis == null || index < 0 || index >= analysis.chapters.size()) {
                 return null;
@@ -217,7 +257,7 @@ public final class AudiobookCreator {
                 }
                 Files.deleteIfExists(clip);
                 writeClip(chapter, clip);
-                return Files.exists(clip) ? clip : null;
+                return cachedOutput(clip);
             }
         } finally {
             previewWorker.release();
@@ -232,6 +272,7 @@ public final class AudiobookCreator {
     public Path fullChapter(String previewId, int index) throws IOException, InterruptedException {
         acquirePreviewWorker();
         try {
+            cleanupExpired();
             Analysis analysis = analyses.get(previewId);
             if (analysis == null || index < 0 || index >= analysis.chapters.size()) {
                 return null;
@@ -273,7 +314,7 @@ public final class AudiobookCreator {
                         full.toString()
                     )
                 );
-                return Files.exists(full) ? full : null;
+                return cachedOutput(full);
             }
         } finally {
             previewWorker.release();
