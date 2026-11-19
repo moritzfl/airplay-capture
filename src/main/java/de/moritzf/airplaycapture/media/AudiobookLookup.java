@@ -63,7 +63,7 @@ public final class AudiobookLookup {
     private static final Duration NEGATIVE_TTL = Duration.ofHours(12);
     private static final long MIN_REQUEST_INTERVAL_MS = 1100;
 
-    private final Map<String, Cached> cache = new ConcurrentHashMap<>();
+    private final Map<String, Cached> cache = de.moritzf.airplaycapture.util.BoundedCache.create();
     private final Map<String, Boolean> inFlight = new ConcurrentHashMap<>();
     private final ExecutorService worker = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "audiobook-lookup");
@@ -86,14 +86,18 @@ public final class AudiobookLookup {
      * Looks up a book by album, or by title when the sender provides no album. Title-only lookups
      * ignore the artist, because audiobook players often send a playlist name instead of the author.
      */
-    public void request(String title, String album, String artist, Options options) {
+    public synchronized void request(String title, String album, String artist, Options options) {
         boolean titleOnly = album == null || album.isBlank();
         String subject = titleOnly ? title : album;
         if (subject == null || subject.isBlank() || options == null || !options.any()) {
             return;
         }
         String key = lookupKey(subject, artist, options, titleOnly);
-        if (cached(key).isPresent() || inFlight.putIfAbsent(key, Boolean.TRUE) != null) {
+        if (
+            cached(key).isPresent() ||
+            inFlight.size() >= 32 ||
+            inFlight.putIfAbsent(key, Boolean.TRUE) != null
+        ) {
             return;
         }
         worker.submit(() -> {

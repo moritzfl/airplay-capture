@@ -6,7 +6,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import javax.naming.NamingEnumeration;
 import javax.naming.directory.Attribute;
@@ -21,7 +20,7 @@ public final class ClientNameResolver {
         "(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\\..*)?$"
     );
     private static final Pattern IPV4 = Pattern.compile("^\\d{1,3}(\\.\\d{1,3}){3}$");
-    private static final Map<String, String> CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, String> CACHE = BoundedCache.create();
     private static final List<String> DEVICE_WORDS = List.of(
         "iphone",
         "ipad",

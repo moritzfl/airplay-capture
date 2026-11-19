@@ -140,6 +140,7 @@ public final class AudiobookJobs implements AutoCloseable {
     private final UiState ui;
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
     private final Map<String, Boolean> cancelRequests = new ConcurrentHashMap<>();
+    private final java.util.concurrent.Semaphore slots = new java.util.concurrent.Semaphore(8);
     private final ExecutorService worker = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "audiobook-queue");
         thread.setDaemon(true);
@@ -207,6 +208,9 @@ public final class AudiobookJobs implements AutoCloseable {
 
     /** Adds a job to the queue and notifies the UI. */
     public Job enqueue(String groupKey, String title, String author, Task task) {
+        if (!slots.tryAcquire()) throw new IllegalStateException(
+            "Audiobook queue is full. Try again later."
+        );
         Job job = new Job();
         job.id = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         job.groupKey = groupKey;
@@ -216,7 +220,13 @@ public final class AudiobookJobs implements AutoCloseable {
         save();
         Log.info("audiobook", "queued: " + job.title + " (" + job.id + ")");
         ui.changed();
-        worker.submit(() -> execute(job.id, task));
+        worker.submit(() -> {
+            try {
+                execute(job.id, task);
+            } finally {
+                slots.release();
+            }
+        });
         return job.copy();
     }
 

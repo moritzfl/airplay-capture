@@ -1,6 +1,7 @@
 package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.Log;
+import de.moritzf.airplaycapture.util.BoundedCache;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -15,7 +16,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -56,11 +56,11 @@ public final class MetadataEnricher {
     private final HttpClient http = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(5))
         .build();
-    private final Map<String, CachedAlbums> albumCache = new ConcurrentHashMap<>();
-    private final Map<String, CachedTracks> trackCache = new ConcurrentHashMap<>();
-    private final Map<String, CachedAlbums> deezerAlbumCache = new ConcurrentHashMap<>();
-    private final Map<String, CachedAlbums> deezerTrackCache = new ConcurrentHashMap<>();
-    private final Map<Integer, String> deezerGenres = new ConcurrentHashMap<>();
+    private final Map<String, CachedAlbums> albumCache = BoundedCache.create();
+    private final Map<String, CachedTracks> trackCache = BoundedCache.create();
+    private final Map<String, CachedAlbums> deezerAlbumCache = BoundedCache.create();
+    private final Map<String, CachedAlbums> deezerTrackCache = BoundedCache.create();
+    private final Map<Integer, String> deezerGenres = BoundedCache.create();
     private volatile long lastRequestAt;
 
     private record CachedAlbums(Optional<AlbumInfo> info, long expiresAt) {}

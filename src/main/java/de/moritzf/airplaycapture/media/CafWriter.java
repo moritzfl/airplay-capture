@@ -1,14 +1,17 @@
 package de.moritzf.airplaycapture.media;
 
+import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.StandardOpenOption;
 
 /**
  * Streaming writer for Apple's CAF container carrying raw ALAC packets.
@@ -24,7 +27,9 @@ public final class CafWriter implements Closeable {
 
     private final RandomAccessFile file;
     private final Path path;
-    private final List<Integer> packetSizes = new ArrayList<>();
+    private final FileChannel table;
+    private final BufferedOutputStream sizes;
+    private long packets;
     private final long dataPayloadStart;
     private long framesWritten;
     private boolean closed;
@@ -32,8 +37,20 @@ public final class CafWriter implements Closeable {
     public CafWriter(Path path, AlacConfig config) throws IOException {
         this.path = path;
         this.file = new RandomAccessFile(path.toFile(), "rw");
-        file.setLength(0);
-        this.dataPayloadStart = writeHeader(config);
+        try {
+            file.setLength(0);
+            this.dataPayloadStart = writeHeader(config);
+            table = FileChannel.open(
+                Files.createTempFile(path.toAbsolutePath().getParent(), "pakt-", ".tmp"),
+                StandardOpenOption.READ,
+                StandardOpenOption.WRITE,
+                StandardOpenOption.DELETE_ON_CLOSE
+            );
+            sizes = new BufferedOutputStream(Channels.newOutputStream(table));
+        } catch (IOException | RuntimeException e) {
+            file.close();
+            throw e;
+        }
     }
 
     public Path path() {
@@ -53,7 +70,11 @@ public final class CafWriter implements Closeable {
             throw new IOException("writer closed");
         }
         file.write(data, offset, length);
-        packetSizes.add(length);
+        int shift = 0;
+        for (int n = length >>> 7; n != 0; n >>>= 7) shift += 7;
+        for (; shift > 0; shift -= 7) sizes.write(0x80 | ((length >>> shift) & 0x7f));
+        sizes.write(length & 0x7f);
+        packets++;
         framesWritten += framesPerPacket;
     }
 
@@ -170,49 +191,32 @@ public final class CafWriter implements Closeable {
             return;
         }
         closed = true;
-        long end = file.getFilePointer();
-        long dataSize = end - dataPayloadStart + 4; // include edit count
+        try (file; sizes) {
+            sizes.flush();
+            long end = file.getFilePointer();
+            long dataSize = end - dataPayloadStart + 4; // include edit count
 
-        // Patch the data chunk size.
-        file.seek(dataPayloadStart - 12);
-        writeLong(dataSize);
-        file.seek(end);
+            // Patch the data chunk size.
+            file.seek(dataPayloadStart - 12);
+            writeLong(dataSize);
+            file.seek(end);
 
-        // pakt: packet table, variable packet sizes.
-        writeAscii("pakt");
-        long paktStart = file.getFilePointer();
-        writeLong(0); // placeholder size
-        writeLong(packetSizes.size());
-        writeLong(framesWritten);
-        writeInt(0); // priming frames
-        writeInt(0); // remainder frames
-        ByteBuffer varint = ByteBuffer.allocate(5);
-        for (int size : packetSizes) {
-            varint.clear();
-            int value = size;
-            // 7 bits per byte, continuation bit on all but the last
-            int groups = 1;
-            for (int v = value >>> 7; v != 0; v >>>= 7) {
-                groups++;
-            }
-            for (int i = groups - 1; i >= 0; i--) {
-                int b = (value >>> (7 * i)) & 0x7F;
-                if (i > 0) {
-                    b |= 0x80;
-                }
-                varint.put((byte) b);
-            }
-            varint.flip();
-            byte[] bytes = new byte[varint.remaining()];
-            varint.get(bytes);
-            file.write(bytes);
+            // pakt: packet table, variable packet sizes.
+            writeAscii("pakt");
+            long paktStart = file.getFilePointer();
+            writeLong(0); // placeholder size
+            writeLong(packets);
+            writeLong(framesWritten);
+            writeInt(0); // priming frames
+            writeInt(0); // remainder frames
+            table.position(0);
+            Channels.newInputStream(table).transferTo(Channels.newOutputStream(file.getChannel()));
+            long paktEnd = file.getFilePointer();
+            file.seek(paktStart);
+            writeLong(paktEnd - paktStart - 8);
+            file.seek(paktEnd);
+            file.getFD().sync();
         }
-        long paktEnd = file.getFilePointer();
-        file.seek(paktStart);
-        writeLong(paktEnd - paktStart - 8);
-        file.seek(paktEnd);
-        file.getFD().sync();
-        file.close();
     }
 
     private void writeAscii(String value) throws IOException {

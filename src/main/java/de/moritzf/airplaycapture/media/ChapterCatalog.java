@@ -1,6 +1,7 @@
 package de.moritzf.airplaycapture.media;
 
 import de.moritzf.airplaycapture.Log;
+import de.moritzf.airplaycapture.util.BoundedCache;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -13,7 +14,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -67,8 +67,8 @@ public class ChapterCatalog {
     private static final long MUSICBRAINZ_INTERVAL_MS = 1_100;
     private static final int MAX_CANDIDATES = 3;
 
-    private final Map<String, Cached> cache = new ConcurrentHashMap<>();
-    private final Map<String, CachedSearch> searchCache = new ConcurrentHashMap<>();
+    private final Map<String, Cached> cache = BoundedCache.create();
+    private final Map<String, CachedSearch> searchCache = BoundedCache.create();
     private final HttpClient http = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(5))
         .build();

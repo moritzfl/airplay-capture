@@ -151,6 +151,9 @@ public final class AudiobookCreator {
     private final AudiobookLookup lookup = new AudiobookLookup();
     private final ChapterCatalog catalog;
     private final Map<String, Analysis> analyses = new ConcurrentHashMap<>();
+    private final java.util.concurrent.Semaphore previewWorker = new java.util.concurrent.Semaphore(
+        1
+    );
 
     public AudiobookCreator(AppDirs dirs, Library library, UiState ui, Settings settings) {
         this(dirs, library, ui, settings, new ChapterCatalog());
@@ -171,14 +174,28 @@ public final class AudiobookCreator {
 
     /** Analyses sources and returns the chapter plan without writing any library file. */
     public Preview analyze(Request request) throws IOException, InterruptedException {
-        cleanupExpired();
-        Analysis analysis = analyzeInternal(request, null);
-        analyses.put(analysis.id, analysis);
-        Log.info(
-            "audiobook",
-            "preview ready: " + analysis.chapters.size() + " chapters (" + analysis.id + ")"
+        acquirePreviewWorker();
+        try {
+            cleanupExpired();
+            if (analyses.size() >= 8) throw new IOException(
+                "Preview limit reached. Close an existing preview first."
+            );
+            Analysis analysis = analyzeInternal(request, null);
+            analyses.put(analysis.id, analysis);
+            Log.info(
+                "audiobook",
+                "preview ready: " + analysis.chapters.size() + " chapters (" + analysis.id + ")"
+            );
+            return view(analysis);
+        } finally {
+            previewWorker.release();
+        }
+    }
+
+    private void acquirePreviewWorker() throws IOException {
+        if (!previewWorker.tryAcquire()) throw new IOException(
+            "Another preview is being processed. Try again shortly."
         );
-        return view(analysis);
     }
 
     /**
@@ -186,19 +203,24 @@ public final class AudiobookCreator {
      * the last 8 s of the chapter, or the whole chapter when it is shorter than 20 s.
      */
     public Path previewClip(String previewId, int index) throws IOException, InterruptedException {
-        Analysis analysis = analyses.get(previewId);
-        if (analysis == null || index < 0 || index >= analysis.chapters.size()) {
-            return null;
-        }
-        synchronized (analysis) {
-            PlannedChapter chapter = analysis.chapters.get(index);
-            Path clip = analysis.work.resolve("preview-" + index + ".m4a");
-            if (Files.exists(clip) && Files.size(clip) > 0) {
-                return clip;
+        acquirePreviewWorker();
+        try {
+            Analysis analysis = analyses.get(previewId);
+            if (analysis == null || index < 0 || index >= analysis.chapters.size()) {
+                return null;
             }
-            Files.deleteIfExists(clip);
-            writeClip(chapter, clip);
-            return Files.exists(clip) ? clip : null;
+            synchronized (analysis) {
+                PlannedChapter chapter = analysis.chapters.get(index);
+                Path clip = analysis.work.resolve("preview-" + index + ".m4a");
+                if (Files.exists(clip) && Files.size(clip) > 0) {
+                    return clip;
+                }
+                Files.deleteIfExists(clip);
+                writeClip(chapter, clip);
+                return Files.exists(clip) ? clip : null;
+            }
+        } finally {
+            previewWorker.release();
         }
     }
 
@@ -208,48 +230,53 @@ public final class AudiobookCreator {
      * temporary preview folder.
      */
     public Path fullChapter(String previewId, int index) throws IOException, InterruptedException {
-        Analysis analysis = analyses.get(previewId);
-        if (analysis == null || index < 0 || index >= analysis.chapters.size()) {
-            return null;
-        }
-        synchronized (analysis) {
-            PlannedChapter chapter = analysis.chapters.get(index);
-            if (chapter.track() != null && chapter.startMs() == 0) {
-                Path original = library.file(chapter.track(), chapter.format());
-                if (original != null && Files.exists(original)) {
-                    return original;
+        acquirePreviewWorker();
+        try {
+            Analysis analysis = analyses.get(previewId);
+            if (analysis == null || index < 0 || index >= analysis.chapters.size()) {
+                return null;
+            }
+            synchronized (analysis) {
+                PlannedChapter chapter = analysis.chapters.get(index);
+                if (chapter.track() != null && chapter.startMs() == 0) {
+                    Path original = library.file(chapter.track(), chapter.format());
+                    if (original != null && Files.exists(original)) {
+                        return original;
+                    }
                 }
+                Path full = analysis.work.resolve("full-" + index + ".m4a");
+                if (Files.exists(full) && Files.size(full) > 0) {
+                    return full;
+                }
+                Files.deleteIfExists(full);
+                run(
+                    List.of(
+                        settings.ffmpegPath,
+                        "-hide_banner",
+                        "-loglevel",
+                        "error",
+                        "-y",
+                        "-ss",
+                        format(chapter.startMs() / 1000.0),
+                        "-t",
+                        format(chapter.durationMs() / 1000.0),
+                        "-i",
+                        chapter.source().toString(),
+                        "-map",
+                        "0:a:0",
+                        "-c:a",
+                        "aac",
+                        "-b:a",
+                        "96k",
+                        "-movflags",
+                        "+faststart",
+                        full.toString()
+                    )
+                );
+                return Files.exists(full) ? full : null;
             }
-            Path full = analysis.work.resolve("full-" + index + ".m4a");
-            if (Files.exists(full) && Files.size(full) > 0) {
-                return full;
-            }
-            Files.deleteIfExists(full);
-            run(
-                List.of(
-                    settings.ffmpegPath,
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-ss",
-                    format(chapter.startMs() / 1000.0),
-                    "-t",
-                    format(chapter.durationMs() / 1000.0),
-                    "-i",
-                    chapter.source().toString(),
-                    "-map",
-                    "0:a:0",
-                    "-c:a",
-                    "aac",
-                    "-b:a",
-                    "96k",
-                    "-movflags",
-                    "+faststart",
-                    full.toString()
-                )
-            );
-            return Files.exists(full) ? full : null;
+        } finally {
+            previewWorker.release();
         }
     }
 
