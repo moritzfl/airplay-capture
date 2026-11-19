@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-11-19
+
 ### Added
 
 - On Synology, the Login Portal page (the address for phones) also offers **Open in new tab**, left
   of the account name, to show the app without DSM's header. That tab can be added to the Home
   Screen and then opens like an app.
+
+### Changed
+
+- The Synology package uses Docker Bridge 0.4.1.
 
 ### Security
 
@@ -163,7 +169,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker images for linux/amd64 and linux/arm64 on `ghcr.io`.
 - Runs natively on macOS, Linux and Windows.
 
-[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.1...HEAD
+[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.2...HEAD
+[2.0.2]: https://github.com/moritzfl/airplay-capture/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/moritzfl/airplay-capture/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/moritzfl/airplay-capture/compare/1.2.0...2.0.0
 [1.2.0]: https://github.com/moritzfl/airplay-capture/compare/1.1.0...1.2.0
