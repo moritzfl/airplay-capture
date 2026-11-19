@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 
 /**
  * Optional HTTP form login. Without {@code AIRPLAY_CAPTURE_WEB_PASSWORD} the interface is open
@@ -46,6 +48,17 @@ public class SecurityConfig {
         @Value("${airplay-capture.web.password:}") String password,
         @Value("${vaadin.url-mapping:/app/*}") String vaadinMapping
     ) throws Exception {
+        http.headers(h ->
+            h
+                .contentSecurityPolicy(c -> c.policyDirectives("frame-ancestors 'none'"))
+                .addHeaderWriter(new StaticHeadersWriter("Referrer-Policy", "no-referrer"))
+                .addHeaderWriter(
+                    new StaticHeadersWriter(
+                        "Permissions-Policy",
+                        "camera=(), microphone=(), geolocation=()"
+                    )
+                )
+        );
         http.csrf(csrf ->
             csrf.ignoringRequestMatchers(request ->
                 HandlerHelper.isFrameworkInternalRequest(vaadinMapping, request)
@@ -54,6 +67,7 @@ public class SecurityConfig {
         if (password == null || password.isBlank()) {
             http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         } else {
+            http.addFilterBefore(new LoginThrottle(), UsernamePasswordAuthenticationFilter.class);
             http.authorizeHttpRequests(auth ->
                 auth
                     .requestMatchers(

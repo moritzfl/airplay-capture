@@ -84,7 +84,7 @@ docker run -d --name airplay-capture --network host -v "$PWD/data:/data" \
   ghcr.io/moritzfl/airplay-capture:latest
 ```
 
-Use `--network host` on Linux to receive AirPlay; use `-p 8080:8080` instead if you only want the
+Use `--network host` on Linux to receive AirPlay; use `-e SERVER_ADDRESS=0.0.0.0 -p 127.0.0.1:8080:8080` instead if you only want the
 web UI.
 
 ### macOS, Linux and Windows
@@ -126,20 +126,20 @@ The app runs for as long as that terminal stays open; `Ctrl+C` stops it. Good to
 - **Port.** If port 8080 is taken, the app waits 20 seconds for it and then uses the next free one.
   The terminal prints the address (`ready - open http://localhost:<port>/app/`), and `web-port.txt`
   in the data folder holds it too. `--web-port 9000` picks a port yourself.
-- **Other devices.** Phones and computers on the same network reach the UI at
-  `http://<name-or-ip-of-this-computer>:8080/app/`. There is no sign-in unless you
-  [set a password](#settings).
+- **Other devices.** The UI listens on loopback by default; AirPlay discovery is unaffected.
+  For remote access, [set a password](#settings) and put an HTTPS reverse proxy in front of the UI.
+  Set `SERVER_SERVLET_SESSION_COOKIE_SECURE=true` when serving HTTPS. If the proxy terminates TLS,
+  use `SERVER_FORWARD_HEADERS_STRATEGY=framework` only when the backend accepts requests exclusively
+  from that trusted proxy and it replaces incoming forwarded headers. Rate-limit `/login` there.
+  `SERVER_ADDRESS` overrides the bind address for a jar or host-networked container.
 - **Files.** Recordings go to the `library` subfolder of the data folder:
   `~/Library/Application Support/AirPlayCapture` on macOS, `~/.airplay-capture` on Linux and
   `%APPDATA%\AirPlayCapture` on Windows. `--data <folder>` moves it, for example
   `java -jar airplay-capture-<version>.jar --data ~/airplay-data`.
 - **Updating.** Download the newer jar and start that one instead. Recordings and settings live in
   the data folder and stay as they are.
-- **Java security.** On x86-64, start the app with
-  `java -XX:-UseBASE64Intrinsics -jar airplay-capture-<version>.jar` until your Java 21 build
-  contains the Java4Shell fix (CVE-2026-114938). The flag turns off only the hardware-accelerated
-  Base64 decoder that the flaw uses; the receiver decodes Base64 from the network, which is the
-  affected code path.
+- **Java security.** Keep the JDK patched. The receiver uses Jackson's decoder for network Base64,
+  avoiding the JDK Base64 intrinsic in both jar and container launches.
 
 Docker Desktop on macOS and Windows cannot receive AirPlay reliably (see [Docker](#docker)), so the
 jar is the way to record on those systems. **Windows is untested on a real Windows machine** — the
