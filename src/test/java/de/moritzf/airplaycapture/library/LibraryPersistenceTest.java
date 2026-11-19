@@ -39,6 +39,18 @@ class LibraryPersistenceTest {
     }
 
     @Test
+    void refusesOutOfLibraryMediaAndCoverNamesBeforeLoadingTheIndex() throws IOException {
+        AppDirs dirs = new AppDirs(data);
+        for (String entry : java.util.List.of(
+            "{\"id\":\"0123456789abcdef\",\"files\":{\"mp3\":\"../other.mp3\"}}",
+            "{\"id\":\"../outside\",\"files\":{}}"
+        )) {
+            Files.writeString(dirs.libraryFile(), "[" + entry + "]");
+            assertThrows(IllegalStateException.class, () -> new Library(dirs, new Settings()));
+        }
+    }
+
+    @Test
     void leavesInvalidIndexUntouched() throws IOException {
         AppDirs dirs = new AppDirs(data);
         Files.writeString(dirs.libraryFile(), "[{");
