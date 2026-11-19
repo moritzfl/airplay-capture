@@ -45,9 +45,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
+        @Value("${airplay-capture.bridge.secret.file:}") String bridgeSecretFile,
         @Value("${airplay-capture.web.password:}") String password,
         @Value("${vaadin.url-mapping:/app/*}") String vaadinMapping
     ) throws Exception {
+        if (!bridgeSecretFile.isEmpty()) {
+            http.addFilterBefore(
+                new BridgeSecretFilter(java.nio.file.Path.of(bridgeSecretFile)),
+                UsernamePasswordAuthenticationFilter.class
+            );
+        }
         http.headers(h ->
             h
                 .contentSecurityPolicy(c -> c.policyDirectives("frame-ancestors 'none'"))

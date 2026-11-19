@@ -5,6 +5,9 @@
 build
 data
 packaging/dist
+packaging/e2e/.auth
+packaging/e2e/output
+security-review.md
 review-engineering.md
 synology-docker-bridge
 src/main/bundles

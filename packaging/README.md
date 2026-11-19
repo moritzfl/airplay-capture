@@ -58,8 +58,9 @@ existing recordings and repoints that symlink without recreating the container. 
 across upgrades and uninstalls.
 
 The compose project uses **host networking**, which is required for mDNS discovery, RTSP and the
-RTP/UDP audio stream. The app container runs as root inside its namespace so it can write to the DSM
-shares; it only touches `/data` and the output parent.
+RTP/UDP audio stream. The app runs as the package's DSM system internal user. Grant that user
+read/write access to the recordings folder under **Manage → Folder access**. The app checks
+the per-install bridge secret on every web request, including requests from NAS loopback.
 
 ## Window controls
 

@@ -12,8 +12,10 @@
   "service": "airplay-capture",
   "networkMode": "host",
   "appPath": "/app/",
-  "appUser": "root",
+  "appUser": "package",
+  "identityHeaders": true,
   "appEnv": {
+    "AIRPLAY_CAPTURE_BRIDGE_SECRET_FILE": "/data/.bridge-secret",
     "SERVER_ADDRESS": "127.0.0.1",
     "AIRPLAY_CAPTURE_WEB_PORT": "${APP_CONTAINER_PORT}",
     "AIRPLAY_CAPTURE_DATA": "/data",
