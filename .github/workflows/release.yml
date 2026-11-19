@@ -107,7 +107,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: moritzfl/synology-docker-bridge
-          ref: 471b87a56650c03a2da50c90dcae006b3acf9958
+          ref: 7666ec5f9b64ec68db950f84a42bff5833462a99 # 0.4.0
           path: synology-docker-bridge
           persist-credentials: false
 
