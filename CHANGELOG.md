@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of the account name, to show the app without DSM's header. That tab can be added to the Home
   Screen and then opens like an app.
 
+### Security
+
+- The web interface is local-only by default. Remote installations should use a password and
+  HTTPS; sign-in attempts are rate-limited. Synology now authenticates the bridge connection
+  and runs the app as its DSM package user. Grant that user access to the recordings folder.
+- The receiver limits unauthenticated requests and accepts audio only from the session peer.
+  Long recordings keep their packet tables on disk, and audiobook preview and conversion work
+  is bounded.
+
 ## [2.0.1] - 2026-11-18
 
 ### Added

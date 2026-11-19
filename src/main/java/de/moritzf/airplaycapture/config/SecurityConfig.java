@@ -45,6 +45,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
+        @Value("${server.address:127.0.0.1}") String bindAddress,
         @Value("${airplay-capture.bridge.secret.file:}") String bridgeSecretFile,
         @Value("${airplay-capture.web.password:}") String password,
         @Value("${vaadin.url-mapping:/app/*}") String vaadinMapping
@@ -72,6 +73,15 @@ public class SecurityConfig {
             )
         );
         if (password == null || password.isBlank()) {
+            if (
+                bridgeSecretFile.isEmpty() &&
+                !java.net.InetAddress.getByName(bindAddress).isLoopbackAddress()
+            ) {
+                de.moritzf.airplaycapture.Log.warn(
+                    "web",
+                    "Web UI is bound to a non-loopback address without a password. Restrict access to the configured listener."
+                );
+            }
             http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         } else {
             http.addFilterBefore(new LoginThrottle(), UsernamePasswordAuthenticationFilter.class);

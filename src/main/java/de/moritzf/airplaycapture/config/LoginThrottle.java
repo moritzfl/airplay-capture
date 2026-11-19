@@ -21,6 +21,8 @@ final class LoginThrottle extends OncePerRequestFilter {
         "/login"
     );
     private final Map<String, Window> peers = new HashMap<>();
+    private final java.util.concurrent.atomic.AtomicBoolean warnedHttp =
+        new java.util.concurrent.atomic.AtomicBoolean();
 
     private record Window(long start, int count) {}
 
@@ -46,10 +48,18 @@ final class LoginThrottle extends OncePerRequestFilter {
         HttpServletResponse res,
         FilterChain chain
     ) throws IOException, ServletException {
-        if (LOGIN.matches(req) && !admit(req.getRemoteAddr())) {
-            res.setHeader("Retry-After", "60");
-            res.setStatus(429);
-            return;
+        if (LOGIN.matches(req)) {
+            if (!req.isSecure() && warnedHttp.compareAndSet(false, true)) {
+                de.moritzf.airplaycapture.Log.warn(
+                    "web",
+                    "Login received over HTTP. Use HTTPS for remote access and configure trusted proxy forwarding."
+                );
+            }
+            if (!admit(req.getRemoteAddr())) {
+                res.setHeader("Retry-After", "60");
+                res.setStatus(429);
+                return;
+            }
         }
         chain.doFilter(req, res);
     }

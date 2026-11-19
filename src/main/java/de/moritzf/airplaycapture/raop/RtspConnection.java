@@ -379,7 +379,7 @@ final class RtspConnection implements Runnable {
         }
     }
 
-    private static Request read(
+    static Request read(
         BufferedInputStream in,
         ByteArrayOutputStream headerBytes,
         long bodyBudget
