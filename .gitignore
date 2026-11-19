@@ -54,6 +54,8 @@ src/main/frontend/generated/
 package.json
 !packaging/e2e/package.json
 package-lock.json
+!tools/format/package.json
+!tools/format/package-lock.json
 pnpm-lock.yaml
 vite.generated.ts
 tsconfig.tsbuildinfo

@@ -4,11 +4,6 @@ vaadin = "25.3.5"
 jmdns = "3.6.5"
 junit = "6.1.3"
 archunit = "1.5.1"
-spotless = "8.11.0"
-# renovate: datasource=npm depName=prettier
-prettier-core = "3.10.1"
-# renovate: datasource=npm depName=prettier-plugin-java
-prettier-java = "2.12.0"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
@@ -25,4 +20,3 @@ archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 vaadin = { id = "com.vaadin", version.ref = "vaadin" }
-spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

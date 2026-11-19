@@ -2,7 +2,6 @@ plugins {
     java
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.vaadin)
-    alias(libs.plugins.spotless)
 }
 
 group = "de.moritzf"
@@ -33,17 +32,21 @@ dependencies {
     testRuntimeOnly(libs.junit.launcher)
 }
 
-spotless {
-    java {
-        target("src/*/java/**/*.java")
-        prettier(
-            mapOf(
-                "prettier" to libs.versions.prettier.core.get(),
-                "prettier-plugin-java" to libs.versions.prettier.java.get(),
-            ),
-        ).configFile(".prettierrc.json")
+val formatterDir = file("tools/format")
+val installFormatter = tasks.register<Exec>("installFormatter") {
+    workingDir(formatterDir)
+    inputs.files("tools/format/package.json", "tools/format/package-lock.json")
+    outputs.dir("tools/format/node_modules")
+    commandLine(if (System.getProperty("os.name").startsWith("Windows")) "npm.cmd" else "npm", "ci", "--ignore-scripts")
+}
+for ((name, mode) in mapOf("spotlessApply" to "--write", "spotlessCheck" to "--check")) {
+    tasks.register<Exec>(name) {
+        dependsOn(installFormatter)
+        workingDir(formatterDir)
+        commandLine("node", "node_modules/prettier/bin/prettier.cjs", mode, "../../src/*/java/**/*.java")
     }
 }
+tasks.check { dependsOn("spotlessCheck") }
 
 vaadin {
     productionMode = true

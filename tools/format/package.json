@@ -1,0 +1,8 @@
+{
+  "name": "airplay-capture-format",
+  "private": true,
+  "devDependencies": {
+    "prettier": "3.10.1",
+    "prettier-plugin-java": "2.12.0"
+  }
+}
