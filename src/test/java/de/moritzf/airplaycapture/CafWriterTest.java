@@ -98,16 +98,16 @@ class CafWriterTest {
                 writer.writeFrame(packet, 0, packet.length);
             }
         }
-        double expected =
-            duration(plain) + (filled * (double) alac.frameLength()) / alac.sampleRate();
-        assertEquals(expected, duration(out), 0.01, "the gap keeps its place in time");
+        long expectedSamples = decodedSamples(plain) + (long) filled * alac.frameLength();
+        assertEquals(expectedSamples, decodedSamples(out), "the gap keeps its place in time");
 
         double gapStart = (half * (double) alac.frameLength()) / alac.sampleRate();
         double gapEnd = ((half + filled) * (double) alac.frameLength()) / alac.sampleRate();
+        double expectedDuration = expectedSamples / (double) alac.sampleRate();
         assertTrue(maxVolume(out, gapStart + 0.01, gapEnd - 0.01) < -90, "filled span is silent");
         assertTrue(maxVolume(out, 0.1, gapStart - 0.1) > -30, "audio before the gap is intact");
         assertTrue(
-            maxVolume(out, gapEnd + 0.1, expected - 0.1) > -30,
+            maxVolume(out, gapEnd + 0.1, expectedDuration - 0.1) > -30,
             "audio after the gap is intact"
         );
     }
@@ -123,7 +123,7 @@ class CafWriterTest {
                 assertTrue(writer.writeSilence(250));
             }
             assertEquals("", decodeErrors(out), channels + " channel(s)");
-            assertEquals((250 * 352) / 44100.0, duration(out), 0.01, channels + " channel(s)");
+            assertEquals(250L * 352, decodedSamples(out), channels + " channel(s)");
             assertTrue(maxVolume(out, 0, 1.9) < -90, channels + " channel(s) silent");
         }
         assertEquals(null, CafWriter.silentFrame(config(352, 6, 44100)), "no silence for 5.1");
@@ -152,31 +152,19 @@ class CafWriterTest {
         return output;
     }
 
-    private static double duration(Path file) throws Exception {
-        Process process = new ProcessBuilder(
-            "ffmpeg",
-            "-hide_banner",
-            "-i",
-            file.toString(),
-            "-f",
-            "null",
-            "-"
-        )
-            .redirectErrorStream(true)
-            .start();
-        String output = new String(process.getInputStream().readAllBytes());
-        process.waitFor();
-        java.util.regex.Matcher time = java.util.regex.Pattern.compile(
-            "time=(\\d+):(\\d+):([0-9.]+)"
-        ).matcher(output);
-        double seconds = -1;
-        while (time.find()) {
-            seconds =
-                Integer.parseInt(time.group(1)) * 3600 +
-                Integer.parseInt(time.group(2)) * 60 +
-                Double.parseDouble(time.group(3));
-        }
-        return seconds;
+    private static long decodedSamples(Path file) throws Exception {
+        // FFmpeg progress timestamps are rounded and vary between versions.
+        String frames = TestMedia.ffprobe(
+            file,
+            "-select_streams",
+            "a:0",
+            "-show_frames",
+            "-show_entries",
+            "frame=nb_samples",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1"
+        );
+        return frames.lines().mapToLong(Long::parseLong).sum();
     }
 
     private static double maxVolume(Path file, double from, double to) throws Exception {
