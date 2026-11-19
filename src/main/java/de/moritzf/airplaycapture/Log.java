@@ -44,6 +44,10 @@ public final class Log {
     }
 
     private static void write(String level, String scope, String message, boolean stderr) {
+        message = String.valueOf(message);
+        message = message
+            .substring(0, Math.min(2048, message.length()))
+            .replaceAll("[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]", " ");
         String time = LocalTime.now().format(TIME);
         Line line = new Line(time, level, scope, message);
         synchronized (LINES) {

@@ -82,10 +82,7 @@ class UpdateCheckerTest {
     void parsesTheReleaseGitHubReturns() {
         UpdateChecker.Release release = UpdateChecker.parseRelease(RELEASE).orElseThrow();
         assertEquals("1.2.0", release.version());
-        assertEquals(
-            "https://github.com/moritzfl/airplay-capture/releases/tag/1.2.0",
-            release.url()
-        );
+        assertEquals("https://github.com/moritzfl/airplay-capture/releases", release.url());
         assertEquals("2026-11-20T10:00:00Z", release.publishedAt());
         assertTrue(UpdateChecker.parseRelease("{\"message\":\"Not Found\"}").isEmpty());
         assertTrue(UpdateChecker.parseRelease("not json").isEmpty());

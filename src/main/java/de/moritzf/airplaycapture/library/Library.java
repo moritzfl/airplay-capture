@@ -62,7 +62,28 @@ public final class Library {
     }
 
     public Path coverFile(String id, boolean png) {
-        return dirs.coverDir().resolve(id + (png ? ".png" : ".jpg"));
+        return child(dirs.coverDir(), id + (png ? ".png" : ".jpg"));
+    }
+
+    private static Path child(Path dir, String name) {
+        if (
+            name == null ||
+            name.isBlank() ||
+            name.length() > 255 ||
+            name.equals(".") ||
+            name.equals("..") ||
+            name.indexOf('/') >= 0 ||
+            name.indexOf('\\') >= 0 ||
+            name.indexOf(':') >= 0 ||
+            name.indexOf('\0') >= 0
+        ) {
+            throw new IllegalArgumentException("Invalid library filename");
+        }
+        Path path = dir.normalize().resolve(name).normalize();
+        if (
+            !path.startsWith(dir.normalize()) || Files.isSymbolicLink(path)
+        ) throw new IllegalArgumentException("Unsafe library path");
+        return path;
     }
 
     public synchronized List<LibraryTrack> tracks() {
@@ -83,7 +104,7 @@ public final class Library {
         if (name == null) {
             return null;
         }
-        return libraryDir().resolve(name);
+        return child(libraryDir(), name);
     }
 
     /** Size of one exported format; 0 when the file is missing. */
@@ -116,7 +137,7 @@ public final class Library {
     public synchronized void delete(LibraryTrack track) {
         tracks.removeIf(t -> t.id.equals(track.id));
         for (String name : track.files.values()) {
-            deleteQuietly(libraryDir().resolve(name));
+            deleteQuietly(child(libraryDir(), name));
         }
         deleteQuietly(coverFile(track.id, true));
         deleteQuietly(coverFile(track.id, false));
@@ -178,9 +199,15 @@ public final class Library {
                 throw new IOException("expected a JSON array");
             }
             for (LibraryTrack track : loaded) {
-                if (track == null || track.id == null || track.files == null) {
+                if (
+                    track == null ||
+                    track.id == null ||
+                    !track.id.matches("[0-9a-f]{16}") ||
+                    track.files == null
+                ) {
                     throw new IOException("invalid track entry");
                 }
+                for (String name : track.files.values()) child(libraryDir(), name);
                 // Retain indexed files even if the library mount is temporarily unavailable.
                 if (track.coverHash == null || track.coverHash.isBlank()) {
                     track.coverHash = existingCoverHash(track.id);

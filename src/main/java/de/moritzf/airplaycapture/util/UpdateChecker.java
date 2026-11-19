@@ -195,7 +195,7 @@ public final class UpdateChecker implements AutoCloseable {
         return Optional.of(
             new Release(
                 tag.startsWith("v") ? tag.substring(1) : tag,
-                release.path("html_url").asString(""),
+                "https://github.com/moritzfl/airplay-capture/releases",
                 release.path("published_at").asString("")
             )
         );

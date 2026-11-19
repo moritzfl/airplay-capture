@@ -30,12 +30,12 @@ class LibraryPersistenceTest {
         Settings settings = new Settings();
         Library library = new Library(dirs, settings);
         LibraryTrack track = new LibraryTrack();
-        track.id = "test";
+        track.id = "0123456789abcdef";
         track.files.put("mp3", "not-mounted.mp3");
         library.add(track);
 
         Library reopened = new Library(dirs, settings);
-        assertEquals("not-mounted.mp3", reopened.find("test").orElseThrow().files.get("mp3"));
+        assertEquals("not-mounted.mp3", reopened.find(track.id).orElseThrow().files.get("mp3"));
     }
 
     @Test
