@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- On Synology, the Login Portal page (the address for phones) also offers **Open in new tab**, left
+  of the account name, to show the app without DSM's header. That tab can be added to the Home
+  Screen and then opens like an app.
+
 ## [2.0.1] - 2026-11-18
 
 ### Added

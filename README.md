@@ -189,7 +189,9 @@ The web UI works on small screens, so you can browse, play and download from you
 ![The library on a phone](docs/images/mobile.png)
 
 On Synology, open **Manage → Open on phones…** once, then open the address on your phone and use
-**Share → Add to Home Screen** for an app-like icon.
+**Share → Add to Home Screen** for an app-like icon. To leave out DSM's header with your account
+name, tap **Open in new tab** (the arrow left of the account name) first and add that tab to the
+Home Screen instead.
 
 ### Settings
 
