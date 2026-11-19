@@ -29,11 +29,18 @@ public final class Dmap {
 
     public static Map<String, Object> parse(byte[] data) {
         Map<String, Object> result = new LinkedHashMap<>();
-        parseInto(data, 0, data.length, result);
+        parseInto(data, 0, data.length, result, 0);
         return result;
     }
 
-    private static void parseInto(byte[] data, int offset, int end, Map<String, Object> result) {
+    private static void parseInto(
+        byte[] data,
+        int offset,
+        int end,
+        Map<String, Object> result,
+        int depth
+    ) {
+        if (depth >= 16) return;
         int position = offset;
         while (position + 8 <= end) {
             String tag = new String(data, position, 4, StandardCharsets.US_ASCII);
@@ -48,7 +55,7 @@ public final class Dmap {
             }
             int length = (int) lengthLong;
             if (CONTAINERS.contains(tag)) {
-                parseInto(data, position, position + length, result);
+                parseInto(data, position, position + length, result, depth + 1);
             } else {
                 result.putIfAbsent(tag, decode(tag, data, position, length));
             }

@@ -168,6 +168,7 @@ final class StreamSession {
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             try {
                 audioSocket.receive(packet);
+                if (!clientAddress.equals(packet.getAddress())) continue;
                 byte[] copy = new byte[packet.getLength()];
                 System.arraycopy(packet.getData(), packet.getOffset(), copy, 0, packet.getLength());
                 if (
@@ -197,6 +198,9 @@ final class StreamSession {
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             try {
                 controlSocket.receive(packet);
+                if (
+                    !remoteControl.equals(packet.getSocketAddress()) || packet.getLength() < 4
+                ) continue;
                 int type = packet.getData()[1] & 0x7F;
                 if (type == 0x56) {
                     // retransmitted audio packet: 4 byte wrapper + normal RTP packet

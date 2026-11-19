@@ -11,13 +11,13 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import tools.jackson.core.Base64Variants;
 
 /** One RTSP control connection (ANNOUNCE / SETUP / RECORD / SET_PARAMETER / ...). */
 final class RtspConnection implements Runnable {
@@ -64,17 +64,18 @@ final class RtspConnection implements Runnable {
             BufferedInputStream in = new BufferedInputStream(rawIn);
             ByteArrayOutputStream capture = new ByteArrayOutputStream(1024);
             socket.setSoTimeout(8000);
+            long bodyBudget = 256L * 1024 * 1024;
             while (!socket.isClosed()) {
                 Request request;
                 try {
-                    request = read(in, capture);
+                    request = read(in, capture, bodyBudget);
                 } catch (SocketTimeoutException e) {
                     byte[] raw = capture.toByteArray();
                     Log.info(
                         "rtsp",
                         "no RTSP request from " +
                             clientAddress.getHostAddress() +
-                            " within 8s (" +
+                            " before timeout (" +
                             raw.length +
                             " bytes)" +
                             (raw.length == 0 ? "" : ": " + hexPrefix(raw))
@@ -84,7 +85,8 @@ final class RtspConnection implements Runnable {
                 if (request == null) {
                     break;
                 }
-                socket.setSoTimeout(0);
+                if (request.body != null) bodyBudget -= request.body.length;
+                socket.setSoTimeout(60000);
                 capture.reset();
                 Log.info("rtsp", request.method + " " + request.uri);
                 if (!loggedSender) {
@@ -143,7 +145,12 @@ final class RtspConnection implements Runnable {
         switch (request.method) {
             case "OPTIONS" -> response.headers.put("Public", PUBLIC_METHODS);
             case "ANNOUNCE" -> {
-                announced = Sdp.parse(request.bodyAsString());
+                try {
+                    announced = Sdp.parse(request.bodyAsString());
+                } catch (IllegalArgumentException e) {
+                    announced = null;
+                    return new Response(400, "Bad Request");
+                }
                 Log.info("rtsp", "ANNOUNCE: " + announced);
                 response.headers.put("Audio-Jack-Status", "connected; type=analog");
             }
@@ -374,7 +381,8 @@ final class RtspConnection implements Runnable {
 
     private static Request read(
         BufferedInputStream in,
-        ByteArrayOutputStream headerBytes
+        ByteArrayOutputStream headerBytes,
+        long bodyBudget
     ) throws IOException {
         String requestLine = readLine(in, headerBytes);
         if (requestLine == null || requestLine.isEmpty()) {
@@ -419,10 +427,17 @@ final class RtspConnection implements Runnable {
             try {
                 length = Integer.parseInt(contentLength.trim());
             } catch (NumberFormatException e) {
-                length = 0;
+                throw new IOException("Invalid Content-Length", e);
             }
-            if (length > 0 && length < 8 * 1024 * 1024) {
+            if (
+                length < 0 ||
+                length > bodyBudget ||
+                length >= 8 * 1024 * 1024 ||
+                (parts[0].equals("ANNOUNCE") && length > 16384)
+            ) throw new IOException("Request body limit exceeded");
+            if (length > 0) {
                 body = in.readNBytes(length);
+                if (body.length != length) throw new IOException("Truncated request body");
             }
         }
         return new Request(parts[0], parts[1], headers, body);
@@ -453,6 +468,9 @@ final class RtspConnection implements Runnable {
         boolean any = false;
         while ((b = in.read()) != -1) {
             any = true;
+            if (line.size() >= 4096 || capture.size() >= 16384) throw new IOException(
+                "RTSP header limit exceeded"
+            );
             capture.write(b);
             if (b == '\n') {
                 break;
@@ -500,7 +518,7 @@ final class RtspConnection implements Runnable {
 
     static byte[] decodeChallenge(String header) {
         try {
-            return Base64.getDecoder().decode(header.trim());
+            return Base64Variants.MIME_NO_LINEFEEDS.withPaddingAllowed().decode(header.trim());
         } catch (IllegalArgumentException e) {
             return new byte[0];
         }

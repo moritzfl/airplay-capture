@@ -425,7 +425,7 @@ public final class RecordingManager {
             draft.caf = dirs.tmpDir().resolve(draft.id + ".caf");
             draft.writer = new CafWriter(draft.caf, draft.config);
             return true;
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             Log.error("recorder", "cannot create recording file: " + e.getMessage());
             draft.failed = true;
             return false;

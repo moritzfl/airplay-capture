@@ -141,6 +141,17 @@ public final class RaopServer {
             Socket socket = null;
             try {
                 socket = listener.accept();
+                var peer = socket.getInetAddress();
+                if (
+                    connections.size() >= 32 ||
+                    connections
+                        .stream()
+                        .filter(s -> peer.equals(s.getInetAddress()))
+                        .count() >= 4
+                ) {
+                    closeSocket(socket);
+                    continue;
+                }
                 connections.add(socket);
                 if (listener.isClosed()) {
                     connectionClosed(socket);

@@ -83,7 +83,14 @@ public final class CafWriter implements Closeable {
      */
     public static byte[] silentFrame(AlacConfig config) {
         int channels = config.channels();
-        if (channels < 1 || channels > 2) {
+        if (
+            channels < 1 ||
+            channels > 2 ||
+            config.frameLength() < 1 ||
+            config.frameLength() > 8192 ||
+            config.bitDepth() < 1 ||
+            config.bitDepth() > 32
+        ) {
             return null;
         }
         long bits =

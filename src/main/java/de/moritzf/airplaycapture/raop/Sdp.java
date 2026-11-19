@@ -2,7 +2,7 @@ package de.moritzf.airplaycapture.raop;
 
 import de.moritzf.airplaycapture.media.AlacConfig;
 import java.util.Arrays;
-import java.util.Base64;
+import tools.jackson.core.Base64Variants;
 
 /**
  * Parsed ANNOUNCE payload: the SDP description a sender uses to announce the audio stream and the
@@ -37,6 +37,7 @@ public final class Sdp {
     }
 
     public static Sdp parse(String sdp) {
+        if (sdp.length() > 16384) throw new IllegalArgumentException("SDP too large");
         AlacConfig alac = null;
         byte[] key = null;
         byte[] iv = null;
@@ -68,8 +69,8 @@ public final class Sdp {
 
     private static AlacConfig parseFmtp(String value) {
         String[] parts = value.trim().split("\\s+");
-        if (parts.length < 11) {
-            return null;
+        if (parts.length != 11 && parts.length != 12) {
+            throw new IllegalArgumentException("Invalid ALAC parameters");
         }
         // The first token may be the RTP payload type ("96").
         int start = parts.length - 11;
@@ -78,6 +79,27 @@ public final class Sdp {
             for (int i = 0; i < 11; i++) {
                 v[i] = Integer.parseInt(parts[start + i]);
             }
+            if (
+                v[0] < 1 ||
+                v[0] > 8192 ||
+                !(v[2] == 16 || v[2] == 20 || v[2] == 24 || v[2] == 32) ||
+                v[6] < 1 ||
+                v[6] > 2 ||
+                v[8] < 0 ||
+                v[8] > 65536 ||
+                v[10] < 8000 ||
+                v[10] > 192000 ||
+                v[1] != 0 ||
+                v[3] < 0 ||
+                v[3] > 255 ||
+                v[4] < 0 ||
+                v[4] > 255 ||
+                v[5] < 0 ||
+                v[5] > 255 ||
+                v[7] < 0 ||
+                v[7] > 65535 ||
+                v[9] < 0
+            ) throw new IllegalArgumentException("Unsupported ALAC parameters");
             return new AlacConfig(
                 v[0],
                 v[1],
@@ -92,16 +114,16 @@ public final class Sdp {
                 v[10]
             );
         } catch (NumberFormatException e) {
-            return null;
+            throw new IllegalArgumentException("Invalid ALAC parameters", e);
         }
     }
 
     private static byte[] decodeBase64(String value) {
         try {
-            return Base64.getDecoder().decode(value);
+            return Base64Variants.MIME_NO_LINEFEEDS.withPaddingAllowed().decode(value);
         } catch (IllegalArgumentException e) {
             try {
-                return Base64.getUrlDecoder().decode(value);
+                return Base64Variants.MODIFIED_FOR_URL.withPaddingAllowed().decode(value);
             } catch (IllegalArgumentException e2) {
                 return null;
             }

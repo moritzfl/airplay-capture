@@ -15,6 +15,28 @@ import org.junit.jupiter.api.Test;
 class ProtocolParsingTest {
 
     @Test
+    void rejectsOutOfRangeAlacRatherThanUsingDefaults() {
+        for (String length : java.util.List.of("0", "8193", "invalid")) {
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () ->
+                Sdp.parse("a=fmtp:96 " + length + " 0 16 40 10 14 2 255 0 0 44100")
+            );
+        }
+    }
+
+    @Test
+    void ignoresMetadataBeyondNestingLimit() {
+        byte[] data = dmap("minm", "Song");
+        for (int i = 0; i < 16; i++) {
+            data = ByteBuffer.allocate(data.length + 8)
+                .putInt(0x6d6c6974)
+                .putInt(data.length)
+                .put(data)
+                .array();
+        }
+        assertTrue(Dmap.parse(data).isEmpty());
+    }
+
+    @Test
     void parsesDmapInsideContainer() {
         byte[] blob = dmap(
             "minm",
