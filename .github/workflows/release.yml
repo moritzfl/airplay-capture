@@ -83,6 +83,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          provenance: mode=max
+          sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -93,6 +95,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -135,6 +140,11 @@ jobs:
           cp "build/libs/$artifact.jar" "packaging/dist/$artifact-x86_64.spk" \
             "packaging/dist/$artifact-armv8.spk" release-assets/
           (cd release-assets && sha256sum -- "$artifact.jar" "$artifact-x86_64.spk" "$artifact-armv8.spk" > release-checksums.txt)
+
+      - name: Sign release artifact provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: release-assets/*
 
       - name: Release notes from CHANGELOG.md
         run: |

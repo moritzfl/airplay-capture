@@ -1,6 +1,6 @@
 # Runtime image used by the Synology SPK: the application jar is built on the host,
 # so no architecture-specific build tools are needed inside the image.
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre-alpine@sha256:ac05c3c42b7c2f1a52c9bd52f01041fa1958231b15ebeae7420429cbc5baf474
 
 RUN apk add --no-cache ffmpeg tzdata \
     && addgroup -g 10001 -S recorder \

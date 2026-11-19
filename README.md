@@ -401,7 +401,9 @@ release is tagged (`.github/workflows/ci.yml`).
    `ghcr.io/moritzfl/airplay-capture` with tags `X.Y.Z` and `X.Y`. The `latest` tag only moves when
    the new tag is the highest version tag, so releasing an older patch does not move it backwards.
 4. Builds the Synology SPK and the runnable jar and creates a **GitHub Release** with both plus
-   SHA-256 checksums. The release notes are that version's `CHANGELOG.md` section.
+   SHA-256 checksums. Verify signed build provenance with
+   `gh attestation verify <downloaded-file> --repo moritzfl/airplay-capture`. Published Docker
+   images include provenance and an SBOM. The release notes are that version's `CHANGELOG.md` section.
 
 The release and the `ghcr.io` package use the workflow's `GITHUB_TOKEN`, so **no secret setup is
 required**. Images are published to ghcr.io only.
