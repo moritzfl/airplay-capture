@@ -15,7 +15,7 @@ COPY src src
 RUN ./gradlew --no-daemon bootJar -x test && cp build/libs/*.jar /src/app.jar
 
 # The amd64 manifest has the Java4Shell fix (21.0.13.1+2); the older arm64 build is unaffected.
-FROM eclipse-temurin:21-jre@sha256:d77e090ae1f6970c047b443c6f0a6c1358b0426d44432bb5a7753408cd43de0d
+FROM eclipse-temurin:21-jre@sha256:ca73b4d3961703d6d7830a4361f49ef0478f8f28b39defc07bb72f4cc7f834f6
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
