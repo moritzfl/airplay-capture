@@ -138,8 +138,10 @@ The app runs for as long as that terminal stays open; `Ctrl+C` stops it. Good to
   `java -jar airplay-capture-<version>.jar --data ~/airplay-data`.
 - **Updating.** Download the newer jar and start that one instead. Recordings and settings live in
   the data folder and stay as they are.
-- **Java security.** Keep the JDK patched. The receiver uses Jackson's decoder for network Base64,
-  avoiding the JDK Base64 intrinsic in both jar and container launches.
+- **Java security.** The jar uses your installed Java runtime. For the
+  [Java4Shell fix (CVE-2026-114938)](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/),
+  update to Eclipse Temurin 21.0.13.1+2 or a newer patched release, or follow your Java vendor's
+  advisory. Check your installed build with `java -version`.
 
 Docker Desktop on macOS and Windows cannot receive AirPlay reliably (see [Docker](#docker)), so the
 jar is the way to record on those systems. **Windows is untested on a real Windows machine** — the

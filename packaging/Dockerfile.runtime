@@ -1,6 +1,6 @@
 # Runtime image used by the Synology SPK: the application jar is built on the host,
 # so no architecture-specific build tools are needed inside the image.
-FROM eclipse-temurin:21-jre-alpine@sha256:ac05c3c42b7c2f1a52c9bd52f01041fa1958231b15ebeae7420429cbc5baf474
+FROM eclipse-temurin:21-jre-alpine@sha256:5d7689f47d670aca766b9503a70bccc2d73b4eb9221ae8f714ae958313c4ce70
 
 RUN apk add --no-cache ffmpeg tzdata \
     && addgroup -g 10001 -S recorder \
@@ -17,6 +17,4 @@ USER recorder
 VOLUME ["/data"]
 EXPOSE 8080
 
-# -XX:-UseBASE64Intrinsics keeps Java4Shell (CVE-2026-114938) unreachable until the Temurin
-# image carries the fixed JDK; the RAOP receiver decodes Base64 from the network.
-ENTRYPOINT ["java", "-XX:-UseBASE64Intrinsics", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

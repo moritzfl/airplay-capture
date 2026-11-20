@@ -5,7 +5,7 @@
 # The JDK must be the toolchain version in build.gradle.kts (Java 21): Gradle does not download one,
 # so another major fails the build. renovate.json keeps these images on their major for that reason;
 # move build.gradle.kts, this file and packaging/Dockerfile.runtime together.
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk@sha256:db5cc6341a1d7bc40cdb51e1f0d9824f3bb2cc8107d29da421dc4df7d11f05f1 AS build
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk@sha256:8ad118b146aa92da815b576441acd6b42b38236797ad0b6edc8c200b85bb0734 AS build
 WORKDIR /src
 COPY gradle gradle
 COPY gradlew gradlew
@@ -14,7 +14,8 @@ RUN ./gradlew --no-daemon --version > /dev/null
 COPY src src
 RUN ./gradlew --no-daemon bootJar -x test && cp build/libs/*.jar /src/app.jar
 
-FROM eclipse-temurin:21-jre@sha256:ca73b4d3961703d6d7830a4361f49ef0478f8f28b39defc07bb72f4cc7f834f6
+# The amd64 manifest has the Java4Shell fix (21.0.13.1+2); the older arm64 build is unaffected.
+FROM eclipse-temurin:21-jre@sha256:d77e090ae1f6970c047b443c6f0a6c1358b0426d44432bb5a7753408cd43de0d
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
@@ -32,6 +33,4 @@ USER recorder
 VOLUME ["/data"]
 EXPOSE 8080
 
-# -XX:-UseBASE64Intrinsics keeps Java4Shell (CVE-2026-114938) unreachable until the Temurin
-# image carries the fixed JDK; the RAOP receiver decodes Base64 from the network.
-ENTRYPOINT ["java", "-XX:-UseBASE64Intrinsics", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

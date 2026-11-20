@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Updated the bundled Java runtimes to address [Java4Shell (CVE-2026-114938)](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/).
+  The x86-64 Docker image and both Synology packages use Eclipse Temurin 21.0.13.1+2. The ARM64
+  Docker image is unaffected. These builds no longer need the temporary Base64 workaround.
+- The standalone jar does not bundle Java. Update your installed runtime to a patched build,
+  such as Eclipse Temurin 21.0.13.1+2 or later.
+
 ## [2.0.2] - 2026-11-19
 
 ### Added
