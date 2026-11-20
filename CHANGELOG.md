@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-11-20
+
 ### Security
 
 - Updated the bundled Java runtimes to address [Java4Shell (CVE-2026-114938)](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/).
@@ -177,7 +179,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker images for linux/amd64 and linux/arm64 on `ghcr.io`.
 - Runs natively on macOS, Linux and Windows.
 
-[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.2...HEAD
+[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.3...HEAD
+[2.0.3]: https://github.com/moritzfl/airplay-capture/compare/2.0.2...2.0.3
 [2.0.2]: https://github.com/moritzfl/airplay-capture/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/moritzfl/airplay-capture/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/moritzfl/airplay-capture/compare/1.2.0...2.0.0
