@@ -7,16 +7,26 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CancellationException;
 import java.util.function.BooleanSupplier;
 
 /**
- * Joins recorded chapter CAFs into one .m4b audiobook with chapter marks, tags and an optional
- * cover, using ffmpeg's concat demuxer and FFMETADATA chapter input.
+ * Encodes a continuous recording or joins separate recordings into an .m4b audiobook with
+ * chapter marks, tags and an optional cover.
  */
 public final class AudiobookAssembler {
 
     public record Chapter(Path caf, String title, long durationMs) {}
+
+    public record Marker(String title, long durationMs) {}
+
+    /** Chapter boundaries in one continuous input, starting at the given trim offset. */
+    public record Timeline(Path audio, long startMs, List<Marker> markers) {
+        public long durationMs() {
+            return markers.stream().mapToLong(Marker::durationMs).sum();
+        }
+    }
 
     /** Receives the encoder's own progress, 0..1. */
     @FunctionalInterface
@@ -72,41 +82,85 @@ public final class AudiobookAssembler {
         Progress progress,
         BooleanSupplier cancelled
     ) throws IOException, InterruptedException {
-        if (chapters.isEmpty()) {
+        List<Path> files = chapters.stream().map(Chapter::caf).toList();
+        List<Marker> markers = chapters
+            .stream()
+            .map(chapter -> new Marker(chapter.title(), chapter.durationMs()))
+            .toList();
+        encode(files, null, markers, cover, output, title, author, progress, cancelled);
+    }
+
+    /** Writes chapter marks without splitting the input into per-chapter audio files. */
+    public void assemble(
+        Timeline timeline,
+        Path cover,
+        Path output,
+        String title,
+        String author,
+        Progress progress,
+        BooleanSupplier cancelled
+    ) throws IOException, InterruptedException {
+        encode(
+            List.of(),
+            timeline,
+            timeline.markers(),
+            cover,
+            output,
+            title,
+            author,
+            progress,
+            cancelled
+        );
+    }
+
+    private void encode(
+        List<Path> files,
+        Timeline timeline,
+        List<Marker> markers,
+        Path cover,
+        Path output,
+        String title,
+        String author,
+        Progress progress,
+        BooleanSupplier cancelled
+    ) throws IOException, InterruptedException {
+        if (markers.isEmpty()) {
             throw new IOException("no chapters to assemble");
         }
         Path work = Files.createTempDirectory(output.getParent(), ".m4b-");
         try {
-            Path list = work.resolve("chapters.ffconcat");
             Path metadata = work.resolve("chapters.txt");
-            List<String> concat = new ArrayList<>();
-            for (Chapter chapter : chapters) {
-                concat.add(
-                    "file '" + chapter.caf().toAbsolutePath().toString().replace("'", "'\\''") + "'"
-                );
-            }
-            Files.write(list, concat, StandardCharsets.UTF_8);
-            Files.write(metadata, chapterMetadata(chapters), StandardCharsets.UTF_8);
-
-            long totalMs = chapters
+            Files.write(metadata, chapterMetadata(markers), StandardCharsets.UTF_8);
+            long totalMs = markers
                 .stream()
                 .mapToLong(chapter -> Math.max(0, chapter.durationMs()))
                 .sum();
             List<String> command = new ArrayList<>(
-                List.of(
-                    ffmpeg,
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-f",
-                    "concat",
-                    "-safe",
-                    "0",
-                    "-i",
-                    list.toString()
-                )
+                List.of(ffmpeg, "-hide_banner", "-loglevel", "error", "-y")
             );
+            if (timeline != null) {
+                command.addAll(
+                    List.of(
+                        "-ss",
+                        seconds(timeline.startMs()),
+                        "-t",
+                        seconds(totalMs),
+                        "-i",
+                        timeline.audio().toString()
+                    )
+                );
+            } else {
+                Path list = work.resolve("chapters.ffconcat");
+                List<String> concat = files
+                    .stream()
+                    .map(
+                        file ->
+                            "file '" + file.toAbsolutePath().toString().replace("'", "'\\''") + "'"
+                    )
+                    .toList();
+                Files.write(list, concat, StandardCharsets.UTF_8);
+                command.addAll(List.of("-f", "concat", "-safe", "0", "-i", list.toString()));
+            }
             int nextInput = 1;
             int coverInput = -1;
             if (cover != null && Files.exists(cover)) {
@@ -172,12 +226,16 @@ public final class AudiobookAssembler {
         }
     }
 
-    private static List<String> chapterMetadata(List<Chapter> chapters) {
+    private static String seconds(long ms) {
+        return String.format(Locale.ROOT, "%.3f", ms / 1000.0);
+    }
+
+    private static List<String> chapterMetadata(List<Marker> chapters) {
         List<String> lines = new ArrayList<>();
         lines.add(";FFMETADATA1");
         long start = 0;
         for (int i = 0; i < chapters.size(); i++) {
-            Chapter chapter = chapters.get(i);
+            Marker chapter = chapters.get(i);
             long duration = Math.max(0, chapter.durationMs());
             if (duration == 0) {
                 continue;
@@ -198,11 +256,13 @@ public final class AudiobookAssembler {
     }
 
     private static String escape(String value) {
-        String escaped = value.replace("\\", "\\\\").replace('\r', ' ').replace('\n', ' ');
-        if (escaped.startsWith(";") || escaped.startsWith("#")) {
-            escaped = " " + escaped;
-        }
-        return escaped;
+        return value
+            .replace("\\", "\\\\")
+            .replace("=", "\\=")
+            .replace(";", "\\;")
+            .replace("#", "\\#")
+            .replace('\r', ' ')
+            .replace('\n', ' ');
     }
 
     private static void addTag(List<String> command, String key, String value) {

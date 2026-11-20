@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Audiobooks now use the full Deezer chapter list, including editions with more than 100 tracks.
+  M4B exports with timed chapters keep their names and markers without writing temporary audio
+  files for every chapter.
 
 ## [2.0.3] - 2026-11-20
 

@@ -819,20 +819,14 @@ public final class RecordingManager {
         String baseName = null;
         Path output = null;
         Path splitWork = null;
+        int chapterCount;
         try {
             Files.createDirectories(library.libraryDir());
-            boolean fromCatalog = false;
+            AudiobookAssembler.Timeline timeline = null;
             if (catalog != null) {
                 splitWork = Files.createTempDirectory(dirs.tmpDir(), "book-");
-                List<AudiobookAssembler.Chapter> planned = catalogChapters(
-                    usable,
-                    catalog,
-                    duration,
-                    splitWork
-                );
-                if (planned != null) {
-                    chapters = planned;
-                    fromCatalog = true;
+                timeline = catalogTimeline(usable, catalog, duration, splitWork);
+                if (timeline != null) {
                     if (!catalog.album().isBlank()) {
                         bookTitle = catalog.album();
                     }
@@ -841,24 +835,32 @@ public final class RecordingManager {
                     }
                 }
             }
-            if (!fromCatalog && settings.audiobookSplitLongTracks) {
+            if (timeline == null && settings.audiobookSplitLongTracks) {
                 if (splitWork == null) {
                     splitWork = Files.createTempDirectory(dirs.tmpDir(), "book-");
                 }
                 chapters = planChapters(usable, chapters, duration, splitWork);
             }
-            duration = chapters.stream().mapToLong(AudiobookAssembler.Chapter::durationMs).sum();
             baseName = library.uniqueBaseName(
                 sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle)
             );
             output = library.libraryDir().resolve(baseName + ".m4b");
-            new AudiobookAssembler(settings.ffmpegPath, settings.audiobookBitrateKbps).assemble(
-                chapters,
-                cover,
-                output,
-                bookTitle,
-                bookAuthor
+            var assembler = new AudiobookAssembler(
+                settings.ffmpegPath,
+                settings.audiobookBitrateKbps
             );
+            if (timeline != null) {
+                duration = timeline.durationMs();
+                chapterCount = timeline.markers().size();
+                assembler.assemble(timeline, cover, output, bookTitle, bookAuthor, null, null);
+            } else {
+                duration = chapters
+                    .stream()
+                    .mapToLong(AudiobookAssembler.Chapter::durationMs)
+                    .sum();
+                chapterCount = chapters.size();
+                assembler.assemble(chapters, cover, output, bookTitle, bookAuthor);
+            }
         } catch (Exception e) {
             Log.error("audiobook", "cannot assemble " + book.title + ": " + e.getMessage());
             ui.lastError = "audiobook assembly failed: " + e.getMessage();
@@ -889,7 +891,7 @@ public final class RecordingManager {
         track.source = clientIp;
         track.baseName = baseName;
         track.status = "ready";
-        track.chapterCount = chapters.size();
+        track.chapterCount = chapterCount;
         track.files = new LinkedHashMap<>();
         track.files.put("m4b", output.getFileName().toString());
         try {
@@ -919,7 +921,7 @@ public final class RecordingManager {
             "audiobook ready: " +
                 baseName +
                 " (" +
-                chapters.size() +
+                chapterCount +
                 " chapters, " +
                 formatDuration(duration) +
                 ")"
@@ -975,7 +977,7 @@ public final class RecordingManager {
      * at pauses, with an Audible-style intro/outro trimmed. Returns null when the catalog list
      * does not fit this recording, so the caller keeps the sender chapters.
      */
-    private List<AudiobookAssembler.Chapter> catalogChapters(
+    private AudiobookAssembler.Timeline catalogTimeline(
         List<BookChapter> usable,
         ChapterCatalog.Result catalog,
         long totalMs,
@@ -1013,39 +1015,26 @@ public final class RecordingManager {
                 );
                 return null;
             }
-            List<ChapterSplitter.Segment> segments = splitter.split(
-                source,
-                plan.startMs(),
-                plan.endMs(),
-                plan.boundaries(),
-                workDir,
-                "chapter"
-            );
-            List<AudiobookAssembler.Chapter> result = new ArrayList<>();
-            for (int i = 0; i < segments.size(); i++) {
-                String title =
-                    i < catalog.chapters().size() && !catalog.chapters().get(i).title().isBlank()
-                        ? catalog.chapters().get(i).title()
-                        : "Chapter " + (i + 1);
-                result.add(
-                    new AudiobookAssembler.Chapter(
-                        segments.get(i).file(),
-                        title,
-                        segments.get(i).durationMs()
-                    )
+            List<AudiobookAssembler.Marker> markers = new ArrayList<>();
+            long start = plan.startMs();
+            for (int i = 0; i < durations.size(); i++) {
+                long end = i < plan.boundaries().size() ? plan.boundaries().get(i) : plan.endMs();
+                markers.add(
+                    new AudiobookAssembler.Marker(catalog.chapters().get(i).title(), end - start)
                 );
+                start = end;
             }
             Log.info(
                 "audiobook",
                 "catalog chapters from " +
                     catalog.source() +
                     " fit this recording: " +
-                    result.size() +
+                    markers.size() +
                     " chapters, '" +
                     catalog.album() +
                     "'"
             );
-            return result;
+            return new AudiobookAssembler.Timeline(source, plan.startMs(), markers);
         } catch (Exception e) {
             Log.warn(
                 "audiobook",

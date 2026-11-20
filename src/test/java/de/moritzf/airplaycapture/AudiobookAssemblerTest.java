@@ -1,5 +1,6 @@
 package de.moritzf.airplaycapture;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,8 +13,10 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.json.JsonMapper;
 
 class AudiobookAssemblerTest {
 
@@ -63,6 +66,48 @@ class AudiobookAssemblerTest {
         assertTrue(tags.contains("Audiobook"), tags);
         double duration = Double.parseDouble(tags.replaceAll("(?s).*duration=([0-9.]+).*", "$1"));
         assertTrue(duration > 4.5 && duration < 5.5, tags);
+    }
+
+    @Test
+    void writesMoreThan255NamedMarkersWithoutSplittingAudio() throws Exception {
+        assumeTrue(TestMedia.ffmpegAvailable(), "ffmpeg required");
+        Path audio = TestMedia.createAlacCaf(temp, 5.0);
+        Path output = temp.resolve("many-markers.m4b");
+        var markers = IntStream.rangeClosed(1, 300)
+            .mapToObj(i -> new AudiobookAssembler.Marker("Kapitel " + i + ": Mut & Herz #1", 10))
+            .toList();
+
+        new AudiobookAssembler("ffmpeg", 96).assemble(
+            new AudiobookAssembler.Timeline(audio, 1_000, markers),
+            null,
+            output,
+            "Test Book",
+            "Test Author",
+            null,
+            null
+        );
+
+        var file = JsonMapper.builder()
+            .build()
+            .readTree(
+                TestMedia.ffprobe(
+                    output,
+                    "-show_chapters",
+                    "-show_entries",
+                    "chapter=start_time,end_time:chapter_tags=title:format=duration",
+                    "-of",
+                    "json"
+                )
+            );
+        var chapters = file.path("chapters");
+        assertEquals(300, chapters.size());
+        assertEquals(3.0, file.path("format").path("duration").asDouble(), 0.03);
+        for (int i = 0; i < markers.size(); i++) {
+            var chapter = chapters.get(i);
+            assertEquals(markers.get(i).title(), chapter.path("tags").path("title").asString());
+            assertEquals(i * 0.01, chapter.path("start_time").asDouble(), 0.001);
+            assertEquals((i + 1) * 0.01, chapter.path("end_time").asDouble(), 0.001);
+        }
     }
 
     @Test

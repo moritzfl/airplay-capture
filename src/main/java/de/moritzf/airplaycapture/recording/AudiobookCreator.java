@@ -623,21 +623,16 @@ public final class AudiobookCreator {
             if (chapters.isEmpty()) {
                 throw new IOException("no chapters to assemble");
             }
-            // Chapters without a source recording are ranges of the joined book and must be cut
-            // out of it; passing the joined file per chapter would repeat the whole book.
-            boolean split =
+            // Range-based chapters share one input; export it once with chapter metadata.
+            boolean timed =
                 combined != null && chapters.stream().anyMatch(chapter -> chapter.track() == null);
             return new Analysis(
                 id,
                 work,
                 tracks,
-                sources,
-                split,
-                combined,
-                boundaries,
+                timed ? combined : null,
                 chapters,
                 startMs,
-                endMs,
                 source,
                 note
             );
@@ -650,6 +645,9 @@ public final class AudiobookCreator {
     private static Path concatenate(ChapterSplitter splitter, List<Source> sources, Path work)
         throws IOException, InterruptedException
     {
+        if (sources.size() == 1) {
+            return sources.getFirst().path();
+        }
         return splitter.concatenate(
             sources.stream().map(Source::path).toList(),
             work.resolve("book.caf"),
@@ -763,46 +761,8 @@ public final class AudiobookCreator {
         String bookTitle = blank(title) ? "Untitled audiobook" : title.trim();
         String bookAuthor = author == null ? "" : author.trim();
 
-        List<AudiobookAssembler.Chapter> chapters = new ArrayList<>();
-        if (analysis.split) {
-            report(progress, "Cutting " + analysis.chapters.size() + " chapters", 0.36);
-            List<ChapterSplitter.Segment> segments = new ChapterSplitter(settings.ffmpegPath).split(
-                analysis.combined,
-                analysis.startMs,
-                analysis.endMs,
-                analysis.boundaries,
-                analysis.work,
-                "chapter"
-            );
-            for (int i = 0; i < segments.size(); i++) {
-                String chapterTitle =
-                    i < analysis.chapters.size()
-                        ? analysis.chapters.get(i).title()
-                        : "Chapter " + (i + 1);
-                chapters.add(
-                    new AudiobookAssembler.Chapter(
-                        segments.get(i).file(),
-                        chapterTitle,
-                        segments.get(i).durationMs()
-                    )
-                );
-            }
-        } else {
-            for (PlannedChapter chapter : analysis.chapters) {
-                chapters.add(
-                    new AudiobookAssembler.Chapter(
-                        chapter.source(),
-                        chapter.title(),
-                        chapter.durationMs()
-                    )
-                );
-            }
-        }
-        if (chapters.isEmpty()) {
-            throw new IOException("no chapters to assemble");
-        }
-
-        long duration = chapters.stream().mapToLong(AudiobookAssembler.Chapter::durationMs).sum();
+        long duration = analysis.totalMs();
+        int chapterCount = analysis.chapters.size();
         Path cover = cover(analysis.tracks);
         String baseName = library.uniqueBaseName(
             sanitize(bookAuthor.isBlank() ? bookTitle : bookAuthor + " - " + bookTitle)
@@ -811,26 +771,58 @@ public final class AudiobookCreator {
         Files.createDirectories(library.libraryDir());
         report(
             progress,
-            "Encoding " + chapters.size() + "-chapter audiobook at " + bitrateKbps + " kbps",
+            "Encoding " + chapterCount + "-chapter audiobook at " + bitrateKbps + " kbps",
             0.45
         );
-        new AudiobookAssembler(settings.ffmpegPath, bitrateKbps).assemble(
-            chapters,
-            cover,
-            output,
-            bookTitle,
-            bookAuthor,
-            fraction -> {
-                // runs on ffmpeg's reader thread: report only, never throw here
-                if (progress != null && !progress.cancelled()) {
-                    progress.step(
-                        "Encoding audiobook at " + bitrateKbps + " kbps",
-                        0.45 + 0.50 * fraction
-                    );
-                }
-            },
-            progress == null ? null : progress::cancelled
-        );
+        AudiobookAssembler assembler = new AudiobookAssembler(settings.ffmpegPath, bitrateKbps);
+        AudiobookAssembler.Progress encodeProgress = fraction -> {
+            // Runs on ffmpeg's reader thread: report only, never throw here.
+            if (progress != null && !progress.cancelled()) {
+                progress.step(
+                    "Encoding audiobook at " + bitrateKbps + " kbps",
+                    0.45 + 0.50 * fraction
+                );
+            }
+        };
+        var cancelled =
+            progress == null ? null : (java.util.function.BooleanSupplier) progress::cancelled;
+        if (analysis.timeline != null) {
+            var markers = analysis.chapters
+                .stream()
+                .map(chapter ->
+                    new AudiobookAssembler.Marker(chapter.title(), chapter.durationMs())
+                )
+                .toList();
+            assembler.assemble(
+                new AudiobookAssembler.Timeline(analysis.timeline, analysis.startMs, markers),
+                cover,
+                output,
+                bookTitle,
+                bookAuthor,
+                encodeProgress,
+                cancelled
+            );
+        } else {
+            var chapters = analysis.chapters
+                .stream()
+                .map(chapter ->
+                    new AudiobookAssembler.Chapter(
+                        chapter.source(),
+                        chapter.title(),
+                        chapter.durationMs()
+                    )
+                )
+                .toList();
+            assembler.assemble(
+                chapters,
+                cover,
+                output,
+                bookTitle,
+                bookAuthor,
+                encodeProgress,
+                cancelled
+            );
+        }
 
         // A rebuild joins the existing book instead of splitting it into a second group; the new
         // file becomes the current download and the old one stays as an earlier version.
@@ -867,7 +859,7 @@ public final class AudiobookCreator {
             .orElse("");
         book.baseName = baseName;
         book.status = "ready";
-        book.chapterCount = chapters.size();
+        book.chapterCount = chapterCount;
         book.createdAtEpochMs = System.currentTimeMillis();
         book.files = new java.util.LinkedHashMap<>();
         book.files.put("m4b", output.getFileName().toString());
@@ -892,7 +884,7 @@ public final class AudiobookCreator {
             "manual audiobook ready: " +
                 baseName +
                 " (" +
-                chapters.size() +
+                chapterCount +
                 " chapters, " +
                 analysis.tracks.size() +
                 " sources)"
@@ -905,7 +897,7 @@ public final class AudiobookCreator {
             book.id,
             output.getFileName().toString(),
             book.sizeBytes,
-            chapters.size(),
+            chapterCount,
             duration,
             bookTitle,
             bookAuthor
@@ -1173,13 +1165,9 @@ public final class AudiobookCreator {
         final String id;
         final Path work;
         final List<LibraryTrack> tracks;
-        final List<Source> sources;
-        final boolean split;
-        final Path combined;
-        final List<Long> boundaries;
+        final Path timeline;
         final List<PlannedChapter> chapters;
         final long startMs;
-        final long endMs;
         final String source;
         final String note;
         final long createdAt = System.currentTimeMillis();
@@ -1188,26 +1176,18 @@ public final class AudiobookCreator {
             String id,
             Path work,
             List<LibraryTrack> tracks,
-            List<Source> sources,
-            boolean split,
-            Path combined,
-            List<Long> boundaries,
+            Path timeline,
             List<PlannedChapter> chapters,
             long startMs,
-            long endMs,
             String source,
             String note
         ) {
             this.id = id;
             this.work = work;
             this.tracks = tracks;
-            this.sources = sources;
-            this.split = split;
-            this.combined = combined;
-            this.boundaries = boundaries;
+            this.timeline = timeline;
             this.chapters = chapters;
             this.startMs = startMs;
-            this.endMs = endMs;
             this.source = source;
             this.note = note;
         }
