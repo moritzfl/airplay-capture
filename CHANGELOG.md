@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-11-20
+
 ### Fixed
 
 - Audiobooks now use the full Deezer chapter list, including editions with more than 100 tracks.
@@ -185,7 +187,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker images for linux/amd64 and linux/arm64 on `ghcr.io`.
 - Runs natively on macOS, Linux and Windows.
 
-[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.3...HEAD
+[Unreleased]: https://github.com/moritzfl/airplay-capture/compare/2.0.4...HEAD
+[2.0.4]: https://github.com/moritzfl/airplay-capture/compare/2.0.3...2.0.4
 [2.0.3]: https://github.com/moritzfl/airplay-capture/compare/2.0.2...2.0.3
 [2.0.2]: https://github.com/moritzfl/airplay-capture/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/moritzfl/airplay-capture/compare/2.0.0...2.0.1
