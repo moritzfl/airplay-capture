@@ -11,9 +11,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -64,6 +66,8 @@ public class ChapterCatalog {
     private static final Duration POSITIVE_TTL = Duration.ofDays(7);
     private static final Duration NEGATIVE_TTL = Duration.ofHours(12);
     private static final long DEEZER_INTERVAL_MS = 250;
+    private static final int DEEZER_TRACK_PAGE_SIZE = 100;
+    private static final int MAX_DEEZER_TRACK_PAGES = 100;
     private static final long MUSICBRAINZ_INTERVAL_MS = 1_100;
     private static final int MAX_CANDIDATES = 3;
 
@@ -270,13 +274,20 @@ public class ChapterCatalog {
                     "AirPlayCapture/1.0",
                     true
                 );
-                String tracksJson = get(
-                    "https://api.deezer.com/album/" + encode(candidate.id()) + "/tracks?limit=100",
-                    "AirPlayCapture/1.0",
-                    true
-                );
+                JsonNode album = safeRead(albumJson);
                 List<Chapter> chapters = cleanTitles(
-                    parseDeezerTracks(tracksJson),
+                    readDeezerTracks(album.path("nb_tracks").asInt(0), index ->
+                        get(
+                            "https://api.deezer.com/album/" +
+                                encode(candidate.id()) +
+                                "/tracks?limit=" +
+                                DEEZER_TRACK_PAGE_SIZE +
+                                "&index=" +
+                                index,
+                            "AirPlayCapture/1.0",
+                            true
+                        )
+                    ),
                     candidate.title()
                 );
                 if (!usable(chapters)) {
@@ -285,7 +296,6 @@ public class ChapterCatalog {
                 long total = totalMs(chapters);
                 double score =
                     candidate.similarity() * 0.35 + durationScore(expectedDurationMs, total) * 0.65;
-                JsonNode album = safeRead(albumJson);
                 String albumTitle = album.path("title").asString(candidate.title());
                 String albumArtist = album.path("artist").path("name").asString(candidate.artist());
                 results.add(
@@ -346,22 +356,51 @@ public class ChapterCatalog {
         return candidates;
     }
 
-    static List<Chapter> parseDeezerTracks(String json) {
-        JsonNode data = safeRead(json).path("data");
+    @FunctionalInterface
+    interface DeezerTrackPage {
+        String get(int index) throws Exception;
+    }
+
+    /** Reads the full track list in playback order. A partial list would shift chapter marks. */
+    static List<Chapter> readDeezerTracks(
+        int expectedCount,
+        DeezerTrackPage fetch
+    ) throws Exception {
         List<Chapter> chapters = new ArrayList<>();
-        if (!data.isArray()) {
-            return chapters;
-        }
-        for (JsonNode item : data) {
-            String title = item.path("title").asString("");
-            long duration = item.path("duration").isNumber()
-                ? item.path("duration").asLong() * 1000
-                : 0;
-            if (!title.isBlank()) {
-                chapters.add(new Chapter(title, duration));
+        Set<String> ids = new HashSet<>();
+        for (int pageNumber = 0; pageNumber < MAX_DEEZER_TRACK_PAGES; pageNumber++) {
+            // Only use "next" as a continuation signal; never request a URL from the payload.
+            JsonNode page = safeRead(fetch.get(chapters.size()));
+            JsonNode data = page.path("data");
+            int total = page.path("total").asInt(0);
+            if (
+                !data.isArray() ||
+                data.isEmpty() ||
+                (total > 0 && expectedCount > 0 && total != expectedCount)
+            ) {
+                break;
+            }
+            if (total > 0) {
+                expectedCount = total;
+            }
+            for (JsonNode item : data) {
+                String id = id(item);
+                int duration = item.path("duration").asInt(0);
+                if ((!id.isBlank() && !ids.add(id)) || duration <= 0) {
+                    throw new IllegalStateException("invalid Deezer track list");
+                }
+                // Keep even an unnamed track: it still takes up time in the recording.
+                chapters.add(new Chapter(item.path("title").asString(""), duration * 1000L));
+            }
+            boolean hasNext = !page.path("next").asString("").isBlank();
+            if (!hasNext && (expectedCount <= 0 || chapters.size() == expectedCount)) {
+                return chapters;
+            }
+            if (expectedCount > 0 && chapters.size() >= expectedCount) {
+                break;
             }
         }
-        return chapters;
+        throw new IllegalStateException("incomplete Deezer track list");
     }
 
     // ---------------------------------------------------------------- MusicBrainz

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Audiobooks now use the full Deezer chapter list, including editions with more than 100 tracks.
+
 ## [2.0.3] - 2026-11-20
 
 ### Security

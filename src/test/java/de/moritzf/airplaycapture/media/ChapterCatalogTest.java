@@ -2,16 +2,19 @@ package de.moritzf.airplaycapture.media;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 class ChapterCatalogTest {
 
     @Test
-    void parsesDeezerAlbumTracksAsChapters() {
+    void parsesDeezerAlbumTracksAsChapters() throws Exception {
         String json = """
         {"data":[
           {"title":"Kapitel 01: Die Eiskönigin - Völlig Unverfroren","duration":90},
@@ -19,12 +22,52 @@ class ChapterCatalogTest {
         ]}
         """;
 
-        List<ChapterCatalog.Chapter> chapters = ChapterCatalog.parseDeezerTracks(json);
+        List<ChapterCatalog.Chapter> chapters = ChapterCatalog.readDeezerTracks(2, index -> json);
 
         assertEquals(2, chapters.size());
         assertEquals("Kapitel 01: Die Eiskönigin - Völlig Unverfroren", chapters.get(0).title());
         assertEquals(90_000, chapters.get(0).durationMs());
         assertEquals(97_000, chapters.get(1).durationMs());
+    }
+
+    @Test
+    void readsPastTheFirstHundredTracksInPlaybackOrder() throws Exception {
+        List<Integer> offsets = new ArrayList<>();
+        var chapters = ChapterCatalog.readDeezerTracks(171, index -> {
+            offsets.add(index);
+            return deezerPage(index, Math.min(index + 100, 171), 171);
+        });
+
+        assertEquals(List.of(0, 100), offsets);
+        assertEquals(171, chapters.size());
+        assertEquals(23_256_000, ChapterCatalog.totalMs(chapters));
+        assertEquals("Kapitel 100: Heldin", chapters.get(99).title());
+        assertEquals("Kapitel 101: Heldin", chapters.get(100).title());
+        assertEquals("Kapitel 171: Heldin", chapters.getLast().title());
+    }
+
+    @Test
+    void doesNotUsePartialOrRepeatedPagesAsAnEdition() {
+        assertThrows(IllegalStateException.class, () ->
+            ChapterCatalog.readDeezerTracks(171, index ->
+                index == 0 ? deezerPage(0, 100, 171) : "{\"error\":{\"code\":4}}"
+            )
+        );
+        assertThrows(IllegalStateException.class, () ->
+            ChapterCatalog.readDeezerTracks(171, index -> deezerPage(0, 100, 171))
+        );
+    }
+
+    private static String deezerPage(int from, int to, int total) {
+        String data = IntStream.range(from + 1, to + 1)
+            .mapToObj(number ->
+                """
+                {"id":%d,"title":"Kapitel %d: Heldin","duration":136}""".formatted(number, number)
+            )
+            .collect(Collectors.joining(","));
+        return """
+        {"data":[%s],"total":%d%s}
+        """.formatted(data, total, to < total ? ",\"next\":\"next page\"" : "");
     }
 
     @Test
@@ -115,10 +158,8 @@ class ChapterCatalogTest {
         ]}
         """;
 
-        List<ChapterCatalog.Chapter> chapters = ChapterCatalog.parseDeezerTracks(json);
-
-        assertTrue(chapters.size() > 0);
-        // The lookup rejects lists with missing durations; the parser keeps them for diagnosis.
-        assertEquals(0, chapters.get(0).durationMs());
+        assertThrows(IllegalStateException.class, () ->
+            ChapterCatalog.readDeezerTracks(2, index -> json)
+        );
     }
 }
