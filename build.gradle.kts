@@ -8,6 +8,9 @@ group = "de.moritzf"
 version = "2.0.5-SNAPSHOT"
 
 repositories {
+    if (gradle.startParameter.writeDependencyVerifications.isNotEmpty()) {
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
+    }
     mavenCentral()
 }
 

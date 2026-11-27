@@ -1,14 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["/^gradle\\/libs\\.versions\\.toml$/"],
-      "matchStrings": ["# renovate: datasource=(?<datasource>[^ ]+) depName=(?<depName>[^\\s]+)\\s+[^=]+ = \"(?<currentValue>[^\"]+)\""]
-    }
-  ],
   "packageRules": [
+    {
+      "description": "Refresh Gradle verification metadata once for compatible version catalog updates.",
+      "matchManagers": ["gradle"],
+      "matchFileNames": ["gradle/libs.versions.toml"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Gradle catalog updates"
+    },
     {
       "description": "The Docker JDK must match the Gradle toolchain. Raise the Java major together in both Dockerfiles and the Gradle toolchain.",
       "matchDatasources": ["docker"],
