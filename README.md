@@ -270,7 +270,7 @@ implemented, and **one sender at a time** can stream. Record only content you ar
 
 | Layer | Technology |
 | --- | --- |
-| Runtime | Java 21, Spring Boot 4.1 |
+| Runtime | Java 21, Spring Boot 4.2 |
 | UI | Vaadin 25 (server-side, dark Lumo theme), server push |
 | Receiver | plain Java: RTSP/RTP, RSA-OAEP + AES-128-CBC, mDNS via JmDNS |
 | Capture | lossless ALAC frames muxed into CAF, no native code |
