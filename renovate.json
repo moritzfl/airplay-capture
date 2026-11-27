@@ -3,11 +3,12 @@
   "extends": ["config:recommended"],
   "packageRules": [
     {
-      "description": "Refresh Gradle verification metadata once for compatible version catalog updates.",
+      "description": "Batch catalog checksum refreshes and allow time for Maven Central's mirror to sync.",
       "matchManagers": ["gradle"],
       "matchFileNames": ["gradle/libs.versions.toml"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "Gradle catalog updates"
+      "groupName": "Gradle catalog updates",
+      "minimumReleaseAge": "3 days"
     },
     {
       "description": "The Docker JDK must match the Gradle toolchain. Raise the Java major together in both Dockerfiles and the Gradle toolchain.",
